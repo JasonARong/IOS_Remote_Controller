@@ -25,8 +25,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     @Published var statusMessage = "Initializing Bluetooth..."
     
     // MARK: UUIDs must match ESP side
-    private var serviceUUID = CBUUID(string: "1234") // “Remote Mouse” service
-    private var characteristicUUID = CBUUID(string: "ABCD") // data endpoint for dx/dy deltas
+    private var serviceUUID = CBUUID(string: "00001234-0000-1000-8000-00805f9b34fb") // “Remote Mouse” service
+    private var characteristicUUID = CBUUID(string: "0000abcd-0000-1000-8000-00805f9b34fb") // data endpoint for dx/dy deltas
     
     
     override init() { /// override initializer of NSObject
@@ -44,10 +44,23 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         switch central.state { // check curr bluetooth state
         case .poweredOn:
             print("✅ Bluetooth is ON – ready to scan")
+            statusMessage = "Bluetooth is ON, scanning ESP..."
             startScan()
         case .poweredOff:
             print("❌ Bluetooth is OFF")
-        default:
+            statusMessage = "Bluetooth is OFF"
+        case .unauthorized:
+            print("🚫 Bluetooth unauthorized")
+            statusMessage = "Bluetooth unauthorized — enable in Settings"
+        case .resetting:
+            print("♻️ Bluetooth resetting…")
+            statusMessage = "Bluetooth resetting…"
+        case .unsupported:
+            print("❌ Bluetooth unsupported")
+            statusMessage = "Your phone does not support bluetooth"
+        case .unknown:
+            fallthrough
+        @unknown default:
             print("ℹ️ Bluetooth state: \(central.state.rawValue)")
         }
     }
@@ -58,7 +71,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         centralManager.scanForPeripherals(withServices: [serviceUUID], options: nil)
     }
     
-    // Discover a peripheral while scanning & ask to connect
+    // Discover a peripheral during scanning & ask to connect
     func centralManager(
         _ central: CBCentralManager,
         didDiscover peripheral: CBPeripheral,
@@ -66,7 +79,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         rssi RSSI: NSNumber // signal strength
     ){
         print("🔍 Found peripheral: \(peripheral.name ?? "Unknown")")
-        print("AdvertisementData: \(advertisementData)")
+        //print("AdvertisementData: \(advertisementData)")
         statusMessage = "Connecting to \(peripheral.name ?? "ESP")..."
         self.peripheral = peripheral // setting peripheral
         self.peripheral?.delegate = self
@@ -81,8 +94,12 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         didConnect peripheral: CBPeripheral
     ){
         print("✅ Connected to \(peripheral.name ?? "ESP")")
-        statusMessage = "Connected!"
+        statusMessage = "Connected! Trying To Find Service..."
         isConnected = true
+        // Reset any queued state on fresh connection
+        pendingPackets.removeAll()
+        writeCharacteristic = nil
+        
         peripheral.discoverServices([serviceUUID]) // find service that matches UUID
     }
     
@@ -102,10 +119,12 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
     ){
+        statusMessage = "Disconnected ( \(error?.localizedDescription ?? "no error") )"
         print("Disconnected ( \(error?.localizedDescription ?? "no error") )")
         isConnected = false
         writeCharacteristic = nil
         self.peripheral = nil
+        pendingPackets.removeAll()
         
         startScan()
     }
@@ -142,9 +161,11 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         // characteristic is found
         for char in service.characteristics ?? [] {
             print("📡 Found characteristic: \(char.uuid)")
-            writeCharacteristic = char // setting writeCharacteristic
-            statusMessage = "Ready to send data"
-            print("✅ Ready to send dx/dy")
+            if (char.uuid == characteristicUUID){
+                writeCharacteristic = char // setting writeCharacteristic
+                statusMessage = "Ready to send data"
+                print("✅ Write characteristic ready (props: \(char.properties))")
+            }
         }
         
     }
@@ -164,8 +185,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         var packet = Data() // Data(): raw bytes container.
         /// little-endian byte order: least significant byte first, ESP32 uses this order
         withUnsafeBytes(of: dxInt16.littleEndian) { bytes in /// bytes: pointer to the memory containing dxInt16
-            /// withUnsafeBytes accesses the raw bytes in actual memory via pointer
-            packet.append(contentsOf: bytes)
+            packet.append(contentsOf: bytes) /// withUnsafeBytes accesses the raw bytes in actual memory via pointer
         }
         withUnsafeBytes(of: dyInt16.littleEndian) { packet.append(contentsOf: $0) }
                 

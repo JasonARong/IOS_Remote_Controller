@@ -8,7 +8,14 @@
 import SwiftUI
 
 struct TouchPadView: View {
-    @StateObject private var viewModel = TouchPadViewModel(connection: ConnectionManager())
+    @StateObject private var connection: ConnectionManager
+    @StateObject private var viewModel: TouchPadViewModel
+    
+    init (){
+        let conn = ConnectionManager()
+        _connection = StateObject(wrappedValue: conn)
+        _viewModel = StateObject(wrappedValue: TouchPadViewModel(connection: conn))
+    }
     
     
     private var pointText: String {
@@ -48,6 +55,9 @@ struct TouchPadView: View {
                    .padding(8)
                    .background(.ultraThinMaterial, in: Capsule())
                    .padding(8)
+                
+                Text(connection.statusMessage)
+//                Text(connection.isConnected ? "Connected" : "Disconnected")
             }
         }
     }
