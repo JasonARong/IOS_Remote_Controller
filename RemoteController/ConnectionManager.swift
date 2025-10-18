@@ -8,6 +8,7 @@
 import Foundation
 import CoreBluetooth
 import Combine
+import QuartzCore
 
 /// Abstracts communication to ESP (BLE/Wi-Fi/USB).
 /// Inherits NSObject: required for Bluetooth delegate callbacks
@@ -28,12 +29,86 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private var serviceUUID = CBUUID(string: "00001234-0000-1000-8000-00805f9b34fb") // “Remote Mouse” service
     private var characteristicUUID = CBUUID(string: "0000abcd-0000-1000-8000-00805f9b34fb") // data endpoint for dx/dy deltas
     
+    // For smooth cursor movement
+    private var accumulatedDX: CGFloat = 0
+    private var accumulatedDY: CGFloat = 0
+    private var displayLink: CADisplayLink?
+    private let targetFPS: Int = 60
     
     override init() { /// override initializer of NSObject
         super.init()
         /// delegate: self ( this class will receive Bluetooth callbacks ) ( require self to be delegate type)
         /// queue: nil ( callbacks run on the main thread )
         centralManager = CBCentralManager(delegate: self, queue: nil)
+        startDisplayLink()
+    }
+    
+    deinit {
+        stopDisplayLink()
+    }
+    
+    // MARK: - Display link pacing
+    private func startDisplayLink() {
+        let displayLink = CADisplayLink(target: self, selector: #selector(tick))
+        if #available(iOS 15.0, *){ // Prefer targetFPS (60 or 120); system will choose best within this range
+            displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: Float(targetFPS))
+        } else {
+            displayLink.preferredFramesPerSecond = targetFPS >= 120 ? 120 : 60
+        }
+        displayLink.add(to: .main, forMode: .common) // .main run loop with .common mode
+        self.displayLink = displayLink
+    }
+    
+    private func stopDisplayLink() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+    
+    @objc private func tick(){
+        // Grab and reset accumulators
+        let dx = accumulatedDX * 1.25
+        let dy = accumulatedDY * 1.25
+        if dx==0 && dy==0 { return }
+        accumulatedDX = 0
+        accumulatedDY = 0
+        
+        // ESP require number in raw bytes (0x00, 0xFF, etc.)
+        /// turn floating-point deltas into 16-bit integers (2 bytes)
+        let dxClamped = max(-32767, min(32767, dx))
+        let dyClamped = max(-32767, min(32767, dy))
+        let dxInt16 = Int16(dxClamped)
+        let dyInt16 = Int16(dyClamped)
+        
+        // Build packet
+        // Packet structure: [dx_low, dx_high, dy_low, dy_high]
+        var packet = Data() // Data(): raw bytes container.
+        /// little-endian byte order: least significant byte first, ESP32 uses this order
+        withUnsafeBytes(of: dxInt16.littleEndian) { bytes in /// bytes: pointer to the memory containing dxInt16
+            packet.append(contentsOf: bytes) /// withUnsafeBytes accesses the raw bytes in actual memory via pointer
+        }
+        withUnsafeBytes(of: dyInt16.littleEndian) { bytes in
+            packet.append(contentsOf: bytes)
+        }
+        
+        
+        guard let peripheral = peripheral,
+              let char = writeCharacteristic else {
+            print("⚪️ Stub: would send dx=\(dxInt16), dy=\(dyInt16)")
+            return
+        }
+        
+        if peripheral.canSendWriteWithoutResponse {
+            peripheral.writeValue(packet, for: char, type: .withoutResponse) // send data to the writeCharacteristic endpoint
+            print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16)")
+        } else {
+            pendingPackets.append(packet) // enqueue when back-pressured
+        }
+    }
+    
+    // MARK: - Public API (OG: Send data)
+    func sendDelta(dx: CGFloat, dy: CGFloat) {
+        accumulatedDX += dx
+        accumulatedDY += dy
     }
     
     
@@ -167,42 +242,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
                 print("✅ Write characteristic ready (props: \(char.properties))")
             }
         }
-        
     }
     
-    
-    // MARK: - Send data
-    func sendDelta(dx: CGFloat, dy: CGFloat) {
-        // ESP require number in raw bytes (0x00, 0xFF, etc.)
-        /// floating-point deltas -> 16-bit integers (2 bytes)
-        let dxClamped = max(-32767, min(32767, dx))
-        let dyClamped = max(-32767, min(32767, dy))
-        let dxInt16 = Int16(dxClamped)
-        let dyInt16 = Int16(dyClamped)
-        
-    
-        // Packet structure: [dx_low, dx_high, dy_low, dy_high]
-        var packet = Data() // Data(): raw bytes container.
-        /// little-endian byte order: least significant byte first, ESP32 uses this order
-        withUnsafeBytes(of: dxInt16.littleEndian) { bytes in /// bytes: pointer to the memory containing dxInt16
-            packet.append(contentsOf: bytes) /// withUnsafeBytes accesses the raw bytes in actual memory via pointer
-        }
-        withUnsafeBytes(of: dyInt16.littleEndian) { packet.append(contentsOf: $0) }
-                
-    
-        guard let peripheral = peripheral,
-              let char = writeCharacteristic else {
-            print("⚪️ Stub: would send dx=\(dxInt16), dy=\(dyInt16)") // Fallback
-            return
-        }
-        
-        if peripheral.canSendWriteWithoutResponse {
-            peripheral.writeValue(packet, for: char, type: .withoutResponse) // send data to the writeCharacteristic endpoint
-            print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16)")
-        } else {
-            pendingPackets.append(packet) // enqueue when back-pressured
-        }
-    }
     
     
     func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
