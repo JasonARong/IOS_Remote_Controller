@@ -19,11 +19,12 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private var centralManager: CBCentralManager! /// manages Bluetooth devices connections
     private var peripheral: CBPeripheral? /// Connected Bluetooth devices
     private var writeCharacteristic: CBCharacteristic? /// represent a specific data channel on the Bluetooth device
-    private var pendingPackets = [Data]()
+//    private var pendingPackets = [Data]()
     
     // MARK: State published to UI (optional for debugging)
     @Published var isConnected = false
     @Published var statusMessage = "Initializing Bluetooth..."
+    @Published var packetsDropped: Int = 0
     
     // MARK: UUIDs must match ESP side
     private var serviceUUID = CBUUID(string: "00001234-0000-1000-8000-00805f9b34fb") // “Remote Mouse” service
@@ -33,7 +34,11 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private var accumulatedDX: CGFloat = 0
     private var accumulatedDY: CGFloat = 0
     private var displayLink: CADisplayLink?
-    private let targetFPS: Int = 60
+    private let targetFPS: Int = 45
+    
+    // Statistics
+    private var packetsSent: Int = 0
+    private var lastStatsTime: Date = Date()
     
     override init() { /// override initializer of NSObject
         super.init()
@@ -51,9 +56,9 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private func startDisplayLink() {
         let displayLink = CADisplayLink(target: self, selector: #selector(tick))
         if #available(iOS 15.0, *){ // Prefer targetFPS (60 or 120); system will choose best within this range
-            displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: Float(targetFPS))
+            displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: Float(targetFPS))
         } else {
-            displayLink.preferredFramesPerSecond = targetFPS >= 120 ? 120 : 60
+            displayLink.preferredFramesPerSecond = targetFPS
         }
         displayLink.add(to: .main, forMode: .common) // .main run loop with .common mode
         self.displayLink = displayLink
@@ -65,10 +70,11 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     }
     
     @objc private func tick(){
-        // Grab and reset accumulators
-        let dx = accumulatedDX * 1.25
-        let dy = accumulatedDY * 1.25
-        if dx==0 && dy==0 { return }
+        guard accumulatedDX != 0 || accumulatedDY != 0 else { return }
+        
+        let dx = accumulatedDX
+        let dy = accumulatedDY
+        
         accumulatedDX = 0
         accumulatedDY = 0
         
@@ -100,8 +106,18 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         if peripheral.canSendWriteWithoutResponse {
             peripheral.writeValue(packet, for: char, type: .withoutResponse) // send data to the writeCharacteristic endpoint
             print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16)")
+            packetsSent += 1
+            
+            // Print packet stats every 4 seconds
+            let now = Date()
+            if now.timeIntervalSince(lastStatsTime) > 4.0 {
+                print("📊 Sent \(packetsSent) packets in 4s, dropped: \(packetsDropped)")
+                packetsSent = 0
+                packetsDropped = 0
+                lastStatsTime = now
+            }
         } else {
-            pendingPackets.append(packet) // enqueue when back-pressured
+            packetsDropped += 1
         }
     }
     
@@ -141,9 +157,16 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     }
     
     private func startScan(){
+        guard centralManager.state == .poweredOn else {
+            print("⚠️ Cannot scan - Bluetooth not powered on")
+            return
+        }
         // Scan for Peripherals(devices) based on their advertised service
         print("Start Scanning")
-        centralManager.scanForPeripherals(withServices: [serviceUUID], options: nil)
+        centralManager.scanForPeripherals(
+            withServices: [serviceUUID],
+            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
+        )
     }
     
     // Discover a peripheral during scanning & ask to connect
@@ -160,7 +183,13 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         self.peripheral?.delegate = self
         
         centralManager.stopScan()
-        centralManager.connect(peripheral, options: nil) // connect with the physical device
+        // Set connection options for low latency
+        let options: [String: Any] = [
+            CBConnectPeripheralOptionNotifyOnConnectionKey: true,
+            CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
+            CBConnectPeripheralOptionNotifyOnNotificationKey: true
+        ]
+        centralManager.connect(peripheral, options: options) // connect with the physical device
     }
     
     // Connection succeeded
@@ -171,11 +200,25 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         print("✅ Connected to \(peripheral.name ?? "ESP")")
         statusMessage = "Connected! Trying To Find Service..."
         isConnected = true
-        // Reset any queued state on fresh connection
-        pendingPackets.removeAll()
         writeCharacteristic = nil
+        packetsDropped = 0
+        packetsSent = 0
+        lastStatsTime = Date()
         
-        peripheral.discoverServices([serviceUUID]) // find service that matches UUID
+        //peripheral.discoverServices([serviceUUID]) // find service that matches UUID
+        
+        // Delay service discovery
+        // iOS needs time to complete MTU negotiation and connection setup
+        // Immediate service discovery can cause "device not connected" error
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            guard let self = self,
+                  self.peripheral?.state == .connected else {
+                print("⚠️ Lost connection before service discovery")
+                return
+            }
+            print("🔍 Starting service discovery...")
+            peripheral.discoverServices([self.serviceUUID])
+        }
     }
     
     // Connection failed
@@ -184,8 +227,21 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         didFailToConnect peripheral: CBPeripheral,
         error: Error?
     ){
-        statusMessage = "Fail to connect: \(error?.localizedDescription ?? "Unknown")"
-        print("❌ Connection failed: \(error?.localizedDescription ?? "unknown")")
+        let errorCode = (error as NSError?)?.code ?? -1
+        let errorDomain = (error as NSError?)?.domain ?? "Unknown"
+        
+        statusMessage = "Connection failed: \(error?.localizedDescription ?? "Unknown")"
+        print("❌ Failed to connect: \(error?.localizedDescription ?? "unknown")")
+        print("   Error domain: \(errorDomain), code: \(errorCode)")
+        
+        self.peripheral = nil
+
+        // Wait 2 seconds before retrying - iOS requirement
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            guard let self = self else { return }
+            print("🔄 Retrying scan after connection failure...")
+            self.startScan()
+        }
     }
     
     // Handle disconnect and clear state
@@ -193,15 +249,26 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         _ central: CBCentralManager,
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
-    ){
-        statusMessage = "Disconnected ( \(error?.localizedDescription ?? "no error") )"
-        print("Disconnected ( \(error?.localizedDescription ?? "no error") )")
+    ) {
+        let errorCode = (error as NSError?)?.code ?? -1
+        let errorDomain = (error as NSError?)?.domain ?? "Unknown"
+        
+        statusMessage = "Disconnected: \(error?.localizedDescription ?? "No error")"
+        print("🔌 Disconnected - domain: \(errorDomain), code: \(errorCode)")
+        print("   Description: \(error?.localizedDescription ?? "no error")")
+        
         isConnected = false
         writeCharacteristic = nil
         self.peripheral = nil
-        pendingPackets.removeAll()
         
-        startScan()
+        // CRITICAL FIX #10: Delay before reconnecting
+        // CoreBluetooth needs time to clean up (Apple Forums recommendation: 20ms minimum)
+        // We use 1 second to be safe
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            guard let self = self else { return }
+            print("🔄 Restarting scan after disconnect...")
+            self.startScan()
+        }
     }
     
     
@@ -214,14 +281,25 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     ){
         guard error == nil else{
             print("❌ Service discovery error: \(error!)")
+            statusMessage = "Service discovery failed"
+            centralManager.cancelPeripheralConnection(peripheral)
             return
         }
-        for service in peripheral.services ?? []{
+        
+        guard let services = peripheral.services else {
+            print("⚠️ No services found")
+            return
+        }
+        
+        for service in services {
             print("🧩 Found service: \(service.uuid)")
             if service.uuid == serviceUUID {
                 peripheral.discoverCharacteristics([characteristicUUID], for: service) // Find characteristic that matches UUID
+                return
             }
         }
+        
+        print("⚠️ Target service not found")
     }
     
     func peripheral(
@@ -233,13 +311,25 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             print("❌ Characteristic discovery error: \(error!)")
             return
         }
+        
+        guard let characteristics = service.characteristics else {
+            print("⚠️ No characteristics found")
+            return
+        }
+        
         // characteristic is found
-        for char in service.characteristics ?? [] {
+        for char in characteristics {
             print("📡 Found characteristic: \(char.uuid)")
             if (char.uuid == characteristicUUID){
-                writeCharacteristic = char // setting writeCharacteristic
-                statusMessage = "Ready to send data"
-                print("✅ Write characteristic ready (props: \(char.properties))")
+                // Ckeck write properties support writeWithoutResponse
+                if char.properties.contains(.writeWithoutResponse){
+                    writeCharacteristic = char // setting writeCharacteristic
+                    statusMessage = "Ready to send data"
+                    print("✅ Write characteristic ready (props: \(char.properties))")
+                } else {
+                    print("❌ Characteristic doesn't support writeWithoutResponse")
+                    statusMessage = "Wrong characteristic properties"
+                }
             }
         }
     }
@@ -247,12 +337,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     
     
     func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
-        guard let char = writeCharacteristic else { return }
-        while peripheral.canSendWriteWithoutResponse && !pendingPackets.isEmpty {
-            let packet = pendingPackets.removeFirst()
-            peripheral.writeValue(packet, for: char, type: .withoutResponse)
-            print("🔵 Sent to ESP from pending Packets")
-        }
+        print("🟢 Buffer ready")
     }
     
     
