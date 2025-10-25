@@ -30,7 +30,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             cursorPoint = CGPoint(x: cursorPoint.x + dx, y: cursorPoint.y + dy)
             
             // Send delta to ESP (stub for now)
-            connection.sendDelta(dx: dx, dy: dy)
+            connection.accumulateDelta(dx: dx, dy: dy)
         }
         
         previousPoint = currentLocation

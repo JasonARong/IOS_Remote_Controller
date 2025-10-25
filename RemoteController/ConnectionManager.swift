@@ -18,8 +18,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     // MARK: BLE handles
     private var centralManager: CBCentralManager! /// manages Bluetooth devices connections
     private var peripheral: CBPeripheral? /// Connected Bluetooth devices
-    private var writeCharacteristic: CBCharacteristic? /// represent a specific data channel on the Bluetooth device
-//    private var pendingPackets = [Data]()
+    private var writeBleCharacteristic: CBCharacteristic? /// represent a specific data channel on the Bluetooth device
     
     // MARK: State published to UI (optional for debugging)
     @Published var isConnected = false
@@ -27,19 +26,21 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     @Published var packetsDropped: Int = 0
     
     // MARK: UUIDs must match ESP side
-    private var serviceUUID = CBUUID(string: "00001234-0000-1000-8000-00805f9b34fb") // “Remote Mouse” service
-    private var characteristicUUID = CBUUID(string: "0000abcd-0000-1000-8000-00805f9b34fb") // data endpoint for dx/dy deltas
+    private var serviceUUID = CBUUID(string: "00001234-0000-1000-8000-00805f9b34fb")
+    private var characteristicUUID = CBUUID(string: "0000abcd-0000-1000-8000-00805f9b34fb")
     
     // For smooth cursor movement
     private var accumulatedDX: CGFloat = 0
     private var accumulatedDY: CGFloat = 0
-    private var displayLink: CADisplayLink?
-    private let targetFPS: Int = 45
+    private var displayLink: CADisplayLink? /// use displayLink to send packets at an constant rate
+    private let targetFPS: Int = 45 /// Sending packets' rate
     
     // Statistics
     private var packetsSent: Int = 0
     private var lastStatsTime: Date = Date()
     
+    
+    // MARK: init & deinit
     override init() { /// override initializer of NSObject
         super.init()
         /// delegate: self ( this class will receive Bluetooth callbacks ) ( require self to be delegate type)
@@ -52,15 +53,16 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         stopDisplayLink()
     }
     
+    
     // MARK: - Display link pacing
     private func startDisplayLink() {
         let displayLink = CADisplayLink(target: self, selector: #selector(tick))
-        if #available(iOS 15.0, *){ // Prefer targetFPS (60 or 120); system will choose best within this range
+        if #available(iOS 15.0, *){ // System will choose within preferred targetFPS (60 or 120)
             displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: Float(targetFPS))
         } else {
             displayLink.preferredFramesPerSecond = targetFPS
         }
-        displayLink.add(to: .main, forMode: .common) // .main run loop with .common mode
+        displayLink.add(to: .main, forMode: .common) // ".main" run loop with ".common" mode
         self.displayLink = displayLink
     }
     
@@ -78,8 +80,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         accumulatedDX = 0
         accumulatedDY = 0
         
-        // ESP require number in raw bytes (0x00, 0xFF, etc.)
-        /// turn floating-point deltas into 16-bit integers (2 bytes)
+        // ESP require number in raw bytes
+        /// Turn floating-point deltas into 16-bit integers (e.g. 0x1234) (2 bytes)
         let dxClamped = max(-32767, min(32767, dx))
         let dyClamped = max(-32767, min(32767, dy))
         let dxInt16 = Int16(dxClamped)
@@ -98,7 +100,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         
         
         guard let peripheral = peripheral,
-              let char = writeCharacteristic else {
+              let char = writeBleCharacteristic else {
             print("⚪️ Stub: would send dx=\(dxInt16), dy=\(dyInt16)")
             return
         }
@@ -121,8 +123,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         }
     }
     
-    // MARK: - Public API (OG: Send data)
-    func sendDelta(dx: CGFloat, dy: CGFloat) {
+    // MARK: - Public API
+    func accumulateDelta(dx: CGFloat, dy: CGFloat) {
         accumulatedDX += dx
         accumulatedDY += dy
     }
@@ -177,22 +179,21 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         rssi RSSI: NSNumber // signal strength
     ){
         print("🔍 Found peripheral: \(peripheral.name ?? "Unknown")")
-        //print("AdvertisementData: \(advertisementData)")
         statusMessage = "Connecting to \(peripheral.name ?? "ESP")..."
         self.peripheral = peripheral // setting peripheral
         self.peripheral?.delegate = self
         
         centralManager.stopScan()
-        // Set connection options for low latency
-        let options: [String: Any] = [
+        
+        let options: [String: Any] = [ // Enable connection notifications
             CBConnectPeripheralOptionNotifyOnConnectionKey: true,
             CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
             CBConnectPeripheralOptionNotifyOnNotificationKey: true
         ]
-        centralManager.connect(peripheral, options: options) // connect with the physical device
+        centralManager.connect(peripheral, options: options) // connect to the physical device
     }
     
-    // Connection succeeded
+    // Connection successful
     func centralManager(
         _ central: CBCentralManager,
         didConnect peripheral: CBPeripheral
@@ -200,16 +201,13 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         print("✅ Connected to \(peripheral.name ?? "ESP")")
         statusMessage = "Connected! Trying To Find Service..."
         isConnected = true
-        writeCharacteristic = nil
+        writeBleCharacteristic = nil
         packetsDropped = 0
         packetsSent = 0
         lastStatsTime = Date()
         
-        //peripheral.discoverServices([serviceUUID]) // find service that matches UUID
-        
         // Delay service discovery
         // iOS needs time to complete MTU negotiation and connection setup
-        // Immediate service discovery can cause "device not connected" error
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
             guard let self = self,
                   self.peripheral?.state == .connected else {
@@ -229,14 +227,13 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     ){
         let errorCode = (error as NSError?)?.code ?? -1
         let errorDomain = (error as NSError?)?.domain ?? "Unknown"
-        
-        statusMessage = "Connection failed: \(error?.localizedDescription ?? "Unknown")"
         print("❌ Failed to connect: \(error?.localizedDescription ?? "unknown")")
         print("   Error domain: \(errorDomain), code: \(errorCode)")
+        statusMessage = "Connection failed: \(error?.localizedDescription ?? "Unknown")"
         
         self.peripheral = nil
 
-        // Wait 2 seconds before retrying - iOS requirement
+        // Delay 2s before retrying - iOS requirement
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             guard let self = self else { return }
             print("🔄 Retrying scan after connection failure...")
@@ -258,12 +255,11 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         print("   Description: \(error?.localizedDescription ?? "no error")")
         
         isConnected = false
-        writeCharacteristic = nil
+        writeBleCharacteristic = nil
         self.peripheral = nil
         
-        // CRITICAL FIX #10: Delay before reconnecting
-        // CoreBluetooth needs time to clean up (Apple Forums recommendation: 20ms minimum)
-        // We use 1 second to be safe
+        // Delay 1s before reconnecting
+        // CoreBluetooth needs time to clean up (20ms minimum)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
             guard let self = self else { return }
             print("🔄 Restarting scan after disconnect...")
@@ -323,7 +319,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             if (char.uuid == characteristicUUID){
                 // Ckeck write properties support writeWithoutResponse
                 if char.properties.contains(.writeWithoutResponse){
-                    writeCharacteristic = char // setting writeCharacteristic
+                    writeBleCharacteristic = char // setting writeCharacteristic
                     statusMessage = "Ready to send data"
                     print("✅ Write characteristic ready (props: \(char.properties))")
                 } else {
