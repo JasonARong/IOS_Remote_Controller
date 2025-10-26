@@ -57,7 +57,8 @@ struct TouchPadView: View {
                    .padding(8)
                 
                 Text(connection.statusMessage)
-//                Text(connection.isConnected ? "Connected" : "Disconnected")
+                Text(viewModel.mouseStatus)
+                
             }
         }
     }

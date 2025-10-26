@@ -35,6 +35,11 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private var displayLink: CADisplayLink? /// use displayLink to send packets at an constant rate
     private let targetFPS: Int = 45 /// Sending packets' rate
     
+    // Mouse Button
+    private var buttonsState: UInt8 = 0 // bit0 = left
+    private var buttonDirty: Bool = false // Mark state changes => require data to be sent
+    private var leftHeld: Bool = false
+    
     // Statistics
     private var packetsSent: Int = 0
     private var lastStatsTime: Date = Date()
@@ -72,10 +77,12 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     }
     
     @objc private func tick(){
-        guard accumulatedDX != 0 || accumulatedDY != 0 else { return }
+        let hasMoved = (accumulatedDX != 0 || accumulatedDY != 0)
+        let shouldSend = leftHeld || buttonDirty || hasMoved
+        guard shouldSend else { return }
         
-        let dx = accumulatedDX
-        let dy = accumulatedDY
+        let dx = accumulatedDX * 1.25
+        let dy = accumulatedDY * 1.25
         
         accumulatedDX = 0
         accumulatedDY = 0
@@ -88,8 +95,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         let dyInt16 = Int16(dyClamped)
         
         // Build packet
-        // Packet structure: [dx_low, dx_high, dy_low, dy_high]
-        var packet = Data() // Data(): raw bytes container.
+        // Packet structure: [buttons, reserved, dxLE(2), dyLE(2)] → 6 bytes
+        var packet = Data([buttonsState,0x00]) // Data(): raw bytes container.
         /// little-endian byte order: least significant byte first, ESP32 uses this order
         withUnsafeBytes(of: dxInt16.littleEndian) { bytes in /// bytes: pointer to the memory containing dxInt16
             packet.append(contentsOf: bytes) /// withUnsafeBytes accesses the raw bytes in actual memory via pointer
@@ -107,7 +114,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         
         if peripheral.canSendWriteWithoutResponse {
             peripheral.writeValue(packet, for: char, type: .withoutResponse) // send data to the writeCharacteristic endpoint
-            print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16)")
+            print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16), button=\(buttonsState)")
+            buttonDirty = false
             packetsSent += 1
             
             // Print packet stats every 4 seconds
@@ -128,6 +136,32 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         accumulatedDX += dx
         accumulatedDY += dy
     }
+    
+    // Left mouse button click down
+    func leftDown() {
+        // If left button is not currently pressed
+        if (buttonsState & 0x01) == 0 {
+            buttonsState |= 0x01 // OR assign with 1
+            buttonDirty = true
+            leftHeld = true
+        }
+    }
+    func leftUp() {
+        if (buttonsState & 0x01) != 0 {
+            buttonsState &= ~UInt8(0x01)
+            buttonDirty = true
+            leftHeld = false
+        }
+    }
+    func leftTap() {
+        leftDown()
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self else { return }
+            leftUp()
+        }
+    }
+    
     
     
     // MARK: CBCentralManagerDelegate
