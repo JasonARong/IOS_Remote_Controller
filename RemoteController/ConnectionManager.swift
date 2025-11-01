@@ -141,14 +141,15 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     func leftDown() {
         // If left button is not currently pressed
         if (buttonsState & 0x01) == 0 {
-            buttonsState |= 0x01 // OR assign with 1
+            buttonsState |= 0x01 // buttonsState(0x00) | 0x01 = 1
             buttonDirty = true
             leftHeld = true
         }
     }
     func leftUp() {
+        // If left button is currently pressed
         if (buttonsState & 0x01) != 0 {
-            buttonsState &= ~UInt8(0x01)
+            buttonsState &= ~UInt8(0x01) // buttonsState(0b00000001) & 0b11111110 = 0
             buttonDirty = true
             leftHeld = false
         }

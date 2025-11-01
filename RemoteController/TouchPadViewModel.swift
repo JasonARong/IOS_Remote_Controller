@@ -18,7 +18,6 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     // --- Gesture state ---
     private var startPoint: CGPoint? = nil
     private var previousPoint: CGPoint? = nil
-    private var startTime: Date?
     private var holdTimer: Timer?
     private var movedBeyondSlop: Bool = false
     private var isHolding: Bool = false
@@ -32,13 +31,24 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         self.connection = connection
     }
     
-    func handleDragChanged(_ current: CGPoint) {
+    func handleTouchesChanged(_ touches: Set<UITouch>, event: UIEvent?) {
+        
+        // Only react to single-finger gestures for now
+        if activeTouchCount(from: event) != 1{
+            cancelHold()
+            return
+        }
+        
+        guard let touch = touches.first,
+              let view = touch.view else { return }
+        let current = touch.location(in: view)
+
+
         // First contact
-        if startTime == nil {
+        if startPoint == nil {
             mouseStatus = "First contact"
             startPoint = current
             previousPoint = current
-            startTime = Date()
             movedBeyondSlop = false
             isHolding = false
             
@@ -46,7 +56,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             holdTimer = Timer.scheduledTimer(withTimeInterval: holdDelay, repeats: false){ [weak self] _ in
                 guard let self = self else { return }
                 
-                // If still within slop and not already holding → begin hold
+                // If still within slop and not already holding => begin hold
                 if let start = self.startPoint,
                    let prev = self.previousPoint,
                    !self.movedBeyondSlop,
@@ -63,7 +73,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         }
         
         // Movement
-        if let prev = previousPoint{
+        if let prev = previousPoint {
             let dx = current.x - prev.x
             let dy = current.y - prev.y
             let delta = CGSize(width: dx, height: dy)
@@ -80,9 +90,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         if let start = startPoint {
             if distance(from: start, to: current) > moveSlopRadius {
                 movedBeyondSlop = true
-                if !isHolding { // start moving before 2s, stop hold timer
-                    holdTimer?.invalidate()
-                    holdTimer = nil
+                if !isHolding { // start moving before holdDelay => mouse movement, stop hold timer
+                    cancelHold()
                 }
             }
         }
@@ -90,11 +99,10 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         previousPoint = current
     }
     
-    func handleDragEnded() {
-        mouseStatus="Released" 
+    func handleTouchesEnded(_ touches: Set<UITouch>, event: UIEvent?) {
+        mouseStatus="Released"
         // Stop any pending hold
-        holdTimer?.invalidate()
-        holdTimer = nil
+        cancelHold()
         
         if isHolding{
             mouseStatus="Released from holding" 
@@ -112,10 +120,22 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         // Reset gesture state
         startPoint = nil
         previousPoint = nil
-        startTime = nil
         movedBeyondSlop = false
         isHolding = false
         lastDelta = nil
+    }
+    
+    // Helpers
+    private func activeTouchCount(from event: UIEvent?) -> Int {
+        guard let all = event?.allTouches else { return 0 }
+        return all.filter { touchEvent in
+            touchEvent.phase != .ended && touchEvent.phase != .cancelled
+        }.count
+    }
+    
+    private func cancelHold() {
+        holdTimer?.invalidate()
+        holdTimer = nil
     }
     
     private func distance(from a: CGPoint, to b: CGPoint) -> CGFloat {

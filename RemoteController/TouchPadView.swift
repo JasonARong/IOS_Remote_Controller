@@ -28,26 +28,48 @@ struct TouchPadView: View {
     
     var body: some View {
         ZStack{
-            Rectangle()
-                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [12,4])) // draw border inside the rectangle shape
-                .background(Rectangle().fill(Color(white: 0.98))) // puts another filled rectangle behind
-                .overlay{
-                    ZStack{
-                        Circle() // Cursor
-                            .fill(Color.gray)
-                            .frame(width:40, height:40)
-                            .position(viewModel.cursorPoint)
-                    }
+//            Rectangle()
+//                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [12,4])) // draw border inside the rectangle shape
+//                .background(Rectangle().fill(Color(white: 0.98))) // puts another filled rectangle behind
+//                .overlay{
+//                    ZStack{
+//                        Circle() // Cursor
+//                            .fill(Color.gray)
+//                            .frame(width:40, height:40)
+//                            .position(viewModel.cursorPoint)
+//                    }
+//                }
+//                .gesture(
+//                    DragGesture(minimumDistance: 0) // Tap as drag
+//                        .onChanged { value in
+//                            viewModel.handleDragChanged(value.location)
+//                        }
+//                        .onEnded { _ in // use _ when explicitly ignore value
+//                            viewModel.handleDragEnded()
+//                        }
+//                )
+            
+            TouchPadUIViewRepresentable(
+                onTouchesChanged: { touches, event in
+                    viewModel.handleTouchesChanged(touches, event: event)
+                },
+                onTouchesEnded: { touches, event in
+                    viewModel.handleTouchesEnded(touches, event: event)
                 }
-                .gesture(
-                    DragGesture(minimumDistance: 0) // Tap as drag
-                        .onChanged { value in
-                            viewModel.handleDragChanged(value.location)
-                        }
-                        .onEnded { _ in // use _ when explicitly ignore value
-                            viewModel.handleDragEnded()
-                        }
-                )
+            )
+            .background(Color(white: 0.98))
+            
+            // Decorations should NOT intercept touches:
+            Rectangle()
+                .stroke(style: StrokeStyle(lineWidth: 2, dash: [12,4]))
+                .allowsHitTesting(false)
+            ZStack {
+                Circle()
+                    .fill(Color.gray)
+                    .frame(width: 40, height: 40)
+                    .position(viewModel.cursorPoint)
+            }.allowsHitTesting(false)
+            
             
             VStack {
                 Text(pointText)
