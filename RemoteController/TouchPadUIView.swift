@@ -8,12 +8,13 @@
 import Foundation
 import UIKit
 
+// UIKit UIView to support multi-touch
 final class TouchPadUIView: UIView {
-    // Callbacks for SwiftUI layer
+    // Callbacks from the SwiftUI layer
     var onTouchesChanged: ( (Set<UITouch>, UIEvent?)->Void )?
     var onTouchesEnded:   ( (Set<UITouch>, UIEvent?)->Void )?
     
-    override init(frame: CGRect) {
+    override init(frame: CGRect) { // frame is set by swiftUI (it controls the size and position)
         super.init(frame: frame)
         isMultipleTouchEnabled = true
         isUserInteractionEnabled = true
@@ -24,6 +25,7 @@ final class TouchPadUIView: UIView {
     }
     
     // MARK: - Touch Handlers
+    // Forward all gestures to onTouchesChanged & onTouchesEnded from TouchPadViewModel to handle
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         onTouchesChanged?(touches, event)
     }

@@ -108,7 +108,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         
         guard let peripheral = peripheral,
               let char = writeBleCharacteristic else {
-            print("⚪️ Stub: would send dx=\(dxInt16), dy=\(dyInt16)")
+//            print("⚪️ Stub: would send dx=\(dxInt16), dy=\(dyInt16)")
             return
         }
         
