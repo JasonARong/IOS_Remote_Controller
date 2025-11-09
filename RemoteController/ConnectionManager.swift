@@ -36,7 +36,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private let targetFPS: Int = 45 /// Sending packets' rate
     
     // Mouse Button
-    private var buttonsState: UInt8 = 0 // bit0 = left
+    private var buttonsState: UInt8 = 0 // [0b00000000] bit0 = left btn, bit1 = right btn
     private var buttonDirty: Bool = false // Mark state changes => require data to be sent
     private var leftHeld: Bool = false
     
@@ -59,7 +59,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     }
     
     
-    // MARK: - Display link pacing
+    // MARK: - Send to ESP
+    // Display link pacing
     private func startDisplayLink() {
         let displayLink = CADisplayLink(target: self, selector: #selector(tick))
         if #available(iOS 15.0, *){ // System will choose within preferred targetFPS (60 or 120)
@@ -131,13 +132,15 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         }
     }
     
+    
+    
     // MARK: - Public API
     func accumulateDelta(dx: CGFloat, dy: CGFloat) {
         accumulatedDX += dx
         accumulatedDY += dy
     }
     
-    // Left mouse button click down
+    // Left mouse button
     func leftDown() {
         // If left button is not currently pressed
         if (buttonsState & 0x01) == 0 {
@@ -156,12 +159,33 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     }
     func leftTap() {
         leftDown()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) { [weak self] in
             guard let self = self else { return }
             leftUp()
         }
     }
+    
+    // Right mouse button
+    func rightDown() {
+        if (buttonsState & 0x02 ) == 0 { // if right is pressed
+            buttonsState |= 0x02 // buttonsState(0b0000000) | 0b0000010 = 2
+            buttonDirty = true
+        }
+    }
+    func rightUp() {
+        if (buttonsState & 0x02) != 0 { // if right is not pressed
+            buttonsState &= ~UInt8(0x02) // buttonsState(0b0000010) & 0b11111101 = 0
+            buttonDirty = true
+        }
+    }
+    func rightTap() {
+        rightDown()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) { [weak self] in
+            guard let self = self else { return }
+            rightUp()
+        }
+    }
+    
     
     
     

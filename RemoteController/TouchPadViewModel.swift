@@ -301,7 +301,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                     let bothWithinSlop = (!i1.movedBeyondSlop && !i2.movedBeyondSlop) // within slop
                     
                     if twoFingerCtx.isTapCandidate && liftsClose && withinDuration && bothWithinSlop {
-                        // TODO: connection.rightTap()
+                        connection.rightTap()
                         print("Right Click!!!")
                     }
                 }
