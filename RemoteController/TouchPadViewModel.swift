@@ -12,6 +12,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     @Published var cursorPoint: CGPoint = CGPoint(x: 100, y: 100)
     @Published var lastDelta: CGSize? = nil
     @Published var mouseStatus: String = "Released"
+    @Published var gestureStatus: String = "idle"
     
     private let connection: ConnectionManager
     
@@ -21,27 +22,45 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     // 2 Fingers
     private let pairWindow: TimeInterval      = 0.12   // second finger must arrive within 120ms
     private let tapMaxDuration: TimeInterval  = 0.25   // total duration limit
-    private let liftWindow: TimeInterval      = 0.12   // both lifts within 120ms
-    private let twoFingerSlop: CGFloat        = 12.0   // movement tolerance per finger (or centroid)
+    private let liftWindow: TimeInterval      = 0.12   // both lifts closely within 120ms
     
     
     // --- Touch tracking ---
-    private(set) var activeTouches: [UITouch : TouchInfo] = [:]
     private var primaryTouch: UITouch? = nil
-    // 2 Fingers
-    private var secondaryTouch: UITouch? = nil
+    
+    private(set) var activeTouches: [UITouch : TouchInfo] = [:]
+    final class TouchInfo { // Holds the touch Info for each touch
+        var startPoint: CGPoint? = nil
+        var previousPoint: CGPoint? = nil
+        var holdTimer: Timer?
+        var movedBeyondSlop: Bool = false
+        var isHolding: Bool = false
+        
+        // 2 fingers: timestamps for pairing / tap windows
+        var downTime: TimeInterval = 0
+        var lastMoveTime: TimeInterval = 0
+        var upTime: TimeInterval = 0
+    }
+            
+    private var twoFingerContext: TwoFingerContext? = nil
+    private struct TwoFingerContext {
+        let touch1: UITouch            // first finger (earlier downTime)
+        let touch2: UITouch            // second finger (later downTime)
+        let startedAt: CFTimeInterval
+        var firstLiftAt: CFTimeInterval? = nil
+        var firstLiftDeadline: CFTimeInterval? = nil
+        var isTapCandidate: Bool = true
+        var lastCentroid: CGPoint? = nil      // ready for scroll use later
+    }
+        
     private var gestureState: GestureState = GestureState.idle
-    private var pairStartTime: TimeInterval = 0
-    private var firstLiftTime: TimeInterval? = nil
-    
-    
     private enum GestureState {
         case idle
         case singleActive
-        case twoFingerPending       // classifying: tap vs scroll (scroll later)
-        case twoFingerTapCandidate  // both within slop + within windows
+        case twoFingerPending       // classifying: tap vs scroll (scroll later)        
         case twoFingerScroll
     }
+    
     
     init(connection: ConnectionManager){
         self.connection = connection
@@ -49,11 +68,10 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     
     
     // MARK: - Handle Touches Changed
-    
     func handleTouchesChanged(_ touches: Set<UITouch>, event: UIEvent?) {
-        // register all new touches with timestamps
         let now = CACurrentMediaTime()
         
+        // register all new touches with timestamps
         for touch in touches {
             if activeTouches[touch] == nil {
                 let info = TouchInfo()
@@ -62,159 +80,24 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             }
         }
         
-        let activeTouchCount = activeTouchCount(from: event)
+        let activeTouchCount = activeTouches.count
         
         switch activeTouchCount {
         case 1:
-            gestureState = .singleActive
+            // === One-finger mode ===
+            gestureState = .singleActive // setting gesture state
+            gestureStatus = "singleActive"
             handleSingleFingerChanged(touches, event: event)
         case 2:
-            // First time we see 2 fingers
-            // → cancel single-finger holds and enter 2-finger pipeline
-            if gestureState == .singleActive || gestureState == .idle {
-                cancelAllHolds() // cancel single-finger holds
-                gestureState = .twoFingerPending
-                
-                // lock primary/secondary, keep ordering stable
-                // Sort touches based on their down time
-                let sortedTouches = activeTouches.sorted { $0.value.downTime < $1.value.downTime }
-                primaryTouch = sortedTouches.first?.key
-                secondaryTouch = sortedTouches.dropFirst().first?.key
-                pairStartTime = now
-            }
-            handleTwoFingerChanged(touches, event: event)
+            // === Enter or update two-finger mode ===
+            handleTwoFingerChanged(now: now)
             
         default:
             break // ignore 3+ fingers
         }
     }
     
-    
-    // MARK: - Handle Touches Ended
-    
-    func handleTouchesEnded(_ touches: Set<UITouch>, event: UIEvent?) {
-        mouseStatus="Some touches released"
-        let now = CACurrentMediaTime()
-        
-        // 1) Per-touch bookkeeping: stop holds + stamp upTime
-        for touch in touches {
-            cancelHold(touch: touch)
-            activeTouches[touch]?.upTime = now
-        }
-
-        
-        // 2) How many touches are still actively down?
-        let remainingActive = activeTouchCount(from: event)
-        
-        switch gestureState {
-        case .idle:
-            // Nothing to commit; just remove ended (paranoia) and keep idle.
-            removeEndedTouches(touches)
-            rearmStateAfterRemoval()
-            return
-         
-        // ===== SINGLE-FINGER PIPELINE =====
-        case .singleActive:
-            commitSingleFingerIfNeeded(endedTouches: touches)
-            
-            removeEndedTouches(touches)
-            rearmStateAfterRemoval()
-            return
-            
-        // ===== TWO-FINGER PIPELINE =====
-        case .twoFingerPending, .twoFingerTapCandidate, .twoFingerScroll:
-            if remainingActive >= 2 { return }
-            if remainingActive == 1 {
-                if firstLiftTime == nil {
-                    firstLiftTime = now // First lift during a two-finger gesture.
-                }
-                return
-            }
-            // remainingActive == 0, time to decide and clean up.
-            commitTwoFingerIfNeededAndReset(now: now)
-            return
-        }
-    }
-       
-    // MARK: - Touches Ended Helpers
-    private func commitSingleFingerIfNeeded(endedTouches: Set<UITouch>) {
-        guard let prim = primaryTouch,
-              endedTouches.contains(prim),
-              let info = activeTouches[prim]
-        else { return }
-
-        if info.isHolding {
-            mouseStatus = "Left released from hold"
-            connection.leftUp()
-        } else if let s = info.startPoint, let p = info.previousPoint,
-                  distance(from: s, to: p) <= moveSlopRadius {
-            mouseStatus = "Left tap"
-            connection.leftTap()
-        }
-    }
-    
-    // Decide two-finger right-click (if qualified), then cleanly reset everything
-    private func commitTwoFingerIfNeededAndReset(now: TimeInterval) {
-        defer { resetToIdle() } // Always leave two-finger pipeline fully reset
-
-        guard let t1 = primaryTouch, let t2 = secondaryTouch,
-              let i1 = activeTouches[t1], let i2 = activeTouches[t2]
-        else { return }
-
-        // Windows & constraints
-        let liftsClose: Bool = {
-            guard let first = firstLiftTime else { return true } // both ended together
-            return (now - first) <= liftWindow
-        }()
-
-        let withinPair = abs(i1.downTime - i2.downTime) <= pairWindow
-        let withinTapDuration = (now - min(i1.downTime, i2.downTime)) <= tapMaxDuration
-        let bothWithinSlop = (i1.movedBeyondSlop == false) && (i2.movedBeyondSlop == false)
-
-        if (gestureState == .twoFingerTapCandidate || gestureState == .twoFingerPending),
-           liftsClose, withinPair, withinTapDuration, bothWithinSlop {
-            // TODO: connection.rightTap()   // ✅ two-finger tap → right-click
-            print("Right clicked!!!!")
-        }
-
-        // (If you later add two-finger scroll, you can branch here when state == .twoFingerScroll)
-    }
-    
-    
-    // Remove ended touches from the dictionary
-    private func removeEndedTouches(_ touches: Set<UITouch>) {
-        for t in touches {
-            activeTouches.removeValue(forKey: t)
-        }
-    }
-    
-    private func rearmStateAfterRemoval() {
-        let count = activeTouches.count
-        if count == 0 {
-            resetToIdle()
-        } else if count == 1 {
-            gestureState = .singleActive
-            // pick/repair primaryTouch from the only remaining key:
-            if primaryTouch == nil {
-                primaryTouch = activeTouches.keys.first
-            }
-        } else {
-            if gestureState == .idle { gestureState = .twoFingerPending }
-        }
-    }
-    
-    private func resetToIdle() {
-        gestureState = .idle
-        firstLiftTime = nil
-        primaryTouch = nil
-        secondaryTouch = nil
-        activeTouches.removeAll()
-        mouseStatus = "Idle"
-    }
-    
-    
-    
-    // MARK: - One Finger
+    // MARK: - One Finger Change
     func handleSingleFingerChanged(_ touches: Set<UITouch>, event: UIEvent?) {
         
         guard let touch = touches.first,
@@ -265,50 +148,206 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     }
     
     
-    // MARK: - Two Fingers (placeholder for now)
-    private func handleTwoFingerChanged(_ touches: Set<UITouch>, event: UIEvent?) {
-        mouseStatus = "Two fingers detected"
-        guard let t1 = primaryTouch, let t2 = secondaryTouch,
-              let i1 = activeTouches[t1], let i2 = activeTouches[t2] else { return } // touchInfo i1 and i2
+    // MARK: - Two Fingers Change
+    private func handleTwoFingerChanged(now: CFTimeInterval) {
+        mouseStatus = "Handle Two fingers"
         
-        let now = CACurrentMediaTime()
+        // --- Ensure we have two touches ---
+        let keys = Array(activeTouches.keys)
+        guard keys.count == 2,
+              let info1 = activeTouches[keys[0]],
+              let info2 = activeTouches[keys[1]] else { return }
         
-        // Update points & per-finger slop for both t1 and t2
-        for touch in [t1, t2] {
-            guard let view = touch.view,
-                  let touchInfo = activeTouches[touch] else { continue }
-            
-            let current = touch.location(in: view)
-            if touchInfo.startPoint == nil { // first contact
-                touchInfo.startPoint = current
-                touchInfo.previousPoint = current
-            } else {
-                touchInfo.previousPoint = current
+        // --- Initialize context if needed ---
+        if twoFingerContext == nil {
+            cancelAllHolds()
+            let sorted = [(keys[0], info1), (keys[1], info2)].sorted {
+                $0.1.downTime < $1.1.downTime // sort based on down time aka touch order
             }
-            touchInfo.lastMoveTime = now
+            twoFingerContext = TwoFingerContext(touch1: sorted[0].0, touch2: sorted[1].0, startedAt: now)
             
-            if let s = touchInfo.startPoint,
-               distance(from: s, to: current) > twoFingerSlop {
-                touchInfo.movedBeyondSlop = true
-            }
-        }
-        
-        // Windows / constraints for two-finger tap candidate
-        let withinPair = abs(i1.downTime - i2.downTime) <= pairWindow // down around the same time
-        let withinTapDuration = (now - min(i1.downTime, i2.downTime)) <= tapMaxDuration // quick tap
-        let bothWithinSlop = (i1.movedBeyondSlop == false) && (i2.movedBeyondSlop == false)
-        
-        if withinPair && withinTapDuration && bothWithinSlop {
-            gestureState = .twoFingerTapCandidate
-        } else {
-            // Movement/time exceeded → not a tap anymore.
-            // (We’ll route to scroll later; for now just stay pending.)
             gestureState = .twoFingerPending
+            gestureStatus = "twoFingerPending"
         }
+            
+        guard var twoFingerCtx = twoFingerContext else { return }
+        
+        // --- Update 2 fingers' positions & slop ---
+        for (touch, touchInfo) in activeTouches { // Loop twice for 2 fingers
+            guard let view = touch.view else { continue }
+            let currLocation = touch.location(in: view)
+            
+            if touchInfo.startPoint == nil { // first contact
+                touchInfo.startPoint = currLocation
+                touchInfo.previousPoint = currLocation
+            }
+            else { // update existing 2 fingers
+                if let start = touchInfo.startPoint { // check slop
+                    let dist = distance(from: start, to: currLocation)
+                    if dist > moveSlopRadius { touchInfo.movedBeyondSlop = true } // update slop check
+                }
+                touchInfo.previousPoint = currLocation // update position
+            }
+        }
+        
+        // --- Update tap candidacy ---
+        let i1 = activeTouches[twoFingerCtx.touch1]! // TouchInfo 1
+        let i2 = activeTouches[twoFingerCtx.touch2]! // TouchInfo 2
+        let withinPair = abs(i1.downTime - i2.downTime) <= pairWindow
+        let withinDuration = (now - min(i1.downTime, i2.downTime)) <= tapMaxDuration
+        let bothWithinSlop = (!i1.movedBeyondSlop && !i2.movedBeyondSlop)
+        
+        twoFingerCtx.isTapCandidate = withinPair && withinDuration && bothWithinSlop
+        
+        // --- Check if grace deadline expired (after one finger lifted) ---
+        if let deadline = twoFingerCtx.firstLiftDeadline,
+           now > deadline { // over deadline
+            if let remaining = activeTouches.keys.first(where: {
+                $0.phase != .ended && $0.phase != .cancelled // filter to find active finger
+            }) {
+                twoToOneFinger(remainingTouch: remaining)
+            } else {
+                resetToIdle()
+            }
+            return
+        }
+        
+        // --- Save context back ---
+        twoFingerContext = twoFingerCtx
+        
     }
     
     
-    // MARK: - Hold / Utilities Helpers
+    
+    
+    // MARK: - Handle Touches Ended
+    
+    func handleTouchesEnded(_ touches: Set<UITouch>, event: UIEvent?) {
+        mouseStatus="Some touches released"
+        let now = CACurrentMediaTime()
+        
+        // bookkeeping for each touch: stop holds + stamp upTime
+        for touch in touches {
+            cancelHold(touch: touch)
+            activeTouches[touch]?.upTime = now
+        }
+
+        
+        // How many touches are still actively down?
+        let remainingActive = activeTouchCount(from: event)
+        
+        switch gestureState {
+        case .idle:
+            // Nothing to commit; just remove ended (paranoia) and keep idle.
+            resetToIdle()
+            return
+         
+        // ===== SINGLE-FINGER PIPELINE =====
+        case .singleActive:
+            guard let prim = primaryTouch,
+                  touches.contains(prim),
+                  let info = activeTouches[prim]
+            else { return }
+
+            if info.isHolding {
+                mouseStatus = "Left released from hold"
+                connection.leftUp()
+            } else if let s = info.startPoint, let p = info.previousPoint,
+                      distance(from: s, to: p) <= moveSlopRadius {
+                mouseStatus = "Left tap"
+                connection.leftTap()
+            }
+            
+            resetToIdle()
+            return
+            
+        // ===== TWO-FINGER PIPELINE =====
+        case .twoFingerPending, .twoFingerScroll:
+            guard var twoFingerCtx = twoFingerContext else {
+                resetToIdle()
+                return
+            }
+            
+            // 1 active touch left
+            if remainingActive == 1 {
+                // first finger lift
+                if twoFingerCtx.firstLiftAt == nil { // update first lift time & deadline
+                    twoFingerCtx.firstLiftAt = now
+                    twoFingerCtx.firstLiftDeadline = now + liftWindow
+                }
+                
+                // when not a tap candidate, transition to singleActive
+                if !twoFingerCtx.isTapCandidate {
+                    if let remaining = activeTouches.keys.first(where: {
+                        $0.phase != .ended && $0.phase != .cancelled // filter to find active finger
+                    }) {
+                        twoToOneFinger(remainingTouch: remaining)
+                    } else {
+                        resetToIdle()
+                    }
+                    return
+                }
+                twoFingerContext = twoFingerCtx
+                return
+            }
+            
+            // 0 active touch left
+            if remainingActive == 0{
+                if let i1 = activeTouches[twoFingerCtx.touch1],
+                   let i2 = activeTouches[twoFingerCtx.touch2]{
+                    let liftsClose = (twoFingerCtx.firstLiftAt == nil) ||
+                        ((now - (twoFingerCtx.firstLiftAt ?? now)) <= liftWindow) // two fingers lifted closely time wise
+                    let withinDuration = (now - min(i1.downTime, i2.downTime)) <= tapMaxDuration // two fingers tap instead of hold
+                    let bothWithinSlop = (!i1.movedBeyondSlop && !i2.movedBeyondSlop) // within slop
+                    
+                    if twoFingerCtx.isTapCandidate && liftsClose && withinDuration && bothWithinSlop {
+                        // TODO: connection.rightTap()
+                        print("Right Click!!!")
+                    }
+                }
+                resetToIdle()
+                return
+            }
+        }
+    }
+       
+    // MARK: - Touches Ended Helpers
+
+    // Transition from two fingers to singleActive
+    private func twoToOneFinger(remainingTouch: UITouch) {
+        gestureState = .singleActive // update gesture state to singleActive
+        gestureStatus = "singleActive"
+        twoFingerContext = nil
+        // keep the only remaining touch
+        for (t, _) in activeTouches where t != remainingTouch {
+            activeTouches.removeValue(forKey: t)
+        }
+        primaryTouch = remainingTouch
+        
+        // update remaining touch's touchInfo
+        if let view = remainingTouch.view,
+           let touchInfo = activeTouches[remainingTouch]{
+            let currLocation = remainingTouch.location(in: view)
+            touchInfo.startPoint = currLocation
+            touchInfo.previousPoint = currLocation
+            touchInfo.movedBeyondSlop = false
+            touchInfo.isHolding = false
+        }
+    }
+            
+    private func resetToIdle() {
+        twoFingerContext = nil
+        primaryTouch = nil
+        activeTouches.removeAll()
+        gestureState = .idle
+        
+        gestureStatus = "idle"
+        mouseStatus = "Idle"
+    }
+            
+    
+    
+    // MARK: - Hold Timer Helpers
     private func startHoldTimer(for touch: UITouch) {
         guard let touchInfo = activeTouches[touch] else { return }
         
@@ -330,13 +369,6 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         }
     }
     
-    private func activeTouchCount(from event: UIEvent?) -> Int {
-        guard let all = event?.allTouches else { return 0 }
-        return all.filter { touchEvent in
-            touchEvent.phase != .ended && touchEvent.phase != .cancelled
-        }.count
-    }
-    
     private func cancelHold(touch: UITouch) {
         guard let touchInfo = activeTouches[touch] else { return }
         touchInfo.holdTimer?.invalidate()
@@ -349,25 +381,19 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         }
     }
     
+    // MARK: - Utilities Helpers
+    private func activeTouchCount(from event: UIEvent?) -> Int {
+        guard let all = event?.allTouches else { return 0 }
+        return all.filter { touchEvent in
+            touchEvent.phase != .ended && touchEvent.phase != .cancelled
+        }.count
+    }
+    
     private func distance(from a: CGPoint, to b: CGPoint) -> CGFloat {
         let dx = b.x - a.x
         let dy = b.y - a.y
         return sqrt(dx*dx + dy*dy)
     }
     
-    
-    // MARK: - TouchInfo Class
-    // Holds the touch Info for each touch
-    final class TouchInfo {
-        var startPoint: CGPoint? = nil
-        var previousPoint: CGPoint? = nil
-        var holdTimer: Timer?
-        var movedBeyondSlop: Bool = false
-        var isHolding: Bool = false
-        
-        // 2 fingers: timestamps for pairing / tap windows
-        var downTime: TimeInterval = 0
-        var lastMoveTime: TimeInterval = 0
-        var upTime: TimeInterval = 0
-    }
+
 }

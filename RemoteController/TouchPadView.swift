@@ -59,6 +59,7 @@ struct TouchPadView: View {
                 
                 Text(connection.statusMessage)
                 Text(viewModel.mouseStatus)
+                Text("Gesture: \(viewModel.gestureStatus)")
                 
             }
         }
