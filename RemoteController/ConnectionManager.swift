@@ -29,16 +29,22 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private var serviceUUID = CBUUID(string: "00001234-0000-1000-8000-00805f9b34fb")
     private var characteristicUUID = CBUUID(string: "0000abcd-0000-1000-8000-00805f9b34fb")
     
-    // For smooth cursor movement
+    // Cursor movement
     private var accumulatedDX: CGFloat = 0
     private var accumulatedDY: CGFloat = 0
     private var displayLink: CADisplayLink? /// use displayLink to send packets at an constant rate
     private let targetFPS: Int = 45 /// Sending packets' rate
     
-    // Mouse Button
+    // Mouse Buttons (left & right)
     private var buttonsState: UInt8 = 0 // [0b00000000] bit0 = left btn, bit1 = right btn
     private var buttonDirty: Bool = false // Mark state changes => require data to be sent
     private var leftHeld: Bool = false
+    
+    // Scroll (mouse wheel)
+    private var wheelDelta: Int8 = 0
+    private var accumulatedWheel: CGFloat = 0
+    private let wheelPixelsPerTick: CGFloat = 1.0 // Tunable (6~12)
+    private let scrollSensitivity: CGFloat = 0.1   // 0.2–0.5 recommended
     
     // Statistics
     private var packetsSent: Int = 0
@@ -60,7 +66,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     
     
     // MARK: - Send to ESP
-    // Display link pacing
+    // Display link pacing based on targetFPS
     private func startDisplayLink() {
         let displayLink = CADisplayLink(target: self, selector: #selector(tick))
         if #available(iOS 15.0, *){ // System will choose within preferred targetFPS (60 or 120)
@@ -79,15 +85,15 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     
     @objc private func tick(){
         let hasMoved = (accumulatedDX != 0 || accumulatedDY != 0)
-        let shouldSend = leftHeld || buttonDirty || hasMoved
+        let hasWheel = (wheelDelta != 0)
+        let shouldSend = leftHeld || buttonDirty || hasMoved || hasWheel
         guard shouldSend else { return }
         
-        let dx = accumulatedDX * 1.25
-        let dy = accumulatedDY * 1.25
-        
+        // Movement
+        let dx = accumulatedDX * 2
+        let dy = accumulatedDY * 2
         accumulatedDX = 0
         accumulatedDY = 0
-        
         // ESP require number in raw bytes
         /// Turn floating-point deltas into 16-bit integers (e.g. 0x1234) (2 bytes)
         let dxClamped = max(-32767, min(32767, dx))
@@ -95,9 +101,16 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         let dxInt16 = Int16(dxClamped)
         let dyInt16 = Int16(dyClamped)
         
+        // Scroll Wheel
+        let wheelDeltaUInt8 = UInt8(bitPattern: wheelDelta)
+        wheelDelta = 0
+        
         // Build packet
         // Packet structure: [buttons, reserved, dxLE(2), dyLE(2)] → 6 bytes
-        var packet = Data([buttonsState,0x00]) // Data(): raw bytes container.
+        var packet = Data(capacity: 6)
+        packet.append(buttonsState) // Left & Right button
+        packet.append(wheelDeltaUInt8) // Scroll wheel
+        
         /// little-endian byte order: least significant byte first, ESP32 uses this order
         withUnsafeBytes(of: dxInt16.littleEndian) { bytes in /// bytes: pointer to the memory containing dxInt16
             packet.append(contentsOf: bytes) /// withUnsafeBytes accesses the raw bytes in actual memory via pointer
@@ -115,7 +128,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         
         if peripheral.canSendWriteWithoutResponse {
             peripheral.writeValue(packet, for: char, type: .withoutResponse) // send data to the writeCharacteristic endpoint
-            print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16), button=\(buttonsState)")
+            print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16), button=\(buttonsState), wheel=\(wheelDelta)")
             buttonDirty = false
             packetsSent += 1
             
@@ -135,9 +148,30 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     
     
     // MARK: - Public API
+    
+    // Movement
     func accumulateDelta(dx: CGFloat, dy: CGFloat) {
         accumulatedDX += dx
         accumulatedDY += dy
+    }
+    
+    // Scroll wheel
+    func scroll(deltaY: CGFloat) {
+        let scaledDeltaY = deltaY * scrollSensitivity
+        accumulatedWheel += scaledDeltaY
+        // large enough accumulatedWheel triggers ticks -> scroll
+        while accumulatedWheel >= wheelPixelsPerTick { // scrolling down (positive direction)
+            if wheelDelta < Int8.max {
+                wheelDelta &+= 1 // Increment wheelDelta if it is not maxed out
+            }
+            accumulatedWheel -= wheelPixelsPerTick
+        }
+        while accumulatedWheel <= -wheelPixelsPerTick {
+            if wheelDelta > Int8.min {
+                wheelDelta &-= 1
+            }
+            accumulatedWheel += wheelPixelsPerTick
+        }
     }
     
     // Left mouse button
@@ -185,8 +219,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             rightUp()
         }
     }
-    
-    
+        
     
     
     // MARK: CBCentralManagerDelegate

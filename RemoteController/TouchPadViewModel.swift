@@ -19,10 +19,13 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     // --- Tunables ---
     private let holdDelay: TimeInterval = 0.5
     private let moveSlopRadius: CGFloat = 12.0
-    // 2 Fingers
+    // 2 Fingers - right click
     private let pairWindow: TimeInterval      = 0.12   // second finger must arrive within 120ms
     private let tapMaxDuration: TimeInterval  = 0.25   // total duration limit
     private let liftWindow: TimeInterval      = 0.12   // both lifts closely within 120ms
+    // 2 Fingers - scroll
+    private let dominanceRatio: CGFloat = 1.5
+    private var suppressNextLeftClick = false
     
     
     // --- Touch tracking ---
@@ -50,14 +53,14 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         var firstLiftAt: CFTimeInterval? = nil
         var firstLiftDeadline: CFTimeInterval? = nil
         var isTapCandidate: Bool = true
-        var lastCentroid: CGPoint? = nil      // ready for scroll use later
+        var lastCentroid: CGPoint? = nil      // for scroll
     }
         
     private var gestureState: GestureState = GestureState.idle
     private enum GestureState {
         case idle
         case singleActive
-        case twoFingerPending       // classifying: tap vs scroll (scroll later)        
+        case twoFingerPending       // classifying: tap vs scroll
         case twoFingerScroll
     }
     
@@ -158,11 +161,11 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
               let info1 = activeTouches[keys[0]],
               let info2 = activeTouches[keys[1]] else { return }
         
-        // --- Initialize context if needed ---
+        // --- Initialize TwoFingerContext ---
         if twoFingerContext == nil {
             cancelAllHolds()
             let sorted = [(keys[0], info1), (keys[1], info2)].sorted {
-                $0.1.downTime < $1.1.downTime // sort based on down time aka touch order
+                $0.1.downTime < $1.1.downTime // sort tocuhes based on down time (touch order)
             }
             twoFingerContext = TwoFingerContext(touch1: sorted[0].0, touch2: sorted[1].0, startedAt: now)
             
@@ -175,6 +178,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         // --- Update 2 fingers' positions & slop ---
         for (touch, touchInfo) in activeTouches { // Loop twice for 2 fingers
             guard let view = touch.view else { continue }
+            
             let currLocation = touch.location(in: view)
             
             if touchInfo.startPoint == nil { // first contact
@@ -199,15 +203,68 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         
         twoFingerCtx.isTapCandidate = withinPair && withinDuration && bothWithinSlop
         
+        
+        // --- Arm Scroll ---
+        // if still 2 fingers && no longer a tap candidate => scroll
+        if gestureState == .twoFingerPending && twoFingerCtx.isTapCandidate == false {
+            if let c = centroid(twoFingerCtx.touch1, twoFingerCtx.touch2){
+                twoFingerCtx.lastCentroid = c
+                gestureState = .twoFingerScroll // update gesture to scroll
+                gestureStatus = "twoFingerScroll"
+            }
+            twoFingerContext = twoFingerCtx // update public 2 figner context
+            return
+        }
+        
+        // --- Stream Scroll ---
+        if gestureState == .twoFingerScroll {
+            guard let c = centroid(twoFingerCtx.touch1, twoFingerCtx.touch2) else {
+                twoFingerContext = twoFingerCtx
+                return
+            }
+            let lastCentroid = twoFingerCtx.lastCentroid ?? c
+            
+            // Each finger's vertical deltas (prev->cur)
+            let dy1: CGFloat = {
+                guard let view = twoFingerCtx.touch1.view,
+                      let prev = activeTouches[twoFingerCtx.touch1]?.previousPoint else { return 0 }
+                let curr = twoFingerCtx.touch1.location(in: view)
+                return curr.y - prev.y
+            }()
+            let dy2: CGFloat = {
+                guard let view = twoFingerCtx.touch2.view,
+                      let prev = activeTouches[twoFingerCtx.touch2]?.previousPoint else { return 0 }
+                let curr = twoFingerCtx.touch2.location(in: view)
+                return curr.y - prev.y
+            }()
+            
+            let dominant =
+                abs(dy1) > dominanceRatio * abs(dy2) ? dy1 :
+                abs(dy2) > dominanceRatio * abs(dy1) ? dy2 :
+                (c.y - lastCentroid.y) // centroid glide
+            
+            if abs(dominant) >= 0.5 { // small jitter guard
+                connection.scroll(deltaY: dominant)  // flip sign here if you prefer inverted
+//                print("Scrolled: dy = \(dominant)")
+            }
+            
+            twoFingerCtx.lastCentroid = c
+            twoFingerContext = twoFingerCtx
+            return
+        }
+        
+        
+        
+        
         // --- Check if grace deadline expired (after one finger lifted) ---
         if let deadline = twoFingerCtx.firstLiftDeadline,
            now > deadline { // over deadline
             if let remaining = activeTouches.keys.first(where: {
                 $0.phase != .ended && $0.phase != .cancelled // filter to find active finger
             }) {
-                twoToOneFinger(remainingTouch: remaining)
+                twoToOneFinger(remainingTouch: remaining) // one finger
             } else {
-                resetToIdle()
+                resetToIdle() // no finger
             }
             return
         }
@@ -217,7 +274,13 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         
     }
     
-    
+    // Helper that calculates centroid
+    private func centroid(_ t1: UITouch, _ t2: UITouch) -> CGPoint? {
+        guard let view1 = t1.view, let view2 = t2.view else { return nil }
+        let p1 = t1.location(in: view1)
+        let p2 = t2.location(in: view2)
+        return CGPoint(x: (p1.x + p2.x)/2, y: (p1.y + p2.y)/2)
+    }
     
     
     // MARK: - Handle Touches Ended
@@ -244,21 +307,27 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
          
         // ===== SINGLE-FINGER PIPELINE =====
         case .singleActive:
+            if suppressNextLeftClick {
+                suppressNextLeftClick = false   // consume the suppression
+                resetToIdle()
+                return
+            }
+            
             guard let prim = primaryTouch,
                   touches.contains(prim),
                   let info = activeTouches[prim]
-            else { return }
+            else { resetToIdle(); return }
 
-            if info.isHolding {
+            if info.isHolding { // Release from hold
                 mouseStatus = "Left released from hold"
                 connection.leftUp()
             } else if let s = info.startPoint, let p = info.previousPoint,
-                      distance(from: s, to: p) <= moveSlopRadius {
+                      distance(from: s, to: p) <= moveSlopRadius { // quick left click
                 mouseStatus = "Left tap"
                 connection.leftTap()
             }
             
-            resetToIdle()
+            resetToIdle() // no more active fingers set to idle
             return
             
         // ===== TWO-FINGER PIPELINE =====
@@ -305,7 +374,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                         print("Right Click!!!")
                     }
                 }
-                resetToIdle()
+                resetToIdle() // no more active fingers set to idle
                 return
             }
         }
@@ -318,6 +387,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         gestureState = .singleActive // update gesture state to singleActive
         gestureStatus = "singleActive"
         twoFingerContext = nil
+        suppressNextLeftClick = true // prevent unwanted left click registered from the remaining finger
+        
         // keep the only remaining touch
         for (t, _) in activeTouches where t != remainingTouch {
             activeTouches.removeValue(forKey: t)
