@@ -33,7 +33,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private var accumulatedDX: CGFloat = 0
     private var accumulatedDY: CGFloat = 0
     private var displayLink: CADisplayLink? /// use displayLink to send packets at an constant rate
-    private let targetFPS: Int = 45 /// Sending packets' rate
+    private let targetFPS: Int = 120 /// Sending packets' rate
     
     // Mouse Buttons (left & right)
     private var buttonsState: UInt8 = 0 // [0b00000000] bit0 = left btn, bit1 = right btn
@@ -70,7 +70,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private func startDisplayLink() {
         let displayLink = CADisplayLink(target: self, selector: #selector(tick))
         if #available(iOS 15.0, *){ // System will choose within preferred targetFPS (60 or 120)
-            displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: Float(targetFPS))
+            displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 300, preferred: Float(targetFPS))
         } else {
             displayLink.preferredFramesPerSecond = targetFPS
         }
@@ -90,8 +90,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         guard shouldSend else { return }
         
         // Movement
-        let dx = accumulatedDX * 2
-        let dy = accumulatedDY * 2
+        let dx = accumulatedDX
+        let dy = accumulatedDY
         accumulatedDX = 0
         accumulatedDY = 0
         // ESP require number in raw bytes
@@ -128,7 +128,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         
         if peripheral.canSendWriteWithoutResponse {
             peripheral.writeValue(packet, for: char, type: .withoutResponse) // send data to the writeCharacteristic endpoint
-            print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16), button=\(buttonsState), wheel=\(wheelDelta)")
+//            print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16), button=\(buttonsState), wheel=\(wheelDelta)")
             buttonDirty = false
             packetsSent += 1
             
@@ -425,7 +425,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     
     
     func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
-        print("🟢 Buffer ready")
+//        print("🟢 Buffer ready")
     }
     
     

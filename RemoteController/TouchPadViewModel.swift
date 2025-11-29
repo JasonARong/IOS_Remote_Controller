@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import QuartzCore
 
 class TouchPadViewModel: ObservableObject { // use class: only 1 instance of TouchPadViewModel -> persists&updates the View
     @Published var cursorPoint: CGPoint = CGPoint(x: 100, y: 100)
@@ -15,6 +16,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     @Published var gestureStatus: String = "idle"
     
     private let connection: ConnectionManager
+    private let pointerEngine: PointerMotionEngine
+    private var lastPointerTimestamp: CFTimeInterval? = nil
     
     // --- Tunables ---
     private let holdDelay: TimeInterval = 0.5
@@ -67,6 +70,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     
     init(connection: ConnectionManager){
         self.connection = connection
+        self.pointerEngine = PointerMotionEngine(connection: connection)
     }
     
     
@@ -102,7 +106,6 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     
     // MARK: - One Finger Change
     func handleSingleFingerChanged(_ touches: Set<UITouch>, event: UIEvent?) {
-        
         guard let touch = touches.first,
               let view = touch.view,
               let touchInfo = activeTouches[touch] else { return }
@@ -133,8 +136,17 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             // Update cursor locally (for testing)
             cursorPoint = CGPoint(x: cursorPoint.x + dx, y: cursorPoint.y + dy)
             
-            // Send delta to ESP (stub for now)
-            connection.accumulateDelta(dx: dx, dy: dy)
+            // Send delta to ESP
+            // connection.accumulateDelta(dx: dx, dy: dy)
+            
+            // Use pointer acceleration engine
+            let now = CACurrentMediaTime()
+            let dt: CFTimeInterval // get delta time
+            if let last = lastPointerTimestamp {
+                dt = now - last
+            } else { dt = 1.0 / 120.0 } // safe fallback
+            lastPointerTimestamp = now
+            pointerEngine.applyRawDelta(dx: dx, dy: dy, dt: dt)
         }
         
         // --- Whether exceeded slop ---
@@ -407,11 +419,17 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     }
             
     private func resetToIdle() {
+        // Reset touches
         twoFingerContext = nil
         primaryTouch = nil
         activeTouches.removeAll()
-        gestureState = .idle
         
+        // Reset motion engine
+        pointerEngine.reset()
+        lastPointerTimestamp = nil
+        
+        // Status updates
+        gestureState = .idle
         gestureStatus = "idle"
         mouseStatus = "Idle"
     }
