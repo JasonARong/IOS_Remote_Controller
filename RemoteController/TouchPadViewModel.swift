@@ -16,8 +16,12 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     @Published var gestureStatus: String = "idle"
     
     private let connection: ConnectionManager
+    
+    // --- Smooth move & scroll  ---
     private let pointerEngine: PointerMotionEngine
     private var lastPointerTimestamp: CFTimeInterval? = nil
+    private let scrollEngine: ScrollMotionEngine
+    private var lastScrollTimestamp: CFTimeInterval? = nil
     
     // --- Tunables ---
     private let holdDelay: TimeInterval = 0.5
@@ -71,6 +75,11 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     init(connection: ConnectionManager){
         self.connection = connection
         self.pointerEngine = PointerMotionEngine(connection: connection)
+        self.scrollEngine = ScrollMotionEngine(connection: connection, inertiaEnabled: false)
+        
+        connection.onTick = { [weak self] dt in
+            self?.scrollEngine.update(dt: dt)
+        }
     }
     
     
@@ -136,9 +145,6 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             // Update cursor locally (for testing)
             cursorPoint = CGPoint(x: cursorPoint.x + dx, y: cursorPoint.y + dy)
             
-            // Send delta to ESP
-            // connection.accumulateDelta(dx: dx, dy: dy)
-            
             // Use pointer acceleration engine
             let now = CACurrentMediaTime()
             let dt: CFTimeInterval // get delta time
@@ -172,6 +178,9 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         guard keys.count == 2,
               let info1 = activeTouches[keys[0]],
               let info2 = activeTouches[keys[1]] else { return }
+        
+        // Reset any previous scroll inertia
+//        scrollEngine.reset()
         
         // --- Initialize TwoFingerContext ---
         if twoFingerContext == nil {
@@ -230,11 +239,11 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         
         // --- Stream Scroll ---
         if gestureState == .twoFingerScroll {
-            guard let c = centroid(twoFingerCtx.touch1, twoFingerCtx.touch2) else {
+            guard let currCentriod = centroid(twoFingerCtx.touch1, twoFingerCtx.touch2) else {
                 twoFingerContext = twoFingerCtx
                 return
             }
-            let lastCentroid = twoFingerCtx.lastCentroid ?? c
+            let lastCentroid = twoFingerCtx.lastCentroid ?? currCentriod
             
             // Each finger's vertical deltas (prev->cur)
             let dy1: CGFloat = {
@@ -253,14 +262,24 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             let dominant =
                 abs(dy1) > dominanceRatio * abs(dy2) ? dy1 :
                 abs(dy2) > dominanceRatio * abs(dy1) ? dy2 :
-                (c.y - lastCentroid.y) // centroid glide
+                (currCentriod.y - lastCentroid.y) // centroid glide
+            
+            
+            // Compute dt for Scroll Engine
+            let now = CACurrentMediaTime()
+            let dt: CFTimeInterval
+            if let last = lastScrollTimestamp {
+                dt = now - last
+            } else { dt = 1.0 / 120.0 }
+            lastScrollTimestamp = now
             
             if abs(dominant) >= 0.5 { // small jitter guard
-                connection.scroll(deltaY: dominant)  // flip sign here if you prefer inverted
-//                print("Scrolled: dy = \(dominant)")
+                // 🚀 send to scroll engine (accel + inertia)
+                scrollEngine.applyGestureDelta(dy: dominant, dt: dt)
+//                connection.scroll(deltaY: dominant)  // flip sign here if you prefer inverted
             }
             
-            twoFingerCtx.lastCentroid = c
+            twoFingerCtx.lastCentroid = currCentriod
             twoFingerContext = twoFingerCtx
             return
         }
@@ -270,7 +289,12 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         
         // --- Check if grace deadline expired (after one finger lifted) ---
         if let deadline = twoFingerCtx.firstLiftDeadline,
-           now > deadline { // over deadline
+           now > deadline // over deadline
+        {
+            // leaving scroll into single finger
+            scrollEngine.gestureEnded()
+            lastScrollTimestamp = nil
+            
             if let remaining = activeTouches.keys.first(where: {
                 $0.phase != .ended && $0.phase != .cancelled // filter to find active finger
             }) {
@@ -351,6 +375,10 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             
             // 1 active touch left
             if remainingActive == 1 {
+                // leaving scroll into single finger
+                scrollEngine.gestureEnded()
+                lastScrollTimestamp = nil
+                
                 // first finger lift
                 if twoFingerCtx.firstLiftAt == nil { // update first lift time & deadline
                     twoFingerCtx.firstLiftAt = now
@@ -374,6 +402,10 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             
             // 0 active touch left
             if remainingActive == 0{
+                // leaving scroll
+                scrollEngine.gestureEnded()
+                lastScrollTimestamp = nil
+                
                 if let i1 = activeTouches[twoFingerCtx.touch1],
                    let i2 = activeTouches[twoFingerCtx.touch2]{
                     let liftsClose = (twoFingerCtx.firstLiftAt == nil) ||
@@ -424,9 +456,11 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         primaryTouch = nil
         activeTouches.removeAll()
         
-        // Reset motion engine
+        // Reset motion engines for cursor and scroll
         pointerEngine.reset()
         lastPointerTimestamp = nil
+//        scrollEngine.reset() CANNOT reset here, it ends inertia immediately
+        lastScrollTimestamp = nil
         
         // Status updates
         gestureState = .idle

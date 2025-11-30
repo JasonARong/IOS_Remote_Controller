@@ -28,12 +28,16 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     // MARK: UUIDs must match ESP side
     private var serviceUUID = CBUUID(string: "00001234-0000-1000-8000-00805f9b34fb")
     private var characteristicUUID = CBUUID(string: "0000abcd-0000-1000-8000-00805f9b34fb")
+
+    // Smooth cursor and scroll
+    private var displayLink: CADisplayLink? /// use displayLink to send packets at an constant rate
+    private let targetFPS: Int = 120 /// Sending packets' rate
+    private var lastTickTimestamp: CFTimeInterval? = nil
+    var onTick: ((CFTimeInterval) -> Void)? // Callback so ScrollMotionEngine can run per-frame logic.
     
     // Cursor movement
     private var accumulatedDX: CGFloat = 0
     private var accumulatedDY: CGFloat = 0
-    private var displayLink: CADisplayLink? /// use displayLink to send packets at an constant rate
-    private let targetFPS: Int = 120 /// Sending packets' rate
     
     // Mouse Buttons (left & right)
     private var buttonsState: UInt8 = 0 // [0b00000000] bit0 = left btn, bit1 = right btn
@@ -43,8 +47,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     // Scroll (mouse wheel)
     private var wheelDelta: Int8 = 0
     private var accumulatedWheel: CGFloat = 0
-    private let wheelPixelsPerTick: CGFloat = 1.0 // Tunable (6~12)
-    private let scrollSensitivity: CGFloat = 0.1   // 0.2–0.5 recommended
+    private let wheelPixelsPerTick: CGFloat = 0.05 // Tunable (6~12)
+    private let scrollSensitivity: CGFloat = 0.005   // 0.2–0.5 recommended
     
     // Statistics
     private var packetsSent: Int = 0
@@ -68,6 +72,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     // MARK: - Send to ESP
     // Display link pacing based on targetFPS
     private func startDisplayLink() {
+        lastTickTimestamp = nil
+        
         let displayLink = CADisplayLink(target: self, selector: #selector(tick))
         if #available(iOS 15.0, *){ // System will choose within preferred targetFPS (60 or 120)
             displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 300, preferred: Float(targetFPS))
@@ -84,6 +90,18 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     }
     
     @objc private func tick(){
+        // --- Compute dt and notify scroll engine ---
+        let now = CACurrentMediaTime()
+        let dt: CFTimeInterval
+        if let last = lastTickTimestamp {
+            dt = now - last
+        } else {
+            dt = 1.0 / CFTimeInterval(targetFPS)   // safe fallback
+        }
+        lastTickTimestamp = now
+        onTick?(dt)
+        
+        
         let hasMoved = (accumulatedDX != 0 || accumulatedDY != 0)
         let hasWheel = (wheelDelta != 0)
         let shouldSend = leftHeld || buttonDirty || hasMoved || hasWheel
@@ -172,6 +190,10 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             }
             accumulatedWheel += wheelPixelsPerTick
         }
+    }
+    func resetScrollAccumulator() {
+        accumulatedWheel = 0
+        wheelDelta = 0
     }
     
     // Left mouse button

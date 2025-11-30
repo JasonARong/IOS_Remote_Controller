@@ -55,7 +55,7 @@ final class PointerMotionEngine {
         
         // Send to ConnectionManager
         if sendDx != 0 || sendDy != 0 {
-            connection.accumulateDelta(dx: sendDx, dy: sendDy)
+            connection.accumulateDelta(dx: sendDx, dy: sendDy) // Send to ConnectionManager
         }
     }
     
