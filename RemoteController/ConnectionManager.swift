@@ -9,6 +9,7 @@ import Foundation
 import CoreBluetooth
 import Combine
 import QuartzCore
+import UIKit
 
 /// Abstracts communication to ESP (BLE/Wi-Fi/USB).
 /// Inherits NSObject: required for Bluetooth delegate callbacks
@@ -49,6 +50,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private var accumulatedWheel: CGFloat = 0
     private let wheelPixelsPerTick: CGFloat = 0.05 // Tunable (6~12)
     private let scrollSensitivity: CGFloat = 0.005   // 0.2–0.5 recommended
+    private let scrollHaptic = UISelectionFeedbackGenerator() // Haptic feedback for scroll tick
     
     // Statistics
     private var packetsSent: Int = 0
@@ -177,18 +179,29 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     func scroll(deltaY: CGFloat) {
         let scaledDeltaY = deltaY * scrollSensitivity
         accumulatedWheel += scaledDeltaY
+        
+        var didTick = false
+        
         // large enough accumulatedWheel triggers ticks -> scroll
         while accumulatedWheel >= wheelPixelsPerTick { // scrolling down (positive direction)
             if wheelDelta < Int8.max {
                 wheelDelta &+= 1 // Increment wheelDelta if it is not maxed out
             }
             accumulatedWheel -= wheelPixelsPerTick
+            didTick = true
         }
         while accumulatedWheel <= -wheelPixelsPerTick {
             if wheelDelta > Int8.min {
                 wheelDelta &-= 1
             }
             accumulatedWheel += wheelPixelsPerTick
+            didTick = true
+        }
+        
+        if didTick {
+            // One haptic per "frame" where we emitted at least one tick
+            scrollHaptic.selectionChanged()
+            scrollHaptic.prepare()     // prepare for the next one
         }
     }
     func resetScrollAccumulator() {

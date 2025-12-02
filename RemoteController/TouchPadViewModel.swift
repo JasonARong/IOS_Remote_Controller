@@ -33,7 +33,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     // 2 Fingers - scroll
     private let dominanceRatio: CGFloat = 1.5
     private var suppressNextLeftClick = false
-    
+    // 1 Finger scroll zone
+    private let scrollZoneFraction: CGFloat = 0.15
     
     // --- Touch tracking ---
     private var primaryTouch: UITouch? = nil
@@ -67,7 +68,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     private enum GestureState {
         case idle
         case singleActive
-        case twoFingerPending       // classifying: tap vs scroll
+        case singleFingerScroll
+        case twoFingerPending
         case twoFingerScroll
     }
     
@@ -101,8 +103,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         switch activeTouchCount {
         case 1:
             // === One-finger mode ===
-            gestureState = .singleActive // setting gesture state
-            gestureStatus = "singleActive"
+//            gestureState = .singleActive // setting gesture state
+//            gestureStatus = "singleActive"
             handleSingleFingerChanged(touches, event: event)
         case 2:
             // === Enter or update two-finger mode ===
@@ -129,43 +131,85 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             touchInfo.movedBeyondSlop = false
             touchInfo.isHolding = false
             
-            startHoldTimer(for: touch)
-            mouseStatus = "One touch First contact"
-            
+            // Decide mode based on starting X position
+            if isInScrollZone(current, in: view) {
+                // 👉 Single-finger single finger scroll mode
+                gestureState = .singleFingerScroll
+                lastScrollTimestamp = CACurrentMediaTime()
+                mouseStatus = "Single-finger scroll start"
+            }else {
+                // 👉 Normal single-finger pointer mode
+                gestureState = .singleActive
+                startHoldTimer(for: touch)
+                mouseStatus = "One touch First contact"
+            }
             return
         }
         
-        // --- Movement ---
-        if let prev = touchInfo.previousPoint {
-            let dx = current.x - prev.x
-            let dy = current.y - prev.y
-            let delta = CGSize(width: dx, height: dy)
-            lastDelta = delta
-            
-            // Update cursor locally (for testing)
-            cursorPoint = CGPoint(x: cursorPoint.x + dx, y: cursorPoint.y + dy)
-            
-            // Use pointer acceleration engine
-            let now = CACurrentMediaTime()
-            let dt: CFTimeInterval // get delta time
-            if let last = lastPointerTimestamp {
-                dt = now - last
-            } else { dt = 1.0 / 120.0 } // safe fallback
-            lastPointerTimestamp = now
-            pointerEngine.applyRawDelta(dx: dx, dy: dy, dt: dt)
-        }
         
-        // --- Whether exceeded slop ---
-        if let start = touchInfo.startPoint {
-            if distance(from: start, to: current) > moveSlopRadius {
-                touchInfo.movedBeyondSlop = true
-                if !touchInfo.isHolding { // start moving before holdDelay => mouse movement, stop hold timer
-                    cancelHold(touch: touch)
+        // --- Movement depends on gesture state ---
+        switch gestureState {
+        case .singleActive: // Movement
+            if let prev = touchInfo.previousPoint {
+                let dx = current.x - prev.x
+                let dy = current.y - prev.y
+                let delta = CGSize(width: dx, height: dy)
+                lastDelta = delta
+                
+                // Update cursor locally (for testing)
+                cursorPoint = CGPoint(x: cursorPoint.x + dx, y: cursorPoint.y + dy)
+                
+                // Use pointer acceleration engine
+                let now = CACurrentMediaTime()
+                let dt: CFTimeInterval // get delta time
+                if let last = lastPointerTimestamp {
+                    dt = now - last
+                } else { dt = 1.0 / 120.0 } // safe fallback
+                lastPointerTimestamp = now
+                pointerEngine.applyRawDelta(dx: dx, dy: dy, dt: dt)
+            }
+            
+            // --- Whether exceeded slop ---
+            if let start = touchInfo.startPoint {
+                if distance(from: start, to: current) > moveSlopRadius {
+                    touchInfo.movedBeyondSlop = true
+                    if !touchInfo.isHolding { // start moving before holdDelay => mouse movement, stop hold timer
+                        cancelHold(touch: touch)
+                    }
                 }
             }
+            
+        case .singleFingerScroll: // Scroll
+            if let prev = touchInfo.previousPoint {
+                let dy = current.y - prev.y
+                
+                let now = CACurrentMediaTime()
+                let dt: CFTimeInterval
+                if let last = lastScrollTimestamp {
+                    dt = now - last
+                } else {
+                    dt = 1.0 / 120.0 // Fall back
+                }
+                lastScrollTimestamp = now
+                
+                if abs(dy) > 0.1 {
+                    scrollEngine.applyGestureDelta(dy: dy, dt: dt)
+                }
+            }
+        default:
+            break
         }
+                
         
         touchInfo.previousPoint = current
+    }
+    
+    
+    
+    private func isInScrollZone(_ point: CGPoint, in view: UIView) -> Bool {
+        let width = view.bounds.width
+        let thresholdX = width * (1.0 - scrollZoneFraction)
+        return point.x >= thresholdX
     }
     
     
@@ -341,7 +385,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             resetToIdle()
             return
          
-        // ===== SINGLE-FINGER PIPELINE =====
+        // ===== SINGLE-FINGER: Movement =====
         case .singleActive:
             if suppressNextLeftClick {
                 suppressNextLeftClick = false   // consume the suppression
@@ -354,6 +398,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                   let info = activeTouches[prim]
             else { resetToIdle(); return }
 
+            // Click Logic
             if info.isHolding { // Release from hold
                 mouseStatus = "Left released from hold"
                 connection.leftUp()
@@ -364,6 +409,16 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             }
             
             resetToIdle() // no more active fingers set to idle
+            return
+        
+        // ===== SINGLE-FINGER: SCROLL STRIP =====
+        case .singleFingerScroll:
+            // End scroll-strip gesture, but DO NOT commit any click
+            scrollEngine.gestureEnded()
+            lastScrollTimestamp = nil
+            mouseStatus = "Single-finger scroll ended"
+            
+            resetToIdle()
             return
             
         // ===== TWO-FINGER PIPELINE =====
