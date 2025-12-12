@@ -26,15 +26,27 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     // --- Tunables ---
     private let holdDelay: TimeInterval = 0.5
     private let moveSlopRadius: CGFloat = 12.0
+    // 1 Finger scroll zone
+    private let scrollZoneFraction: CGFloat = 0.15
     // 2 Fingers - right click
     private let pairWindow: TimeInterval      = 0.12   // second finger must arrive within 120ms
     private let tapMaxDuration: TimeInterval  = 0.25   // total duration limit
     private let liftWindow: TimeInterval      = 0.12   // both lifts closely within 120ms
-    // 2 Fingers - scroll
+    // 2 Fingers - gestures
     private let dominanceRatio: CGFloat = 1.5
     private var suppressNextLeftClick = false
-    // 1 Finger scroll zone
-    private let scrollZoneFraction: CGFloat = 0.15
+    private let verticalSwipeThreshold: CGFloat = 80.0
+    private let horizontalSwipeThreshold: CGFloat = 60.0
+    
+    private var pendingTwoFingerCommand: TwoFingerCommand = .none
+    private enum TwoFingerCommand {
+        case none
+        case swipeLeft
+        case swipeRight
+        case swipeUp
+        case swipeDown
+    }
+
     
     // --- Touch tracking ---
     private var primaryTouch: UITouch? = nil
@@ -62,6 +74,15 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         var firstLiftDeadline: CFTimeInterval? = nil
         var isTapCandidate: Bool = true
         var lastCentroid: CGPoint? = nil      // for scroll
+        
+        // For 2 finger gestures
+        var cumulativeDx: CGFloat = 0
+        var cumulativeDy: CGFloat = 0
+        enum LockedAxis {
+            case horizontal
+            case vertical
+        }
+        var lockedAxis: LockedAxis? = nil
     }
         
     private var gestureState: GestureState = GestureState.idle
@@ -70,7 +91,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         case singleActive
         case singleFingerScroll
         case twoFingerPending
-        case twoFingerScroll
+        case twoFingerSwipeHorizontal
+        case twoFingerSwipeVertical
     }
     
     
@@ -223,8 +245,6 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
               let info1 = activeTouches[keys[0]],
               let info2 = activeTouches[keys[1]] else { return }
         
-        // Reset any previous scroll inertia
-//        scrollEngine.reset()
         
         // --- Initialize TwoFingerContext ---
         if twoFingerContext == nil {
@@ -232,7 +252,14 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             let sorted = [(keys[0], info1), (keys[1], info2)].sorted {
                 $0.1.downTime < $1.1.downTime // sort tocuhes based on down time (touch order)
             }
-            twoFingerContext = TwoFingerContext(touch1: sorted[0].0, touch2: sorted[1].0, startedAt: now)
+            twoFingerContext = TwoFingerContext(
+                touch1: sorted[0].0,
+                touch2: sorted[1].0,
+                startedAt: now,
+                cumulativeDx: 0,
+                cumulativeDy: 0,
+                lockedAxis: nil,                
+            )
             
             gestureState = .twoFingerPending
             gestureStatus = "twoFingerPending"
@@ -259,7 +286,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             }
         }
         
-        // --- Update tap candidacy ---
+        // --- Update TAP candidacy ---
         let i1 = activeTouches[twoFingerCtx.touch1]! // TouchInfo 1
         let i2 = activeTouches[twoFingerCtx.touch2]! // TouchInfo 2
         let withinPair = abs(i1.downTime - i2.downTime) <= pairWindow
@@ -269,85 +296,89 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         twoFingerCtx.isTapCandidate = withinPair && withinDuration && bothWithinSlop
         
         
-        // --- Arm Scroll ---
-        // if still 2 fingers && no longer a tap candidate => scroll
-        if gestureState == .twoFingerPending && twoFingerCtx.isTapCandidate == false {
-            if let c = centroid(twoFingerCtx.touch1, twoFingerCtx.touch2){
-                twoFingerCtx.lastCentroid = c
-                gestureState = .twoFingerScroll // update gesture to scroll
-                gestureStatus = "twoFingerScroll"
-            }
-            twoFingerContext = twoFingerCtx // update public 2 figner context
+        // --- Update centroid + incremental movement ---
+        guard let currCentroid = centroid(twoFingerCtx.touch1, twoFingerCtx.touch2) else {
+            twoFingerContext = twoFingerCtx
             return
         }
+        let lastCentroid = twoFingerCtx.lastCentroid ?? currCentroid
+        let deltaCx = currCentroid.x - lastCentroid.x
+        let deltaCy = currCentroid.y - lastCentroid.y
         
-        // --- Stream Scroll ---
-        if gestureState == .twoFingerScroll {
-            guard let currCentriod = centroid(twoFingerCtx.touch1, twoFingerCtx.touch2) else {
-                twoFingerContext = twoFingerCtx
-                return
-            }
-            let lastCentroid = twoFingerCtx.lastCentroid ?? currCentriod
+        // Accumulate movement since gesture start / last reset
+        twoFingerCtx.cumulativeDx += deltaCx
+        twoFingerCtx.cumulativeDy += deltaCy
+        twoFingerCtx.lastCentroid = currCentroid
+        
+        // --- If still a tap candidate, do NOT interpret as swipe yet ---
+        if gestureState == .twoFingerPending && twoFingerCtx.isTapCandidate {
+            twoFingerContext = twoFingerCtx
+            return
+        }
+        // --- If no longer a tap candidate, arm / lock swipe axis ---
+        if gestureState == .twoFingerPending && twoFingerCtx.isTapCandidate == false {
+            let ax = abs(twoFingerCtx.cumulativeDx)
+            let ay = abs(twoFingerCtx.cumulativeDy)
             
-            // Each finger's vertical deltas (prev->cur)
-            let dy1: CGFloat = {
-                guard let view = twoFingerCtx.touch1.view,
-                      let prev = activeTouches[twoFingerCtx.touch1]?.previousPoint else { return 0 }
-                let curr = twoFingerCtx.touch1.location(in: view)
-                return curr.y - prev.y
-            }()
-            let dy2: CGFloat = {
-                guard let view = twoFingerCtx.touch2.view,
-                      let prev = activeTouches[twoFingerCtx.touch2]?.previousPoint else { return 0 }
-                let curr = twoFingerCtx.touch2.location(in: view)
-                return curr.y - prev.y
-            }()
-            
-            let dominant =
-                abs(dy1) > dominanceRatio * abs(dy2) ? dy1 :
-                abs(dy2) > dominanceRatio * abs(dy1) ? dy2 :
-                (currCentriod.y - lastCentroid.y) // centroid glide
-            
-            
-            // Compute dt for Scroll Engine
-            let now = CACurrentMediaTime()
-            let dt: CFTimeInterval
-            if let last = lastScrollTimestamp {
-                dt = now - last
-            } else { dt = 1.0 / 120.0 }
-            lastScrollTimestamp = now
-            
-            if abs(dominant) >= 0.5 { // small jitter guard
-                // 🚀 send to scroll engine (accel + inertia)
-                scrollEngine.applyGestureDelta(dy: dominant, dt: dt)
-//                connection.scroll(deltaY: dominant)  // flip sign here if you prefer inverted
+            if ax > dominanceRatio * ay {
+                // Lock horizontal swipe (desktop left/right)
+                twoFingerCtx.lockedAxis = .horizontal
+                twoFingerCtx.cumulativeDy = 0
+                gestureState = .twoFingerSwipeHorizontal
+                gestureStatus = "twoFingerSwipeHorizontal"
+                mouseStatus = "2-finger: locked H"
+            } else if ay > dominanceRatio * ax {
+                // Lock vertical swipe (overview)
+                twoFingerCtx.lockedAxis = .vertical
+                twoFingerCtx.cumulativeDx = 0
+                gestureState = .twoFingerSwipeVertical
+                gestureStatus = "twoFingerSwipeVertical"
+                mouseStatus = "2-finger: locked V"
             }
             
-            twoFingerCtx.lastCentroid = currCentriod
+            // If neither axis dominant yet, keep accumulating
             twoFingerContext = twoFingerCtx
             return
         }
         
-        
-        
-        
-        // --- Check if grace deadline expired (after one finger lifted) ---
-        if let deadline = twoFingerCtx.firstLiftDeadline,
-           now > deadline // over deadline
-        {
-            // leaving scroll into single finger
-            scrollEngine.gestureEnded()
-            lastScrollTimestamp = nil
-            
-            if let remaining = activeTouches.keys.first(where: {
-                $0.phase != .ended && $0.phase != .cancelled // filter to find active finger
-            }) {
-                twoToOneFinger(remainingTouch: remaining) // one finger
-            } else {
-                resetToIdle() // no finger
+        // --- Stream swipe gestures (no more scroll engine) ---
+        switch gestureState {
+        case .twoFingerSwipeHorizontal:
+            // Only evaluate horizontal component
+            if pendingTwoFingerCommand == .none,
+               abs(twoFingerCtx.cumulativeDx) >= horizontalSwipeThreshold {
+                
+                if twoFingerCtx.cumulativeDx > 0 {
+                    mouseStatus = "Desktop →"
+                    print("Desktop →")
+                    pendingTwoFingerCommand = TwoFingerCommand.swipeRight
+                } else {
+                    mouseStatus = "Desktop ←"
+                    print("Desktop ←")
+                    pendingTwoFingerCommand = TwoFingerCommand.swipeLeft
+                }
             }
-            return
+            
+        case .twoFingerSwipeVertical:
+            // Only evaluate vertical component
+            if pendingTwoFingerCommand == .none,
+               abs(twoFingerCtx.cumulativeDy) >= verticalSwipeThreshold {
+                
+                if twoFingerCtx.cumulativeDy < 0 {
+                    mouseStatus = "Overview (UP)"
+                    print("Overview (UP)")
+                    pendingTwoFingerCommand = TwoFingerCommand.swipeUp
+                } else {
+                    mouseStatus = "Two-finger vertical (down)"
+                    print("Two-finger vertical (down)")
+                    pendingTwoFingerCommand = TwoFingerCommand.swipeDown
+                }
+            }
+            
+        default:
+            break
         }
+        
         
         // --- Save context back ---
         twoFingerContext = twoFingerCtx
@@ -422,18 +453,14 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             return
             
         // ===== TWO-FINGER PIPELINE =====
-        case .twoFingerPending, .twoFingerScroll:
+        case .twoFingerPending, .twoFingerSwipeHorizontal, .twoFingerSwipeVertical:
             guard var twoFingerCtx = twoFingerContext else {
                 resetToIdle()
                 return
             }
             
             // 1 active touch left
-            if remainingActive == 1 {
-                // leaving scroll into single finger
-                scrollEngine.gestureEnded()
-                lastScrollTimestamp = nil
-                
+            if remainingActive == 1 {                
                 // first finger lift
                 if twoFingerCtx.firstLiftAt == nil { // update first lift time & deadline
                     twoFingerCtx.firstLiftAt = now
@@ -445,7 +472,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                     if let remaining = activeTouches.keys.first(where: {
                         $0.phase != .ended && $0.phase != .cancelled // filter to find active finger
                     }) {
-                        twoToOneFinger(remainingTouch: remaining)
+//                        twoToOneFinger(remainingTouch: remaining)
                     } else {
                         resetToIdle()
                     }
@@ -471,6 +498,23 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                     if twoFingerCtx.isTapCandidate && liftsClose && withinDuration && bothWithinSlop {
                         connection.rightTap()
                         print("Right Click!!!")
+                    } else {
+                        switch pendingTwoFingerCommand {
+                        case .none:
+                            break
+                        case .swipeLeft:
+                            connection.sendSystemCommand(.swipeLeft)
+                            print("Commit Desktop ←")
+                        case .swipeRight:
+                            connection.sendSystemCommand(.swipeRight)
+                            print("Commit Desktop →")
+                        case .swipeUp:
+                            connection.sendSystemCommand(.swipeUp)
+                            print("Commit Desktop up")
+                        case .swipeDown:
+                            connection.sendSystemCommand(.swipeDown)
+                            print("Commit Desktop down")
+                        }
                     }
                 }
                 resetToIdle() // no more active fingers set to idle
@@ -514,8 +558,10 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         // Reset motion engines for cursor and scroll
         pointerEngine.reset()
         lastPointerTimestamp = nil
-//        scrollEngine.reset() CANNOT reset here, it ends inertia immediately
         lastScrollTimestamp = nil
+        
+        // Reset 2 finger command
+        pendingTwoFingerCommand = .none
         
         // Status updates
         gestureState = .idle

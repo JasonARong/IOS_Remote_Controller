@@ -57,9 +57,59 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private var lastStatsTime: Date = Date()
     
     
+    // Two Finger gestures & keyboard
+    enum LogicalKey: UInt8 {
+        // Modifiers
+        case control   = 1
+        case shift     = 2
+        case alt       = 3
+        case command   = 4   // GUI / Win key if needed later
+
+        // Arrows
+        case arrowLeft  = 10
+        case arrowRight = 11
+        case arrowUp    = 12
+        case arrowDown  = 13
+
+        // (Later: letters, digits, function keys, etc.)
+    }
+    
+    // Two Finger gestures
+    enum SystemCommand { // should stay consistant with TwoFingerCommand
+        case none
+        case swipeLeft
+        case swipeRight
+        case swipeUp
+        case swipeDown
+    }
+    
+    // MARK: - Profile
+    
+    struct InputMappingProfile {
+        let name: String
+        let bindings: [SystemCommand: [LogicalKey]]
+    }
+    
+    /// The currently active mapping profile
+    private var currentProfile: InputMappingProfile
+    
+    /// Default macOS-style mapping:
+    private let macDefaultProfile = InputMappingProfile(
+        name: "macOS Default",
+        bindings: [
+            .swipeLeft:  [.control, .arrowRight],
+            .swipeRight: [.control, .arrowLeft],
+            .swipeUp:    [.control, .arrowUp],
+            .swipeDown:  []   // no-op for now
+        ]
+    )
+    
+    
     // MARK: init & deinit
     override init() { /// override initializer of NSObject
+        self.currentProfile = macDefaultProfile /// use mac profile as an default
         super.init()
+        
         /// delegate: self ( this class will receive Bluetooth callbacks ) ( require self to be delegate type)
         /// queue: nil ( callbacks run on the main thread )
         centralManager = CBCentralManager(delegate: self, queue: nil)
@@ -126,7 +176,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         wheelDelta = 0
         
         // Build packet
-        // Packet structure: [buttons, reserved, dxLE(2), dyLE(2)] → 6 bytes
+        // Packet structure: [buttons, Scroll, dxLE(1), dxLE(2), dyLE(1), dyLE(2)] → 6 bytes
         var packet = Data(capacity: 6)
         packet.append(buttonsState) // Left & Right button
         packet.append(wheelDeltaUInt8) // Scroll wheel
@@ -254,7 +304,43 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             rightUp()
         }
     }
+
+    // Two finger gesture commands
+    func sendSystemCommand(_ command: SystemCommand) {
+        // Look up mapping in current profile
+        guard let combo = currentProfile.bindings[command], !combo.isEmpty else {
+            print("ℹ️ No mapping for \(command) in profile \(currentProfile.name)")
+            return
+        }
         
+        // Enforce upper limit of 3 key combo
+        let limitedCombo = Array(combo.prefix(3))
+        
+        // If not actually connected yet, just log and bail
+        guard let peripheral = peripheral,
+              let char = writeBleCharacteristic else {
+            print("⚪️ Stub: would send system command \(command)")
+            return
+        }
+        
+        // Protocol proposal:
+        // [0] = 0xF1 → "keyboard combo"
+        // [1] = N    → number of keys (1–3)
+        // [2...]     → LogicalKey.rawValue for each key
+        var packet = Data()
+        packet.append(0xF1)
+        packet.append(UInt8(limitedCombo.count))
+        limitedCombo.forEach { key in
+            packet.append(key.rawValue)
+        }
+
+        if peripheral.canSendWriteWithoutResponse {
+            peripheral.writeValue(packet, for: char, type: .withoutResponse)
+            print("🟣 Sent keyboard combo for \(command): \(limitedCombo)")
+        } else {
+            print("🟡 BLE buffer full, dropped combo for \(command)")
+        }
+    }
     
     
     // MARK: CBCentralManagerDelegate

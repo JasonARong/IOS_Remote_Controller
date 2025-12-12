@@ -1,0 +1,25 @@
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+*.xccheckout
+*.xcscmblueprint
+build/
+DerivedData/
+
+# macOS
+.DS_Store
+.AppleDouble
+._*
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# CocoaPods (如果使用)
+# Pods/
+
+# fastlane (如果使用)
+# fastlane/report.xml
+# fastlane/Preview.html
+# fastlane/screenshots
