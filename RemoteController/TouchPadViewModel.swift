@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 import QuartzCore
+import UIKit
 
 class TouchPadViewModel: ObservableObject { // use class: only 1 instance of TouchPadViewModel -> persists&updates the View
     @Published var cursorPoint: CGPoint = CGPoint(x: 100, y: 100)
@@ -32,7 +33,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     private let pairWindow: TimeInterval      = 0.12   // second finger must arrive within 120ms
     private let tapMaxDuration: TimeInterval  = 0.25   // total duration limit
     private let liftWindow: TimeInterval      = 0.12   // both lifts closely within 120ms
-    // 2 Fingers - gestures
+    // 2 Fingers - swipe gestures
     private let dominanceRatio: CGFloat = 1.5
     private var suppressNextLeftClick = false
     private let verticalSwipeThreshold: CGFloat = 80.0
@@ -46,7 +47,18 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         case swipeUp
         case swipeDown
     }
-
+    
+    // 2 Fingers - swipe gestures (haptics)
+    private let twoFingerHapticLight = UISelectionFeedbackGenerator()
+    private let twoFingerHapticStrong = UIImpactFeedbackGenerator(style: .medium)
+    
+    private var lastTwoFingerLightHapticTime: CFTimeInterval? = nil // Last time we emitted a light haptic
+    private let swipeLightZoneRatio: CGFloat = 0.6 // Where the “light haptic zone” starts
+    
+    private var hapticsEnabledSwipeLeft  = true
+    private var hapticsEnabledSwipeRight = true
+    private var hapticsEnabledSwipeUp    = true
+    private var hapticsEnabledSwipeDown  = false   // disabled as you requested
     
     // --- Touch tracking ---
     private var primaryTouch: UITouch? = nil
@@ -100,6 +112,9 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         self.connection = connection
         self.pointerEngine = PointerMotionEngine(connection: connection)
         self.scrollEngine = ScrollMotionEngine(connection: connection, inertiaEnabled: false)
+        
+        twoFingerHapticLight.prepare()
+        twoFingerHapticStrong.prepare()
         
         connection.onTick = { [weak self] dt in
             self?.scrollEngine.update(dt: dt)
@@ -341,37 +356,95 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             return
         }
         
-        // --- Stream swipe gestures (no more scroll engine) ---
+        // --- Stream swipe gestures ---
+        let hThreshold = horizontalSwipeThreshold
+        let vThreshold = verticalSwipeThreshold
+        let nowTime = CACurrentMediaTime()
+        
         switch gestureState {
         case .twoFingerSwipeHorizontal:
+            let absDx = abs(twoFingerCtx.cumulativeDx)
+            let nearStart = hThreshold * swipeLightZoneRatio
+            
+            guard pendingTwoFingerCommand == .none else { return }
+            
             // Only evaluate horizontal component
-            if pendingTwoFingerCommand == .none,
-               abs(twoFingerCtx.cumulativeDx) >= horizontalSwipeThreshold {
+            if absDx >= hThreshold {
+                // 👉 Threshold reached: one strong haptic, then lock command
+                if twoFingerCtx.cumulativeDx > 0 && hapticsEnabledSwipeRight {
+                    twoFingerHapticStrong.impactOccurred()
+                    twoFingerHapticStrong.prepare()
+                } else if twoFingerCtx.cumulativeDx < 0 && hapticsEnabledSwipeLeft {
+                    twoFingerHapticStrong.impactOccurred()
+                    twoFingerHapticStrong.prepare()
+                }
                 
-                if twoFingerCtx.cumulativeDx > 0 {
-                    mouseStatus = "Desktop →"
-                    print("Desktop →")
-                    pendingTwoFingerCommand = TwoFingerCommand.swipeRight
+                pendingTwoFingerCommand = (twoFingerCtx.cumulativeDx > 0) ? .swipeRight : .swipeLeft
+                twoFingerCtx.cumulativeDx > 0 ? print("Desktop →") : print("Desktop ←")
+                                
+            } else if absDx >= nearStart {
+                // 👉 In light haptic zone, before threshold
+                let directionHapticsEnabled =
+                    (twoFingerCtx.cumulativeDx > 0 && hapticsEnabledSwipeRight) ||
+                    (twoFingerCtx.cumulativeDx < 0 && hapticsEnabledSwipeLeft)
+
+                guard directionHapticsEnabled else { return }
+                
+                let shouldFireLight: Bool
+                if let last = lastTwoFingerLightHapticTime {
+                    shouldFireLight = (nowTime - last) >= 0.08  // ~80ms between pulses
                 } else {
-                    mouseStatus = "Desktop ←"
-                    print("Desktop ←")
-                    pendingTwoFingerCommand = TwoFingerCommand.swipeLeft
+                    shouldFireLight = true
+                }
+                
+                if shouldFireLight {
+                    twoFingerHapticLight.selectionChanged()
+                    twoFingerHapticLight.prepare()
+                    lastTwoFingerLightHapticTime = nowTime
                 }
             }
             
+            
+            
         case .twoFingerSwipeVertical:
+            let absDy = abs(twoFingerCtx.cumulativeDy)
+            let nearStart = vThreshold * swipeLightZoneRatio
+            
+            guard pendingTwoFingerCommand == .none else { return }
+               
             // Only evaluate vertical component
-            if pendingTwoFingerCommand == .none,
-               abs(twoFingerCtx.cumulativeDy) >= verticalSwipeThreshold {
+            if absDy >= vThreshold {
+                // 👉 Threshold reached: one strong haptic, then lock command
+                if twoFingerCtx.cumulativeDy < 0 && hapticsEnabledSwipeUp {
+                    twoFingerHapticStrong.impactOccurred()
+                    twoFingerHapticStrong.prepare()
+                } else if twoFingerCtx.cumulativeDy > 0 && hapticsEnabledSwipeDown {
+                    twoFingerHapticStrong.impactOccurred()
+                    twoFingerHapticStrong.prepare()
+                }
                 
-                if twoFingerCtx.cumulativeDy < 0 {
-                    mouseStatus = "Overview (UP)"
-                    print("Overview (UP)")
-                    pendingTwoFingerCommand = TwoFingerCommand.swipeUp
+                pendingTwoFingerCommand = (twoFingerCtx.cumulativeDy < 0) ? .swipeUp : .swipeDown
+                twoFingerCtx.cumulativeDy < 0 ? print("Overview (UP)") : print("Two-finger vertical (down)")
+                
+            } else if absDy >= nearStart {
+                // 👉 In light haptic zone, before threshold
+                let directionHapticsEnabled =
+                    (twoFingerCtx.cumulativeDy < 0 && hapticsEnabledSwipeUp) ||
+                    (twoFingerCtx.cumulativeDy > 0 && hapticsEnabledSwipeDown)
+
+                guard directionHapticsEnabled else { return }
+                
+                let shouldFireLight: Bool
+                if let last = lastTwoFingerLightHapticTime {
+                    shouldFireLight = (nowTime - last) >= 0.08
                 } else {
-                    mouseStatus = "Two-finger vertical (down)"
-                    print("Two-finger vertical (down)")
-                    pendingTwoFingerCommand = TwoFingerCommand.swipeDown
+                    shouldFireLight = true
+                }
+
+                if shouldFireLight {
+                    twoFingerHapticLight.selectionChanged()
+                    twoFingerHapticLight.prepare()
+                    lastTwoFingerLightHapticTime = nowTime
                 }
             }
             
@@ -562,6 +635,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         
         // Reset 2 finger command
         pendingTwoFingerCommand = .none
+        lastTwoFingerLightHapticTime = nil
         
         // Status updates
         gestureState = .idle
