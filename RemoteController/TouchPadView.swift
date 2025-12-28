@@ -37,7 +37,6 @@ struct TouchPadView: View {
                     viewModel.handleTouchesEnded(touches, event: event)
                 }
             )
-            .background(Color(white: 0.98))
             
             // Decorations should NOT intercept touches:
             Rectangle()

@@ -25,6 +25,12 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     @Published var isConnected = false
     @Published var statusMessage = "Initializing Bluetooth..."
     @Published var packetsDropped: Int = 0
+    @Published var preConnectionModel: PreConnectionViewModel = PreConnectionViewModel(
+        status: .disconnected,
+        tip: nil,
+        statusItems: []
+    )
+    @Published var connectionMonitorModel: ConnectionMonitorViewModel = ConnectionMonitorViewModel()
     
     // MARK: UUIDs must match ESP side
     private var serviceUUID = CBUUID(string: "00001234-0000-1000-8000-00805f9b34fb")
@@ -137,6 +143,22 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         lastTickTimestamp = now
         onTick?(dt)
         
+        // Collect packet stats every 2 seconds (even if no packets sent)
+        if let _ = peripheral, let _ = writeBleCharacteristic {
+            let statsNow = Date()
+            if statsNow.timeIntervalSince(lastStatsTime) >= 2.0 {
+                print("📊 Sent \(packetsSent) packets in 2s, dropped: \(packetsDropped)")
+                
+                // Create PacketData from current stats and queue for update
+                let packetData = PacketData(sent: packetsSent, lost: packetsDropped)
+                updateConnectionMonitor(with: packetData)
+                
+                // Reset counters for next interval
+                packetsSent = 0
+                packetsDropped = 0
+                lastStatsTime = statsNow
+            }
+        }
         
         let hasMoved = (accumulatedDX != 0 || accumulatedDY != 0)
         let hasWheel = (wheelDelta != 0)
@@ -185,21 +207,77 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
 //            print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16), button=\(buttonsState), wheel=\(wheelDelta)")
             buttonDirty = false
             packetsSent += 1
-            
-            // Print packet stats every 4 seconds
-            let now = Date()
-            if now.timeIntervalSince(lastStatsTime) > 4.0 {
-                print("📊 Sent \(packetsSent) packets in 4s, dropped: \(packetsDropped)")
-                packetsSent = 0
-                packetsDropped = 0
-                lastStatsTime = now
-            }
         } else {
             packetsDropped += 1
         }
     }
     
     
+    
+    // MARK: - PreConnection Model Updates
+    
+    private func updatePreConnectionModel(
+        status: PreConnectionStatus,
+        tip: PreConnectionTip? = nil,
+        addStatusItem: StatusItem? = nil,
+        replaceStatusItems: [StatusItem]? = nil
+    ) {
+        var newItems = replaceStatusItems ?? preConnectionModel.statusItems
+        
+        if let newItem = addStatusItem {
+            // Add new item at the beginning (newest-first)
+            newItems.insert(newItem, at: 0)
+        }
+        
+        preConnectionModel = PreConnectionViewModel(
+            status: status,
+            tip: tip,
+            statusItems: newItems
+        )
+    }
+    
+    // MARK: - ConnectionMonitor Model Updates
+    
+    private func updateConnectionMonitor(with newPacketData: PacketData) {
+        // Add new packet data at the beginning (newest-first)
+        var updatedPackets = connectionMonitorModel.packets
+        
+        // Keep only 16 items (matching maxVisibleBars in LiveBarChartView)
+        // Remove the oldest (last) item first if at capacity to avoid array growth
+        if updatedPackets.count >= 16 {
+            updatedPackets.removeLast()
+        }
+        
+        // Insert new item at the beginning
+        updatedPackets.insert(newPacketData, at: 0)
+        
+        // Calculate total sent and lost across all packets
+        var totalSent = 0
+        var totalLost = 0
+        for packet in updatedPackets {
+            totalSent += packet.sent
+            totalLost += packet.lost
+        }
+        let totalPackets = totalSent + totalLost
+        
+        // Calculate packet loss per mille (0-999, where 1000‰ = 100%)
+        let packetLossPerMille: Int
+        if totalPackets > 0 {
+            let perMille = Double(totalLost) / Double(totalPackets) * 1000.0
+            packetLossPerMille = min(999, max(0, Int(perMille.rounded())))
+        } else {
+            packetLossPerMille = 0
+        }
+        
+        // Determine stability: unstable if packet loss > 10% (100 per mille)
+        let isStable = packetLossPerMille <= 100
+        
+        connectionMonitorModel = ConnectionMonitorViewModel(
+            packetLossPercentage: packetLossPerMille,
+            isStable: isStable,
+            packets: updatedPackets
+        )
+    }
     
     // MARK: - Public API
     
@@ -321,8 +399,10 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         if peripheral.canSendWriteWithoutResponse {
             peripheral.writeValue(packet, for: char, type: .withoutResponse)
             print("🟣 Sent keyboard combo for \(command): \(limitedCombo)")
+            packetsSent += 1
         } else {
             print("🟡 BLE buffer full, dropped combo for \(command)")
+            packetsDropped += 1
         }
     }
     
@@ -354,6 +434,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         if peripheral.canSendWriteWithoutResponse {
             peripheral.writeValue(packet, for: char, type: .withoutResponse)
             print("⌨️ Sent key combo: \(limitedCombo)")
+            packetsSent += 1
         } else {
             print("🟡 BLE buffer full, dropped key combo")
             packetsDropped += 1
@@ -369,23 +450,53 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         case .poweredOn:
             print("✅ Bluetooth is ON – ready to scan")
             statusMessage = "Bluetooth is ON, scanning ESP..."
+            updatePreConnectionModel(
+                status: .searching,
+                tip: .connectDongle,
+                addStatusItem: StatusItem(text: "Bluetooth is ON", type: .success)
+            )
             startScan()
         case .poweredOff:
             print("❌ Bluetooth is OFF")
             statusMessage = "Bluetooth is OFF"
+            updatePreConnectionModel(
+                status: .disconnected,
+                tip: .enableBluetooth,
+                replaceStatusItems: [StatusItem(text: "Bluetooth is OFF", type: .info)]
+            )
         case .unauthorized:
             print("🚫 Bluetooth unauthorized")
             statusMessage = "Bluetooth unauthorized — enable in Settings"
+            updatePreConnectionModel(
+                status: .disconnected,
+                tip: .authorizeBluetooth,
+                replaceStatusItems: [StatusItem(text: "Bluetooth Unauthorized", type: .info)]
+            )
         case .resetting:
             print("♻️ Bluetooth resetting…")
             statusMessage = "Bluetooth resetting…"
+            updatePreConnectionModel(
+                status: .disconnected,
+                tip: nil,
+                replaceStatusItems: [StatusItem(text: "Bluetooth Resetting", type: .info)]
+            )
         case .unsupported:
             print("❌ Bluetooth unsupported")
             statusMessage = "Your phone does not support bluetooth"
+            updatePreConnectionModel(
+                status: .disconnected,
+                tip: .unsupportedBluetooth,
+                replaceStatusItems: [StatusItem(text: "Bluetooth Unsupported", type: .error)]
+            )
         case .unknown:
             fallthrough
         @unknown default:
             print("ℹ️ Bluetooth state: \(central.state.rawValue)")
+            updatePreConnectionModel(
+                status: .disconnected,
+                tip: nil,
+                replaceStatusItems: [StatusItem(text: "Bluetooth Unknown State", type: .info)]
+            )
         }
     }
     
@@ -396,6 +507,10 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         }
         // Scan for Peripherals(devices) based on their advertised service
         print("Start Scanning")
+        // Update status to searching when starting scan (include after failed connection)
+        if preConnectionModel.status != .searching {
+            updatePreConnectionModel(status: .searching)
+        }
         centralManager.scanForPeripherals(
             withServices: [serviceUUID],
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
@@ -415,6 +530,12 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         self.peripheral?.delegate = self
         
         centralManager.stopScan()
+        
+        updatePreConnectionModel(
+            status: .connecting,
+            tip: nil,
+            addStatusItem: StatusItem(text: "Found USB Dongle", type: .success)
+        )
         
         let options: [String: Any] = [ // Enable connection notifications
             CBConnectPeripheralOptionNotifyOnConnectionKey: true,
@@ -437,12 +558,23 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         packetsSent = 0
         lastStatsTime = Date()
         
+        // Reset ConnectionMonitor when connecting
+        connectionMonitorModel = ConnectionMonitorViewModel()
+        
+        // Status remains .connecting while discovering services/characteristics
+        // No status item added here - service discovery will handle it
+        
         // Delay service discovery
         // iOS needs time to complete MTU negotiation and connection setup
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
             guard let self = self,
                   self.peripheral?.state == .connected else {
                 print("⚠️ Lost connection before service discovery")
+                self?.updatePreConnectionModel(
+                    status: .disconnected,
+                    tip: nil,
+                    addStatusItem: StatusItem(text: "Lost Connection", type: .error)
+                )
                 return
             }
             print("🔍 Starting service discovery...")
@@ -461,6 +593,12 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         print("❌ Failed to connect: \(error?.localizedDescription ?? "unknown")")
         print("   Error domain: \(errorDomain), code: \(errorCode)")
         statusMessage = "Connection failed: \(error?.localizedDescription ?? "Unknown")"
+        
+        updatePreConnectionModel(
+            status: .disconnected,
+            tip: nil,
+            addStatusItem: StatusItem(text: "Connection Failed", type: .error)
+        )
         
         self.peripheral = nil
 
@@ -489,6 +627,16 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         writeBleCharacteristic = nil
         self.peripheral = nil
         
+        // Reset ConnectionMonitor on disconnect
+        connectionMonitorModel = ConnectionMonitorViewModel()
+        
+        // Update model - will transition back to searching when scan restarts
+        updatePreConnectionModel(
+            status: .disconnected,
+            tip: nil,
+            addStatusItem: StatusItem(text: "Disconnected", type: .info)
+        )
+        
         // Delay 1s before reconnecting
         // CoreBluetooth needs time to clean up (20ms minimum)
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
@@ -509,12 +657,22 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         guard error == nil else{
             print("❌ Service discovery error: \(error!)")
             statusMessage = "Service discovery failed"
+            updatePreConnectionModel(
+                status: .disconnected,
+                tip: nil,
+                addStatusItem: StatusItem(text: "Service Discovery Failed", type: .error)
+            )
             centralManager.cancelPeripheralConnection(peripheral)
             return
         }
         
         guard let services = peripheral.services else {
             print("⚠️ No services found")
+            updatePreConnectionModel(
+                status: .disconnected,
+                tip: nil,
+                addStatusItem: StatusItem(text: "No Services Found", type: .error)
+            )
             return
         }
         
@@ -527,6 +685,11 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         }
         
         print("⚠️ Target service not found")
+        updatePreConnectionModel(
+            status: .disconnected,
+            tip: nil,
+            addStatusItem: StatusItem(text: "Target Service Not Found", type: .error)
+        )
     }
     
     func peripheral(
@@ -536,11 +699,21 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     ){
         guard error == nil else {
             print("❌ Characteristic discovery error: \(error!)")
+            updatePreConnectionModel(
+                status: .disconnected,
+                tip: nil,
+                addStatusItem: StatusItem(text: "Characteristic Discovery Failed", type: .error)
+            )
             return
         }
         
         guard let characteristics = service.characteristics else {
             print("⚠️ No characteristics found")
+            updatePreConnectionModel(
+                status: .disconnected,
+                tip: nil,
+                addStatusItem: StatusItem(text: "No Characteristics Found", type: .error)
+            )
             return
         }
         
@@ -553,9 +726,19 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
                     writeBleCharacteristic = char // setting writeCharacteristic
                     statusMessage = "Ready to send data"
                     print("✅ Write characteristic ready (props: \(char.properties))")
+                    updatePreConnectionModel(
+                        status: .connected,
+                        tip: nil,
+                        addStatusItem: StatusItem(text: "Connection Successful", type: .success)
+                    )
                 } else {
                     print("❌ Characteristic doesn't support writeWithoutResponse")
                     statusMessage = "Wrong characteristic properties"
+                    updatePreConnectionModel(
+                        status: .disconnected,
+                        tip: nil,
+                        addStatusItem: StatusItem(text: "Wrong Characteristic Properties", type: .error)
+                    )
                 }
             }
         }
