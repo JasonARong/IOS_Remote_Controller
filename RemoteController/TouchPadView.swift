@@ -8,12 +8,13 @@
 import SwiftUI
 
 struct TouchPadView: View {
-    @StateObject private var connection: ConnectionManager
+    @ObservedObject var connection: ConnectionManager
     @StateObject private var viewModel: TouchPadViewModel
     
-    init (){
-        let conn = ConnectionManager()
-        _connection = StateObject(wrappedValue: conn)
+    init(connection: ConnectionManager? = nil) {
+        // Use provided connection or create new one for preview/standalone use
+        let conn = connection ?? ConnectionManager()
+        _connection = ObservedObject(wrappedValue: conn)
         _viewModel = StateObject(wrappedValue: TouchPadViewModel(connection: conn))
     }
     

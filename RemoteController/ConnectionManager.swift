@@ -57,22 +57,6 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private var lastStatsTime: Date = Date()
     
     
-    // Two Finger gestures & keyboard
-    enum LogicalKey: UInt8 {
-        // Modifiers
-        case control   = 1
-        case shift     = 2
-        case alt       = 3
-        case command   = 4   // GUI / Win key if needed later
-
-        // Arrows
-        case arrowLeft  = 10
-        case arrowRight = 11
-        case arrowUp    = 12
-        case arrowDown  = 13
-
-        // (Later: letters, digits, function keys, etc.)
-    }
     
     // Two Finger gestures
     enum SystemCommand { // should stay consistant with TwoFingerCommand
@@ -100,7 +84,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             .swipeLeft:  [.control, .arrowRight],
             .swipeRight: [.control, .arrowLeft],
             .swipeUp:    [.control, .arrowUp],
-            .swipeDown:  []   // no-op for now
+            .swipeDown:  [.control, .arrowDown]
         ]
     )
     
@@ -339,6 +323,40 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             print("🟣 Sent keyboard combo for \(command): \(limitedCombo)")
         } else {
             print("🟡 BLE buffer full, dropped combo for \(command)")
+        }
+    }
+    
+    // Keyboard key combo commands
+    func sendKeyCombo(_ combo: [LogicalKey]) {
+        guard !combo.isEmpty else { return }
+        
+        // Enforce upper limit of 3 key combo
+        let limitedCombo = Array(combo.prefix(3))
+        
+        // If not actually connected yet, just log and bail
+        guard let peripheral = peripheral,
+              let char = writeBleCharacteristic else {
+            print("⚪️ Stub: would send key combo: \(limitedCombo)")
+            return
+        }
+        
+        // Protocol: same as sendSystemCommand
+        // [0] = 0xF1 → "keyboard combo"
+        // [1] = N    → number of keys (1–3)
+        // [2...]     → LogicalKey.rawValue for each key
+        var packet = Data()
+        packet.append(0xF1)
+        packet.append(UInt8(limitedCombo.count))
+        limitedCombo.forEach { key in
+            packet.append(key.rawValue)
+        }
+
+        if peripheral.canSendWriteWithoutResponse {
+            peripheral.writeValue(packet, for: char, type: .withoutResponse)
+            print("⌨️ Sent key combo: \(limitedCombo)")
+        } else {
+            print("🟡 BLE buffer full, dropped key combo")
+            packetsDropped += 1
         }
     }
     

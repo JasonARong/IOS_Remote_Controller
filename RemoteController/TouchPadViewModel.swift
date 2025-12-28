@@ -58,7 +58,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     private var hapticsEnabledSwipeLeft  = true
     private var hapticsEnabledSwipeRight = true
     private var hapticsEnabledSwipeUp    = true
-    private var hapticsEnabledSwipeDown  = false   // disabled as you requested
+    private var hapticsEnabledSwipeDown  = true
     
     // --- Touch tracking ---
     private var primaryTouch: UITouch? = nil
