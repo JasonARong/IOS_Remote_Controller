@@ -9,13 +9,22 @@ import SwiftUI
 
 struct TouchPadView: View {
     @ObservedObject var connection: ConnectionManager
+    @ObservedObject var matrixViewModel: DynamicMatrixViewModel
     @StateObject private var viewModel: TouchPadViewModel
     
-    init(connection: ConnectionManager? = nil) {
-        // Use provided connection or create new one for preview/standalone use
-        let conn = connection ?? ConnectionManager()
+    init(connection: ConnectionManager, matrixViewModel: DynamicMatrixViewModel) {
+        _connection = ObservedObject(wrappedValue: connection)
+        _matrixViewModel = ObservedObject(wrappedValue: matrixViewModel)
+        _viewModel = StateObject(wrappedValue: TouchPadViewModel(connection: connection, matrixViewModel: matrixViewModel))
+    }
+    
+    // Convenience init for preview/standalone use
+    init() {
+        let conn = ConnectionManager()
+        let matrix = DynamicMatrixViewModel()
         _connection = ObservedObject(wrappedValue: conn)
-        _viewModel = StateObject(wrappedValue: TouchPadViewModel(connection: conn))
+        _matrixViewModel = ObservedObject(wrappedValue: matrix)
+        _viewModel = StateObject(wrappedValue: TouchPadViewModel(connection: conn, matrixViewModel: matrix))
     }
     
     
@@ -39,29 +48,29 @@ struct TouchPadView: View {
             )
             
             // Decorations should NOT intercept touches:
-            Rectangle()
-                .stroke(style: StrokeStyle(lineWidth: 2, dash: [12,4]))
-                .allowsHitTesting(false)
-            ZStack {
-                Circle()
-                    .fill(Color.gray)
-                    .frame(width: 40, height: 40)
-                    .position(viewModel.cursorPoint)
-            }.allowsHitTesting(false)
-            
-            
-            VStack {
-                Text(pointText)
-                   .font(.caption)
-                   .padding(8)
-                   .background(.ultraThinMaterial, in: Capsule())
-                   .padding(8)
-                
-                Text(connection.statusMessage)
-                Text(viewModel.mouseStatus)
-                Text("Gesture: \(viewModel.gestureStatus)")
-                
-            }
+//            Rectangle()
+//                .stroke(style: StrokeStyle(lineWidth: 2, dash: [12,4]))
+//                .allowsHitTesting(false)
+//            ZStack {
+//                Circle()
+//                    .fill(Color.gray)
+//                    .frame(width: 40, height: 40)
+//                    .position(viewModel.cursorPoint)
+//            }.allowsHitTesting(false)
+//            
+//            
+//            VStack {
+//                Text(pointText)
+//                   .font(.caption)
+//                   .padding(8)
+//                   .background(.ultraThinMaterial, in: Capsule())
+//                   .padding(8)
+//                
+//                Text(connection.statusMessage)
+//                Text(viewModel.mouseStatus)
+//                Text("Gesture: \(viewModel.gestureStatus)")
+//                
+//            }
         }
     }
     

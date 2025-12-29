@@ -20,6 +20,15 @@ extension Color {
     static let displayBlue = Color(red: 0.14, green: 0.8, blue: 1)
     static let displayRed = Color(red: 0.95, green: 0.43, blue: 0.43)
     static let displayGreen = Color(red: 0.5, green: 0.86, blue: 0.38)
+    
+    // Dynamic Matrix
+    static let circleWhite = Color(red: 1.0, green: 1.0, blue: 1.0)
+    static let circleHighlightGreen = Color(red: 0.498, green: 0.867, blue: 0.376)
+    static let backgroundBlack = Color.black
+    static let touchIndicatorWhite = Color.white.opacity(0.7)
+    static let textWhitePrimary = Color.white.opacity(0.85)
+    static let textWhiteSecondary = Color.white.opacity(0.65)
+    static let buttonBlue = Color.blue
 }
 
 // MARK: - Inner shadow

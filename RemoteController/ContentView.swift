@@ -11,6 +11,7 @@ struct ContentView: View {
     @StateObject private var connection: ConnectionManager
     @StateObject private var displayStore = DisplayStore()
     @StateObject private var keyboardViewModel: KeyboardViewModel
+    @StateObject private var matrixViewModel = DynamicMatrixViewModel()
         
     @State private var isKeyboardOn: Bool = false
     @State private var previousConnectionStatus: PreConnectionStatus = .disconnected
@@ -27,8 +28,9 @@ struct ContentView: View {
     
     var body: some View {
         ZStack {
-            // MARK: - TOUCH PAD
-            TouchPadView(connection: connection)
+            // MARK: - Matrix & TOUCH PAD
+            DynamicMatrixView(viewModel: matrixViewModel)
+            TouchPadView(connection: connection, matrixViewModel: matrixViewModel)
            
             VStack {
                 // MARK: - TOP UI MODULE
@@ -149,7 +151,7 @@ struct ContentView: View {
                                             .transition(.opacity.combined(with: .scale(scale: 0.95)))
                                             
                                     } else {
-                                        Text("ദ്ദി(  ˵ •̀ ᴗ - ˵  ) ✧")
+                                        Text(currStatusText.uppercased() == "CONNECTED" ? "ദ്ദി(  ˵ •̀ ᴗ - ˵  ) ✧" : "(  .. ◜ᴗ◝ ..  )")
                                             .font(.custom("Pixelify Sans", size: 17))
                                             .foregroundColor(.white)
                                             
@@ -278,6 +280,15 @@ struct ContentView: View {
         // Connection status changed -> Display Transition
         .onChange(of: connection.preConnectionModel.status) { oldStatus, newStatus in
             handleConnectionStatusChange(from: oldStatus, to: newStatus)
+            
+            // Wire matrix animations to connection status
+            if newStatus == .connected && oldStatus != .connected {
+                // Connection successful: animate to matrix
+                matrixViewModel.animateToMatrix()
+            } else if oldStatus == .connected && newStatus != .connected {
+                // Disconnected: reset to random movement
+                matrixViewModel.resetToRandomMovement()
+            }
             
             withAnimation(.easeInOut(duration: 0.3)) {
                 switch connection.preConnectionModel.status{

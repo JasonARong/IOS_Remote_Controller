@@ -17,6 +17,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     @Published var gestureStatus: String = "idle"
     
     private let connection: ConnectionManager
+    private weak var matrixViewModel: DynamicMatrixViewModel?
     
     // --- Smooth move & scroll  ---
     private let pointerEngine: PointerMotionEngine
@@ -28,7 +29,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     private let holdDelay: TimeInterval = 0.5
     private let moveSlopRadius: CGFloat = 12.0
     // 1 Finger scroll zone
-    private let scrollZoneFraction: CGFloat = 0.15
+    private let scrollZoneFraction: CGFloat = 0.1
     // 2 Fingers - right click
     private let pairWindow: TimeInterval      = 0.12   // second finger must arrive within 120ms
     private let tapMaxDuration: TimeInterval  = 0.25   // total duration limit
@@ -51,6 +52,10 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     // 2 Fingers - swipe gestures (haptics)
     private let twoFingerHapticLight = UISelectionFeedbackGenerator()
     private let twoFingerHapticStrong = UIImpactFeedbackGenerator(style: .medium)
+    
+    // Hold and tap haptics
+    private let holdHapticStrong = UIImpactFeedbackGenerator(style: .medium)
+    private let tapHapticLight = UISelectionFeedbackGenerator()
     
     private var lastTwoFingerLightHapticTime: CFTimeInterval? = nil // Last time we emitted a light haptic
     private let swipeLightZoneRatio: CGFloat = 0.6 // Where the “light haptic zone” starts
@@ -108,13 +113,16 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     }
     
     
-    init(connection: ConnectionManager){
+    init(connection: ConnectionManager, matrixViewModel: DynamicMatrixViewModel? = nil){
         self.connection = connection
+        self.matrixViewModel = matrixViewModel
         self.pointerEngine = PointerMotionEngine(connection: connection)
         self.scrollEngine = ScrollMotionEngine(connection: connection, inertiaEnabled: false)
         
         twoFingerHapticLight.prepare()
         twoFingerHapticStrong.prepare()
+        holdHapticStrong.prepare()
+        tapHapticLight.prepare()
         
         connection.onTick = { [weak self] dt in
             self?.scrollEngine.update(dt: dt)
@@ -160,6 +168,9 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         
         primaryTouch = touch
         let current = touch.location(in: view)
+        
+        // Wire touch location to matrix view model for attraction animation
+        matrixViewModel?.setTouchLocation(current)
         
         // --- First contact ---
         if touchInfo.startPoint == nil {
@@ -264,6 +275,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         // --- Initialize TwoFingerContext ---
         if twoFingerContext == nil {
             cancelAllHolds()
+            // Clear touch location when entering two-finger mode to disable attraction effect
+            matrixViewModel?.setTouchLocation(nil)
             let sorted = [(keys[0], info1), (keys[1], info2)].sorted {
                 $0.1.downTime < $1.1.downTime // sort tocuhes based on down time (touch order)
             }
@@ -342,6 +355,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                 gestureState = .twoFingerSwipeHorizontal
                 gestureStatus = "twoFingerSwipeHorizontal"
                 mouseStatus = "2-finger: locked H"
+                // Disable touch attraction effect during two-finger swipe
+                matrixViewModel?.setTouchLocation(nil)
             } else if ay > dominanceRatio * ax {
                 // Lock vertical swipe (overview)
                 twoFingerCtx.lockedAxis = .vertical
@@ -349,6 +364,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                 gestureState = .twoFingerSwipeVertical
                 gestureStatus = "twoFingerSwipeVertical"
                 mouseStatus = "2-finger: locked V"
+                // Disable touch attraction effect during two-finger swipe
+                matrixViewModel?.setTouchLocation(nil)
             }
             
             // If neither axis dominant yet, keep accumulating
@@ -363,6 +380,9 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         
         switch gestureState {
         case .twoFingerSwipeHorizontal:
+            // Ensure touch location stays cleared during two-finger swipe (no attraction effect)
+            matrixViewModel?.setTouchLocation(nil)
+            
             let absDx = abs(twoFingerCtx.cumulativeDx)
             let nearStart = hThreshold * swipeLightZoneRatio
             
@@ -381,6 +401,10 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                 
                 pendingTwoFingerCommand = (twoFingerCtx.cumulativeDx > 0) ? .swipeRight : .swipeLeft
                 twoFingerCtx.cumulativeDx > 0 ? print("Desktop →") : print("Desktop ←")
+                
+                // Lock matrix shift at maximum value
+                let shiftValue: CGFloat = twoFingerCtx.cumulativeDx > 0 ? 1.0 : -1.0
+                matrixViewModel?.matrixShiftValueX = shiftValue
                                 
             } else if absDx >= nearStart {
                 // 👉 In light haptic zone, before threshold
@@ -389,6 +413,11 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                     (twoFingerCtx.cumulativeDx < 0 && hapticsEnabledSwipeLeft)
 
                 guard directionHapticsEnabled else { return }
+                
+                // Gradually increase matrix shift proportionally to swipe distance
+                let progress = (absDx - nearStart) / (hThreshold - nearStart)
+                let shiftValue = (twoFingerCtx.cumulativeDx > 0 ? 1.0 : -1.0) * min(1.0, progress)
+                matrixViewModel?.matrixShiftValueX = shiftValue
                 
                 let shouldFireLight: Bool
                 if let last = lastTwoFingerLightHapticTime {
@@ -402,11 +431,19 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                     twoFingerHapticLight.prepare()
                     lastTwoFingerLightHapticTime = nowTime
                 }
+            } else {
+                // Before light zone: proportional shift from 0
+                let progress = absDx / nearStart
+                let shiftValue = (twoFingerCtx.cumulativeDx > 0 ? 1.0 : -1.0) * progress * swipeLightZoneRatio
+                matrixViewModel?.matrixShiftValueX = shiftValue
             }
             
             
             
         case .twoFingerSwipeVertical:
+            // Ensure touch location stays cleared during two-finger swipe (no attraction effect)
+            matrixViewModel?.setTouchLocation(nil)
+            
             let absDy = abs(twoFingerCtx.cumulativeDy)
             let nearStart = vThreshold * swipeLightZoneRatio
             
@@ -426,6 +463,11 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                 pendingTwoFingerCommand = (twoFingerCtx.cumulativeDy < 0) ? .swipeUp : .swipeDown
                 twoFingerCtx.cumulativeDy < 0 ? print("Overview (UP)") : print("Two-finger vertical (down)")
                 
+                // Lock matrix shift at maximum value
+                // Note: positive Y shifts down, negative Y shifts up (matching DynamicMatrixView slider behavior)
+                let shiftValue: CGFloat = twoFingerCtx.cumulativeDy > 0 ? 1.0 : -1.0
+                matrixViewModel?.matrixShiftValueY = shiftValue
+                
             } else if absDy >= nearStart {
                 // 👉 In light haptic zone, before threshold
                 let directionHapticsEnabled =
@@ -433,6 +475,11 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                     (twoFingerCtx.cumulativeDy > 0 && hapticsEnabledSwipeDown)
 
                 guard directionHapticsEnabled else { return }
+                
+                // Gradually increase matrix shift proportionally to swipe distance
+                let progress = (absDy - nearStart) / (vThreshold - nearStart)
+                let shiftValue = (twoFingerCtx.cumulativeDy > 0 ? 1.0 : -1.0) * min(1.0, progress)
+                matrixViewModel?.matrixShiftValueY = shiftValue
                 
                 let shouldFireLight: Bool
                 if let last = lastTwoFingerLightHapticTime {
@@ -446,6 +493,11 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                     twoFingerHapticLight.prepare()
                     lastTwoFingerLightHapticTime = nowTime
                 }
+            } else {
+                // Before light zone: proportional shift from 0
+                let progress = absDy / nearStart
+                let shiftValue = (twoFingerCtx.cumulativeDy > 0 ? 1.0 : -1.0) * progress * swipeLightZoneRatio
+                matrixViewModel?.matrixShiftValueY = shiftValue
             }
             
         default:
@@ -509,6 +561,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             } else if let s = info.startPoint, let p = info.previousPoint,
                       distance(from: s, to: p) <= moveSlopRadius { // quick left click
                 mouseStatus = "Left tap"
+                tapHapticLight.selectionChanged()
+                tapHapticLight.prepare()
                 connection.leftTap()
             }
             
@@ -533,7 +587,15 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             }
             
             // 1 active touch left
-            if remainingActive == 1 {                
+            if remainingActive == 1 {
+                // If we were in swipe mode, reset matrix shifts since we're no longer swiping
+                if gestureState == .twoFingerSwipeHorizontal || gestureState == .twoFingerSwipeVertical {
+                    withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+                        matrixViewModel?.matrixShiftValueX = 0
+                        matrixViewModel?.matrixShiftValueY = 0
+                    }
+                }
+                
                 // first finger lift
                 if twoFingerCtx.firstLiftAt == nil { // update first lift time & deadline
                     twoFingerCtx.firstLiftAt = now
@@ -569,6 +631,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                     let bothWithinSlop = (!i1.movedBeyondSlop && !i2.movedBeyondSlop) // within slop
                     
                     if twoFingerCtx.isTapCandidate && liftsClose && withinDuration && bothWithinSlop {
+                        tapHapticLight.selectionChanged()
+                        tapHapticLight.prepare()
                         connection.rightTap()
                         print("Right Click!!!")
                     } else {
@@ -605,6 +669,12 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         twoFingerContext = nil
         suppressNextLeftClick = true // prevent unwanted left click registered from the remaining finger
         
+        // Reset matrix shifts when transitioning from two fingers to one
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            matrixViewModel?.matrixShiftValueX = 0
+            matrixViewModel?.matrixShiftValueY = 0
+        }
+        
         // keep the only remaining touch
         for (t, _) in activeTouches where t != remainingTouch {
             activeTouches.removeValue(forKey: t)
@@ -637,6 +707,14 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         pendingTwoFingerCommand = .none
         lastTwoFingerLightHapticTime = nil
         
+        // Clear touch location and reset matrix shifts
+        matrixViewModel?.setTouchLocation(nil)
+        // Animate matrix shifts back to 0 with spring animation
+        withAnimation(.interactiveSpring(response: 0.24, dampingFraction: 0.88)) {
+            matrixViewModel?.matrixShiftValueX = 0
+            matrixViewModel?.matrixShiftValueY = 0
+        }
+        
         // Status updates
         gestureState = .idle
         gestureStatus = "idle"
@@ -662,6 +740,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             else { return }
                                     
             currentTouchInfo.isHolding = true
+            self.holdHapticStrong.impactOccurred()
+            self.holdHapticStrong.prepare()
             self.connection.leftDown()
             self.mouseStatus = "One touch Holding"
         }
