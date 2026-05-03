@@ -38,13 +38,16 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
 
     // Smooth cursor and scroll
     private var displayLink: CADisplayLink? /// use displayLink to send packets at an constant rate
-    private let targetFPS: Int = 120 /// Sending packets' rate
+    private let targetFPS: Int = 60 /// Sending packets' rate
     private var lastTickTimestamp: CFTimeInterval? = nil
     var onTick: ((CFTimeInterval) -> Void)? // Callback so ScrollMotionEngine can run per-frame logic.
     
     // Cursor movement
     private var accumulatedDX: CGFloat = 0
     private var accumulatedDY: CGFloat = 0
+    #if DEBUG
+    private var debugMouseSequence: UInt8 = 0
+    #endif
     
     // Mouse Buttons (left & right)
     private var buttonsState: UInt8 = 0 // [0b00000000] bit0 = left btn, bit1 = right btn
@@ -118,7 +121,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         
         let displayLink = CADisplayLink(target: self, selector: #selector(tick))
         if #available(iOS 15.0, *){ // System will choose within preferred targetFPS (60 or 120)
-            displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 300, preferred: Float(targetFPS))
+            displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: Float(targetFPS), preferred: Float(targetFPS))
         } else {
             displayLink.preferredFramesPerSecond = targetFPS
         }
@@ -141,6 +144,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             dt = 1.0 / CFTimeInterval(targetFPS)   // safe fallback
         }
         lastTickTimestamp = now
+        MovementDiagnostics.shared.recordBleTickInterval(dt)
         onTick?(dt)
         
         // Collect packet stats every 2 seconds (even if no packets sent)
@@ -164,6 +168,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         let hasWheel = (wheelDelta != 0)
         let shouldSend = leftHeld || buttonDirty || hasMoved || hasWheel
         guard shouldSend else { return }
+        MovementDiagnostics.shared.recordBleAttempt()
         
         // Movement
         let dx = accumulatedDX
@@ -182,8 +187,14 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         wheelDelta = 0
         
         // Build packet
-        // Packet structure: [buttons, Scroll, dxLE(1), dxLE(2), dyLE(1), dyLE(2)] → 6 bytes
-        var packet = Data(capacity: 6)
+        // Release packet: [buttons, Scroll, dxLE(1), dxLE(2), dyLE(1), dyLE(2)] → 6 bytes
+        // Debug packet: [0xA1, seq, buttons, Scroll, dxLE(1), dxLE(2), dyLE(1), dyLE(2)] → 8 bytes
+        var packet = Data(capacity: 8)
+        #if DEBUG
+        debugMouseSequence &+= 1
+        packet.append(0xA1)
+        packet.append(debugMouseSequence)
+        #endif
         packet.append(buttonsState) // Left & Right button
         packet.append(wheelDeltaUInt8) // Scroll wheel
         
@@ -199,6 +210,9 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         guard let peripheral = peripheral,
               let char = writeBleCharacteristic else {
 //            print("⚪️ Stub: would send dx=\(dxInt16), dy=\(dyInt16)")
+            if dxInt16 != 0 || dyInt16 != 0 {
+                MovementDiagnostics.shared.recordMovementDropped(reason: .disconnected, dx: CGFloat(dxInt16), dy: CGFloat(dyInt16))
+            }
             return
         }
         
@@ -207,8 +221,13 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
 //            print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16), button=\(buttonsState), wheel=\(wheelDelta)")
             buttonDirty = false
             packetsSent += 1
+            MovementDiagnostics.shared.recordBleSent(dx: dxInt16, dy: dyInt16)
         } else {
             packetsDropped += 1
+            MovementDiagnostics.shared.recordBleBlocked()
+            if dxInt16 != 0 || dyInt16 != 0 {
+                MovementDiagnostics.shared.recordMovementDropped(reason: .bleBlocked, dx: CGFloat(dxInt16), dy: CGFloat(dyInt16))
+            }
         }
     }
     
@@ -344,6 +363,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             guard let self = self else { return }
             leftUp()
         }
+        print("left clicked and sent")
     }
     
     // Right mouse button
@@ -748,6 +768,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     
     func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
 //        print("🟢 Buffer ready")
+        MovementDiagnostics.shared.recordBleReadyCallback()
     }
     
     

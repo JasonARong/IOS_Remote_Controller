@@ -15,6 +15,14 @@ final class PointerMotionEngine {
     // Subpixel accumulators so tiny movements aren't lost
     private var accumX: CGFloat = 0
     private var accumY: CGFloat = 0
+    private var filteredSpeed: CGFloat = 0
+
+    private let minDt: CFTimeInterval = 1.0 / 90.0
+    private let maxDt: CFTimeInterval = 1.0 / 30.0
+    private let velocityAlpha: CGFloat = 0.35
+    private let maxSpeedForGain: CGFloat = 1800
+    private let rawModeGain: CGFloat = 1.15
+    private let maxReportDelta: CGFloat = 32
     
     init (
         connection: ConnectionManager,
@@ -32,12 +40,15 @@ final class PointerMotionEngine {
     ///   - dt: Time since last pointer update (seconds). Use a small fallback if unknown.
     func applyRawDelta(dx: CGFloat, dy: CGFloat, dt: CFTimeInterval) {
         guard dx != 0 || dy != 0 else { return }
-        
-        let safeDt = max(dt, 1.0 / 240.0) // avoid division by zero dt, assume 240 fps at worst
+
+        let safeDt = min(max(dt, minDt), maxDt)
+
         let distance = hypot(dx, dy)
-        let speed = distance / CGFloat(safeDt)  // "pixels per second"
-        
-        let gain = motionGain(forSpeed: speed, settings: settings) // Get the gain from MotionCurves
+        let instantaneousSpeed = min(distance / CGFloat(safeDt), maxSpeedForGain)
+        filteredSpeed = velocityAlpha * instantaneousSpeed + (1 - velocityAlpha) * filteredSpeed
+
+        let gain = rawModeGain
+        MovementDiagnostics.shared.recordPointerGain(speed: filteredSpeed, gain: gain, safeDt: safeDt)
         
         let scaledDx = dx * gain
         let scaledDy = dy * gain
@@ -46,8 +57,9 @@ final class PointerMotionEngine {
         accumX += scaledDx
         accumY += scaledDy
         // Quantize to whole units to send to the ESP bridge
-        let sendDx = accumX.rounded(.towardZero)
-        let sendDy = accumY.rounded(.towardZero)
+        // Use standard rounding instead of towardZero to preserve small movements
+        let sendDx = max(-maxReportDelta, min(maxReportDelta, accumX.rounded()))
+        let sendDy = max(-maxReportDelta, min(maxReportDelta, accumY.rounded()))
         
         // Keep the fractional remainder
         accumX -= sendDx
@@ -55,6 +67,7 @@ final class PointerMotionEngine {
         
         // Send to ConnectionManager
         if sendDx != 0 || sendDy != 0 {
+            MovementDiagnostics.shared.recordPointerEmit(dx: sendDx, dy: sendDy)
             connection.accumulateDelta(dx: sendDx, dy: sendDy) // Send to ConnectionManager
         }
     }
@@ -63,6 +76,7 @@ final class PointerMotionEngine {
     func reset() {
         accumX = 0
         accumY = 0
+        filteredSpeed = 0
     }
 }
 
@@ -70,9 +84,9 @@ final class PointerMotionEngine {
 extension PointerMotionEngine {
     static let defaultSettings = MotionCurveSettings(
         minSpeed: 40,  // below this: baseGain
-        maxSpeed: 900, // above this: maxGain
-        baseGain: 1.0, // slow movements gain
-        maxGain: 2.0,  // fast flicks gain
-        gamma: 1.2     // slightly soft ramp
+        maxSpeed: 1400, // above this: maxGain
+        baseGain: 1.15, // slow movements gain
+        maxGain: 1.15,  // raw-mode experiment: host OS handles acceleration
+        gamma: 1.6     // soft ramp without hitting max too easily
     )
 }

@@ -11,8 +11,8 @@ import QuartzCore
 import UIKit
 
 class TouchPadViewModel: ObservableObject { // use class: only 1 instance of TouchPadViewModel -> persists&updates the View
-    @Published var cursorPoint: CGPoint = CGPoint(x: 100, y: 100)
-    @Published var lastDelta: CGSize? = nil
+//    @Published var cursorPoint: CGPoint = CGPoint(x: 100, y: 100)
+//    @Published var lastDelta: CGSize? = nil
     @Published var mouseStatus: String = "Released"
     @Published var gestureStatus: String = "idle"
     
@@ -21,7 +21,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     
     // --- Smooth move & scroll  ---
     private let pointerEngine: PointerMotionEngine
-    private var lastPointerTimestamp: CFTimeInterval? = nil
+    private var pendingPointerDX: CGFloat = 0
+    private var pendingPointerDY: CGFloat = 0
     private let scrollEngine: ScrollMotionEngine
     private var lastScrollTimestamp: CFTimeInterval? = nil
     
@@ -53,7 +54,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     private let twoFingerHapticLight = UISelectionFeedbackGenerator()
     private let twoFingerHapticStrong = UIImpactFeedbackGenerator(style: .medium)
     
-    // Hold and tap haptics
+    // --- Haptics ---
     private let holdHapticStrong = UIImpactFeedbackGenerator(style: .medium)
     private let tapHapticLight = UISelectionFeedbackGenerator()
     
@@ -125,6 +126,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         tapHapticLight.prepare()
         
         connection.onTick = { [weak self] dt in
+            self?.pointerTick(dt: dt)
             self?.scrollEngine.update(dt: dt)
         }
     }
@@ -148,8 +150,6 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         switch activeTouchCount {
         case 1:
             // === One-finger mode ===
-//            gestureState = .singleActive // setting gesture state
-//            gestureStatus = "singleActive"
             handleSingleFingerChanged(touches, event: event)
         case 2:
             // === Enter or update two-finger mode ===
@@ -167,7 +167,9 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
               let touchInfo = activeTouches[touch] else { return }
         
         primaryTouch = touch
-        let current = touch.location(in: view)
+        let samples = coalescedSamples(for: touch, event: event)
+        let latestSample = samples.last ?? touch
+        let current = latestSample.location(in: view)
         
         // Wire touch location to matrix view model for attraction animation
         matrixViewModel?.setTouchLocation(current)
@@ -176,8 +178,10 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         if touchInfo.startPoint == nil {
             touchInfo.startPoint = current
             touchInfo.previousPoint = current
+            touchInfo.lastMoveTime = latestSample.timestamp
             touchInfo.movedBeyondSlop = false
             touchInfo.isHolding = false
+            resetPointerSampling()
             
             // Decide mode based on starting X position
             if isInScrollZone(current, in: view) {
@@ -196,30 +200,14 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         
         
         // --- Movement depends on gesture state ---
+        var latestPointForState = current
         switch gestureState {
         case .singleActive: // Movement
-            if let prev = touchInfo.previousPoint {
-                let dx = current.x - prev.x
-                let dy = current.y - prev.y
-                let delta = CGSize(width: dx, height: dy)
-                lastDelta = delta
-                
-                // Update cursor locally (for testing)
-                cursorPoint = CGPoint(x: cursorPoint.x + dx, y: cursorPoint.y + dy)
-                
-                // Use pointer acceleration engine
-                let now = CACurrentMediaTime()
-                let dt: CFTimeInterval // get delta time
-                if let last = lastPointerTimestamp {
-                    dt = now - last
-                } else { dt = 1.0 / 120.0 } // safe fallback
-                lastPointerTimestamp = now
-                pointerEngine.applyRawDelta(dx: dx, dy: dy, dt: dt)
-            }
+            latestPointForState = enqueuePointerSamples(samples, fallbackTouch: touch, in: view, touchInfo: touchInfo)
             
             // --- Whether exceeded slop ---
             if let start = touchInfo.startPoint {
-                if distance(from: start, to: current) > moveSlopRadius {
+                if distance(from: start, to: latestPointForState) > moveSlopRadius {
                     touchInfo.movedBeyondSlop = true
                     if !touchInfo.isHolding { // start moving before holdDelay => mouse movement, stop hold timer
                         cancelHold(touch: touch)
@@ -247,11 +235,71 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         default:
             break
         }
-                
-        
-        touchInfo.previousPoint = current
+
+        touchInfo.previousPoint = latestPointForState
+    }
+
+
+    private func coalescedSamples(for touch: UITouch, event: UIEvent?) -> [UITouch] {
+        let samples = event?.coalescedTouches(for: touch) ?? []
+        return samples.isEmpty ? [touch] : samples
+    }
+
+    @discardableResult
+    private func enqueuePointerSamples(
+        _ samples: [UITouch],
+        fallbackTouch: UITouch,
+        in view: UIView,
+        touchInfo: TouchInfo
+    ) -> CGPoint {
+        var lastPoint = touchInfo.previousPoint ?? fallbackTouch.location(in: view)
+        var lastTimestamp = touchInfo.lastMoveTime
+        var latestPoint = lastPoint
+        var didProcessSample = false
+
+        for sample in samples.sorted(by: { $0.timestamp < $1.timestamp }) {
+            guard sample.timestamp > lastTimestamp else { continue }
+            let point = sample.location(in: view)
+            pendingPointerDX += point.x - lastPoint.x
+            pendingPointerDY += point.y - lastPoint.y
+            lastPoint = point
+            latestPoint = point
+            lastTimestamp = sample.timestamp
+            didProcessSample = true
+        }
+
+        if !didProcessSample {
+            let point = fallbackTouch.location(in: view)
+            if point != lastPoint {
+                pendingPointerDX += point.x - lastPoint.x
+                pendingPointerDY += point.y - lastPoint.y
+                latestPoint = point
+            }
+            lastTimestamp = max(lastTimestamp, fallbackTouch.timestamp)
+        }
+
+        touchInfo.lastMoveTime = lastTimestamp
+        return latestPoint
+    }
+
+    private func pointerTick(dt: CFTimeInterval) {
+        guard gestureState == .singleActive else { return }
+        let dx = pendingPointerDX
+        let dy = pendingPointerDY
+        guard dx != 0 || dy != 0 else { return }
+
+        pendingPointerDX = 0
+        pendingPointerDY = 0
+
+        MovementDiagnostics.shared.recordTouchInterval(dt, dx: dx, dy: dy)
+        pointerEngine.applyRawDelta(dx: dx, dy: dy, dt: dt)
     }
     
+    private func resetPointerSampling() {
+        pendingPointerDX = 0
+        pendingPointerDY = 0
+        pointerEngine.reset()
+    }
     
     
     private func isInScrollZone(_ point: CGPoint, in view: UIView) -> Bool {
@@ -275,6 +323,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         // --- Initialize TwoFingerContext ---
         if twoFingerContext == nil {
             cancelAllHolds()
+            resetPointerSampling()
             // Clear touch location when entering two-finger mode to disable attraction effect
             matrixViewModel?.setTouchLocation(nil)
             let sorted = [(keys[0], info1), (keys[1], info2)].sorted {
@@ -699,8 +748,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         activeTouches.removeAll()
         
         // Reset motion engines for cursor and scroll
-        pointerEngine.reset()
-        lastPointerTimestamp = nil
+        resetPointerSampling()
         lastScrollTimestamp = nil
         
         // Reset 2 finger command

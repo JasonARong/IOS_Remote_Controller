@@ -28,13 +28,13 @@ struct TouchPadView: View {
     }
     
     
-    private var pointText: String {
-        if let delta = viewModel.lastDelta {
-            return String(format: "Δx: %.0f  Δy: %.0f", delta.width, delta.height)
-        } else {
-            return "Touch inside the pad"
-        }
-    }
+//    private var pointText: String {
+//        if let delta = viewModel.lastDelta {
+//            return String(format: "Δx: %.0f  Δy: %.0f", delta.width, delta.height)
+//        } else {
+//            return "Touch inside the pad"
+//        }
+//    }
     
     var body: some View {
         ZStack{
