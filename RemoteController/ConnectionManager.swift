@@ -36,6 +36,13 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private var serviceUUID = CBUUID(string: "00001234-0000-1000-8000-00805f9b34fb")
     private var characteristicUUID = CBUUID(string: "0000abcd-0000-1000-8000-00805f9b34fb")
 
+    // MARK: UDP motion POC
+    private let useUdpMotionPOC = true
+    private let udpMotionHost = "192.168.18.125"
+    private let udpMotionPort: UInt16 = 4210
+    private let udpMotionPacketMarker: UInt8 = 0xB2
+    private var udpMotionSender: UDPMotionSender?
+
     // Smooth cursor and scroll
     private var displayLink: CADisplayLink? /// use displayLink to send packets at an constant rate
     private let targetFPS: Int = 60 /// Sending packets' rate
@@ -106,11 +113,19 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         /// delegate: self ( this class will receive Bluetooth callbacks ) ( require self to be delegate type)
         /// queue: nil ( callbacks run on the main thread )
         centralManager = CBCentralManager(delegate: self, queue: nil)
+        if useUdpMotionPOC {
+            udpMotionSender = UDPMotionSender(
+                host: udpMotionHost,
+                port: udpMotionPort,
+                packetMarker: udpMotionPacketMarker
+            )
+        }
         startDisplayLink()
     }
     
     deinit {
         stopDisplayLink()
+        udpMotionSender?.cancel()
     }
     
     
@@ -166,9 +181,12 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         
         let hasMoved = (accumulatedDX != 0 || accumulatedDY != 0)
         let hasWheel = (wheelDelta != 0)
-        let shouldSend = leftHeld || buttonDirty || hasMoved || hasWheel
-        guard shouldSend else { return }
-        MovementDiagnostics.shared.recordBleAttempt()
+        let shouldSendBleMouse = leftHeld || buttonDirty || hasWheel || (!useUdpMotionPOC && hasMoved)
+        if useUdpMotionPOC && hasMoved && !shouldSendBleMouse {
+            accumulatedDX = 0
+            accumulatedDY = 0
+        }
+        guard shouldSendBleMouse else { return }
         
         // Movement
         let dx = accumulatedDX
@@ -185,6 +203,10 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         // Scroll Wheel
         let wheelDeltaUInt8 = UInt8(bitPattern: wheelDelta)
         wheelDelta = 0
+
+        MovementDiagnostics.shared.recordBleAttempt()
+        let bleDxInt16: Int16 = useUdpMotionPOC ? 0 : dxInt16
+        let bleDyInt16: Int16 = useUdpMotionPOC ? 0 : dyInt16
         
         // Build packet
         // Release packet: [buttons, Scroll, dxLE(1), dxLE(2), dyLE(1), dyLE(2)] → 6 bytes
@@ -199,10 +221,10 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         packet.append(wheelDeltaUInt8) // Scroll wheel
         
         /// little-endian byte order: least significant byte first, ESP32 uses this order
-        withUnsafeBytes(of: dxInt16.littleEndian) { bytes in /// bytes: pointer to the memory containing dxInt16
+        withUnsafeBytes(of: bleDxInt16.littleEndian) { bytes in /// bytes: pointer to the memory containing dxInt16
             packet.append(contentsOf: bytes) /// withUnsafeBytes accesses the raw bytes in actual memory via pointer
         }
-        withUnsafeBytes(of: dyInt16.littleEndian) { bytes in
+        withUnsafeBytes(of: bleDyInt16.littleEndian) { bytes in
             packet.append(contentsOf: bytes)
         }
         
@@ -210,8 +232,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         guard let peripheral = peripheral,
               let char = writeBleCharacteristic else {
 //            print("⚪️ Stub: would send dx=\(dxInt16), dy=\(dyInt16)")
-            if dxInt16 != 0 || dyInt16 != 0 {
-                MovementDiagnostics.shared.recordMovementDropped(reason: .disconnected, dx: CGFloat(dxInt16), dy: CGFloat(dyInt16))
+            if bleDxInt16 != 0 || bleDyInt16 != 0 {
+                MovementDiagnostics.shared.recordMovementDropped(reason: .disconnected, dx: CGFloat(bleDxInt16), dy: CGFloat(bleDyInt16))
             }
             return
         }
@@ -221,18 +243,16 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
 //            print("🔵 Sent to ESP: dx=\(dxInt16), dy=\(dyInt16), button=\(buttonsState), wheel=\(wheelDelta)")
             buttonDirty = false
             packetsSent += 1
-            MovementDiagnostics.shared.recordBleSent(dx: dxInt16, dy: dyInt16)
+            MovementDiagnostics.shared.recordBleSent(dx: bleDxInt16, dy: bleDyInt16)
         } else {
             packetsDropped += 1
             MovementDiagnostics.shared.recordBleBlocked()
-            if dxInt16 != 0 || dyInt16 != 0 {
-                MovementDiagnostics.shared.recordMovementDropped(reason: .bleBlocked, dx: CGFloat(dxInt16), dy: CGFloat(dyInt16))
+            if bleDxInt16 != 0 || bleDyInt16 != 0 {
+                MovementDiagnostics.shared.recordMovementDropped(reason: .bleBlocked, dx: CGFloat(bleDxInt16), dy: CGFloat(bleDyInt16))
             }
         }
     }
-    
-    
-    
+
     // MARK: - PreConnection Model Updates
     
     private func updatePreConnectionModel(
@@ -299,11 +319,25 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     }
     
     // MARK: - Public API
+
+    var isUdpMotionPOCEnabled: Bool {
+        useUdpMotionPOC
+    }
     
     // Movement
     func accumulateDelta(dx: CGFloat, dy: CGFloat) {
         accumulatedDX += dx
         accumulatedDY += dy
+    }
+
+    func enqueueUdpPointerMotion(dx: CGFloat, dy: CGFloat, timestamp: CFTimeInterval) {
+        guard useUdpMotionPOC else { return }
+        udpMotionSender?.enqueueMotion(dx: dx, dy: dy, timestamp: timestamp)
+    }
+
+    func endUdpMotionStream() {
+        guard useUdpMotionPOC else { return }
+        udpMotionSender?.endMotionStream()
     }
     
     // Scroll wheel

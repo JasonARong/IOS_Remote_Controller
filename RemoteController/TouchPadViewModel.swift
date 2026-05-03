@@ -126,8 +126,11 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         tapHapticLight.prepare()
         
         connection.onTick = { [weak self] dt in
-            self?.pointerTick(dt: dt)
-            self?.scrollEngine.update(dt: dt)
+            guard let self else { return }
+            if !self.connection.isUdpMotionPOCEnabled {
+                self.pointerTick(dt: dt)
+            }
+            self.scrollEngine.update(dt: dt)
         }
     }
     
@@ -168,6 +171,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         
         primaryTouch = touch
         let samples = coalescedSamples(for: touch, event: event)
+        MovementDiagnostics.shared.recordTouchCallback(coalescedSampleCount: samples.count)
         let latestSample = samples.last ?? touch
         let current = latestSample.location(in: view)
         
@@ -260,8 +264,11 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         for sample in samples.sorted(by: { $0.timestamp < $1.timestamp }) {
             guard sample.timestamp > lastTimestamp else { continue }
             let point = sample.location(in: view)
-            pendingPointerDX += point.x - lastPoint.x
-            pendingPointerDY += point.y - lastPoint.y
+            let dx = point.x - lastPoint.x
+            let dy = point.y - lastPoint.y
+            let dt = sample.timestamp - lastTimestamp
+            MovementDiagnostics.shared.recordCoalescedSampleInterval(dt)
+            processPointerDelta(dx: dx, dy: dy, dt: dt, timestamp: sample.timestamp)
             lastPoint = point
             latestPoint = point
             lastTimestamp = sample.timestamp
@@ -271,8 +278,12 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         if !didProcessSample {
             let point = fallbackTouch.location(in: view)
             if point != lastPoint {
-                pendingPointerDX += point.x - lastPoint.x
-                pendingPointerDY += point.y - lastPoint.y
+                let dx = point.x - lastPoint.x
+                let dy = point.y - lastPoint.y
+                let timestamp = max(lastTimestamp, fallbackTouch.timestamp)
+                let dt = max(1.0 / 120.0, timestamp - lastTimestamp)
+                MovementDiagnostics.shared.recordCoalescedSampleInterval(dt)
+                processPointerDelta(dx: dx, dy: dy, dt: dt, timestamp: timestamp)
                 latestPoint = point
             }
             lastTimestamp = max(lastTimestamp, fallbackTouch.timestamp)
@@ -280,6 +291,20 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
 
         touchInfo.lastMoveTime = lastTimestamp
         return latestPoint
+    }
+
+    private func processPointerDelta(dx: CGFloat, dy: CGFloat, dt: CFTimeInterval, timestamp: CFTimeInterval) {
+        guard dx != 0 || dy != 0 else { return }
+
+        if connection.isUdpMotionPOCEnabled {
+            MovementDiagnostics.shared.recordTouchInterval(dt, dx: dx, dy: dy)
+            guard let scaledDelta = pointerEngine.scaledRawDelta(dx: dx, dy: dy, dt: dt) else { return }
+            MovementDiagnostics.shared.recordPointerEmit(dx: scaledDelta.dx, dy: scaledDelta.dy)
+            connection.enqueueUdpPointerMotion(dx: scaledDelta.dx, dy: scaledDelta.dy, timestamp: timestamp)
+        } else {
+            pendingPointerDX += dx
+            pendingPointerDY += dy
+        }
     }
 
     private func pointerTick(dt: CFTimeInterval) {
@@ -299,6 +324,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         pendingPointerDX = 0
         pendingPointerDY = 0
         pointerEngine.reset()
+        connection.endUdpMotionStream()
     }
     
     

@@ -9,6 +9,15 @@ import Foundation
 import CoreGraphics
 
 final class PointerMotionEngine {
+    /// Resolution multiplier shared by both the UDP sender and the ESP HID
+    /// pacer. Multiplying motion before quantization eliminates the
+    /// "round-to-zero" gap on slow drags so the iOS subframe stream stays
+    /// uniform; ESP_Bridge.ino divides by POINTER_SCALE (with fractional
+    /// remainder) at HID emit time so host-perceived sensitivity is unchanged.
+    /// Must equal POINTER_SCALE in the active ESP firmware sketch
+    /// (ESP_Bridge.ino or ESP_Bridge_TinyUSB.ino).
+    static let pointerScale: CGFloat = 8
+
     private let connection: ConnectionManager
     private let settings: MotionCurveSettings
     
@@ -22,7 +31,10 @@ final class PointerMotionEngine {
     private let velocityAlpha: CGFloat = 0.35
     private let maxSpeedForGain: CGFloat = 1800
     private let rawModeGain: CGFloat = 1.15
-    private let maxReportDelta: CGFloat = 32
+    // Capped against the new ESP-side scaled-units cap (127). Outputs from
+    // scaledRawDelta are pre-multiplied by pointerScale, so this is also
+    // the per-call cap in scaled units.
+    private let maxReportDelta: CGFloat = 127
     
     init (
         connection: ConnectionManager,
@@ -39,23 +51,11 @@ final class PointerMotionEngine {
     ///   - dy: Raw vertical delta from touch.
     ///   - dt: Time since last pointer update (seconds). Use a small fallback if unknown.
     func applyRawDelta(dx: CGFloat, dy: CGFloat, dt: CFTimeInterval) {
-        guard dx != 0 || dy != 0 else { return }
-
-        let safeDt = min(max(dt, minDt), maxDt)
-
-        let distance = hypot(dx, dy)
-        let instantaneousSpeed = min(distance / CGFloat(safeDt), maxSpeedForGain)
-        filteredSpeed = velocityAlpha * instantaneousSpeed + (1 - velocityAlpha) * filteredSpeed
-
-        let gain = rawModeGain
-        MovementDiagnostics.shared.recordPointerGain(speed: filteredSpeed, gain: gain, safeDt: safeDt)
-        
-        let scaledDx = dx * gain
-        let scaledDy = dy * gain
+        guard let scaledDelta = scaledRawDelta(dx: dx, dy: dy, dt: dt) else { return }
         
         // Accumulate subpixel motion
-        accumX += scaledDx
-        accumY += scaledDy
+        accumX += scaledDelta.dx
+        accumY += scaledDelta.dy
         // Quantize to whole units to send to the ESP bridge
         // Use standard rounding instead of towardZero to preserve small movements
         let sendDx = max(-maxReportDelta, min(maxReportDelta, accumX.rounded()))
@@ -70,6 +70,24 @@ final class PointerMotionEngine {
             MovementDiagnostics.shared.recordPointerEmit(dx: sendDx, dy: sendDy)
             connection.accumulateDelta(dx: sendDx, dy: sendDy) // Send to ConnectionManager
         }
+    }
+
+    func scaledRawDelta(dx: CGFloat, dy: CGFloat, dt: CFTimeInterval) -> CGVector? {
+        guard dx != 0 || dy != 0 else { return nil }
+
+        let safeDt = min(max(dt, minDt), maxDt)
+        let distance = hypot(dx, dy)
+        let instantaneousSpeed = min(distance / CGFloat(safeDt), maxSpeedForGain)
+        filteredSpeed = velocityAlpha * instantaneousSpeed + (1 - velocityAlpha) * filteredSpeed
+
+        let gain = rawModeGain
+        MovementDiagnostics.shared.recordPointerGain(speed: filteredSpeed, gain: gain, safeDt: safeDt)
+
+        // Multiply by pointerScale so downstream UDP quantization keeps
+        // sub-pixel motion. ESP applies the inverse divide before the HID
+        // report leaves the pacer.
+        let scale = gain * PointerMotionEngine.pointerScale
+        return CGVector(dx: dx * scale, dy: dy * scale)
     }
     
     /// Reset any accumulated state when a gesture ends.
