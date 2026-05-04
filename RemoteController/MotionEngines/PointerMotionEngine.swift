@@ -30,7 +30,6 @@ final class PointerMotionEngine {
     private let maxDt: CFTimeInterval = 1.0 / 30.0
     private let velocityAlpha: CGFloat = 0.35
     private let maxSpeedForGain: CGFloat = 1800
-    private let rawModeGain: CGFloat = 1.15
     // Capped against the new ESP-side scaled-units cap (127). Outputs from
     // scaledRawDelta are pre-multiplied by pointerScale, so this is also
     // the per-call cap in scaled units.
@@ -80,7 +79,12 @@ final class PointerMotionEngine {
         let instantaneousSpeed = min(distance / CGFloat(safeDt), maxSpeedForGain)
         filteredSpeed = velocityAlpha * instantaneousSpeed + (1 - velocityAlpha) * filteredSpeed
 
-        let gain = rawModeGain
+        // Velocity-based gain: precise at slow drags (baseGain), accelerated at
+        // fast flicks (maxGain). This compensates for the lost macOS-side
+        // pointer acceleration caused by switching from chunky 30 Hz HID
+        // reports to smooth ~200 Hz reports -- macOS's accel curve underweights
+        // small per-report deltas, so we restore the lost gain ourselves.
+        let gain = motionGain(forSpeed: filteredSpeed, settings: settings)
         MovementDiagnostics.shared.recordPointerGain(speed: filteredSpeed, gain: gain, safeDt: safeDt)
 
         // Multiply by pointerScale so downstream UDP quantization keeps
@@ -100,11 +104,17 @@ final class PointerMotionEngine {
 
 // MARK: - Default pointer curve
 extension PointerMotionEngine {
+    // Conservative starting gains. With the smooth-pipeline fixes (one
+    // subframe per UDP packet + one frame per ESP pacer tick) macOS
+    // pointer acceleration alone underweights our small per-report deltas;
+    // these values restore most of the lost speed without going overboard.
+    // Tune iteratively from logs: increase maxGain for faster flicks,
+    // increase baseGain for slow-drag sensitivity.
     static let defaultSettings = MotionCurveSettings(
-        minSpeed: 40,  // below this: baseGain
-        maxSpeed: 1400, // above this: maxGain
-        baseGain: 1.15, // slow movements gain
-        maxGain: 1.15,  // raw-mode experiment: host OS handles acceleration
-        gamma: 1.6     // soft ramp without hitting max too easily
+        minSpeed: 40,   // below this: pure baseGain (precise pointing)
+        maxSpeed: 1400, // above this: pure maxGain (cross-screen flicks)
+        baseGain: 2.2,  // slow drags slightly amplified vs. raw 1:1
+        maxGain: 6.2,   // fast drags get the host-OS-style acceleration
+        gamma: 0.9      // soft ramp -- low/mid speeds stay close to base
     )
 }
