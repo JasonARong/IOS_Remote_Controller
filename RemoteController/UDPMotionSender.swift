@@ -60,6 +60,7 @@ final class UDPMotionSender {
     private var lastTimerFireTimestamp: CFTimeInterval?
     private var isCancelled = false
 
+    // Sets up UDP connection and starts the 250Hz timer
     init(host: String, port: UInt16, packetMarker: UInt8) {
         self.packetMarker = packetMarker
         let endpointHost = NWEndpoint.Host(host)
@@ -74,6 +75,8 @@ final class UDPMotionSender {
         startTimer()
     }
 
+    // Receives a single touch movement delta, accumulates sub-pixel remainders to avoid rounding to zero,
+    // caps extreme values, converts to Int16, and pushes the result onto the back of the subframe queue.
     func enqueueMotion(dx: CGFloat, dy: CGFloat, timestamp _: CFTimeInterval) {
         guard dx != 0 || dy != 0 else { return }
 
@@ -81,6 +84,7 @@ final class UDPMotionSender {
             guard let self, !self.isCancelled else { return }
             let arrival = CACurrentMediaTime()
 
+            // Accumlate dx dy sub-pixels, prevent rounding gives sub-pixel 0 every time, so the cursor never moves.
             self.fractionalDx += dx
             self.fractionalDy += dy
 
@@ -109,6 +113,7 @@ final class UDPMotionSender {
         }
     }
 
+    // Finger lifted; clears the queue cleanly
     func endMotionStream() {
         queue.async { [weak self] in
             guard let self, !self.isCancelled else { return }
@@ -117,6 +122,7 @@ final class UDPMotionSender {
         }
     }
 
+    // Full teardown; stops timer and closes connection
     func cancel() {
         queue.async { [weak self] in
             guard let self, !self.isCancelled else { return }
@@ -127,8 +133,10 @@ final class UDPMotionSender {
         }
     }
 
+    // Creates and starts the DispatchSourceTimer that fires emitFrameIfNeeded every 4ms. Called once during init.
     private func startTimer() {
         let timer = DispatchSource.makeTimerSource(queue: queue)
+        // repeat every frameInterval (0.004s, 250Hz)
         timer.schedule(deadline: .now() + frameInterval, repeating: frameInterval, leeway: .milliseconds(1))
         timer.setEventHandler { [weak self] in
             self?.emitFrameIfNeeded()
@@ -137,6 +145,7 @@ final class UDPMotionSender {
         self.timer = timer
     }
 
+    // fires every 0.004s, steadily empties the queue
     private func emitFrameIfNeeded() {
         guard !isCancelled else { return }
 
@@ -146,7 +155,7 @@ final class UDPMotionSender {
         }
         lastTimerFireTimestamp = now
 
-        pruneStaleSubframes(now: now)
+        pruneStaleSubframes(now: now) // Remove anything too old
 
         let hadInput: Bool
         if let lastInputReceiveTimestamp {
@@ -158,7 +167,7 @@ final class UDPMotionSender {
         let willEmit = !queuedSubframes.isEmpty
         MovementDiagnostics.shared.recordUdpSenderTick(emitted: willEmit, hadInput: hadInput)
 
-        if willEmit {
+        if willEmit { // Send one subframe
             flushBatch()
         }
 
@@ -174,6 +183,8 @@ final class UDPMotionSender {
         recordQueueState()
     }
 
+    // Walks the front of the queue and discards any subframe older than 32ms,
+    // preventing stale input from replaying after a network blip or pause.
     private func pruneStaleSubframes(now: CFTimeInterval) {
         while let first = queuedSubframes.first,
               now - first.timestamp > staleInterval {
@@ -200,9 +211,11 @@ final class UDPMotionSender {
         send(subframes: chunk)
     }
 
+    // Building and sending the UDP packet
     private func send(subframes: [MotionSubframe]) {
         sequence &+= 1
 
+        // Each packet: 7 bytes (3 header + 4 for one dx/dy pair)
         var packet = Data(capacity: 3 + maxSubframesPerDatagram * 4)
         packet.append(packetMarker)
         packet.append(sequence)
@@ -216,6 +229,7 @@ final class UDPMotionSender {
             }
         }
 
+        // Package sent via NWConnection over UDP (fast, no handshake, fire-and-forget)
         connection.send(content: packet, completion: .contentProcessed { error in
             #if DEBUG
             if let error {
@@ -230,6 +244,8 @@ final class UDPMotionSender {
         }
     }
 
+    // Resets all motion state (fractional accumulators + subframe queue) to zero.
+    // Optionally records the total discarded movement to diagnostics if any was lost.
     private func clearMotionState(recordDrop: Bool) {
         let droppedDx = fractionalDx + queuedSubframes.reduce(CGFloat(0)) { $0 + CGFloat($1.dx) }
         let droppedDy = fractionalDy + queuedSubframes.reduce(CGFloat(0)) { $0 + CGFloat($1.dy) }
@@ -244,6 +260,8 @@ final class UDPMotionSender {
         recordQueueState()
     }
 
+    // Snapshots the current queue length and total pending dx/dy (including fractional remainder)
+    // and forwards it to MovementDiagnostics for Monitoring.
     private func recordQueueState() {
         let queuedDx = queuedSubframes.reduce(CGFloat(0)) { $0 + CGFloat($1.dx) }
         let queuedDy = queuedSubframes.reduce(CGFloat(0)) { $0 + CGFloat($1.dy) }
