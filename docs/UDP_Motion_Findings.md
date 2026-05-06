@@ -120,7 +120,7 @@ Captured in `debug_logs.md` under **Log 13–16** (project root).
 
 ## 7. Known limitations
 
-1. **`touchesMoved` cadence (~30–60 Hz)** still gates how often *new* finger motion enters the app; coalesced samples are dense **inside** each callback, not between callbacks.
+1. **UIKit delivery is bursty:** `touchesMoved` fires on the order of **tens of Hz** (varies by device/load), so each batch of **coalesced** samples lands together. That shapes **latency and burst spacing**, not a hard cap on output — the host still sees **~150–200 HID reports/s** when active (Log 16). Worst case: the **oldest** sample in a batch may be a few tens of ms behind real time before we enqueue it.
 2. **`staleDrops` / `udpStaleDrops`** can occur on aggressive flicks (queue + 32 ms sender stale vs burst size). If skips appear, consider increasing `staleInterval` slightly or reducing peak gain — trade‑off vs latency.
 3. **Wi‑Fi / debugger**: Debugging attached can add hangs; use logs on device for “clean” metrics.
 4. **Secrets in sketches:** `ESP_Bridge_TinyUSB.ino` contains example Wi‑Fi credentials — **replace or externalize before shipping.**
