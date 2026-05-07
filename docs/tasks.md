@@ -1,7 +1,7 @@
 # Tasks
 
 Status: Canonical completion source of truth
-Last Updated: 2026-05-05
+Last Updated: 2026-05-07
 
 ## Status Legend
 
@@ -55,8 +55,8 @@ Exit criteria: Wi-Fi, BLE, ownership, heartbeat, release-all, and versioning beh
   Non-goals: Custom reliable UDP or UDP retries.
   Check: ESP ignores UDP motion when no TCP owner exists or when the sender does not match the active owner.
 
-- [ ] 2.4 Define BLE fallback protocol contract
-  Output: BLE message list that supports the full feature set with less-smooth cursor movement.
+- [x] 2.4 Define BLE fallback protocol contract
+  Output: `docs/Production_Transport_Spec.md` section 4, defining BLE legacy input packets, BLE control frame, ownership, setup/status, and release-all safety behavior.
   Non-goals: Make BLE cursor match Wi-Fi smoothness.
   Check: Cursor, click, drag, scroll, keyboard, system commands, setup, status, and release-all are covered.
 
@@ -260,3 +260,5 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-05-06: Renumbered draft Wi-Fi recovery notes to spec section 5 to match task 2.5.
 - 2026-05-06: Added UDP motion session gate to `docs/Production_Transport_Spec.md` and marked task 2.3 complete.
 - 2026-05-06: Tightened UDP motion session gate epoch, packet version, frame count, endpoint, and sequence rules after strict review.
+- 2026-05-07: Added BLE fallback protocol contract to `docs/Production_Transport_Spec.md` and marked task 2.4 complete.
+- 2026-05-07: Tightened BLE fallback dispatch, delivery, chunking, ownership payload, no-epoch, and error rules after review.
