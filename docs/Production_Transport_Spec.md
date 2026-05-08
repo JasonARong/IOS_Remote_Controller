@@ -8,7 +8,7 @@ Status:
 - Section 2 locked: Wi-Fi TCP control protocol.
 - Section 3 locked: UDP motion session gate.
 - Section 4 locked: BLE fallback protocol contract.
-- Section 5 draft: reference notes for task 2.5 only.
+- Section 5 locked: mode switching and ownership state machine.
 
 ---
 
@@ -679,9 +679,9 @@ Only BLE-specific payload differences are listed here. Shared field meanings com
 | --- | --- |
 | `Pair` | `phoneId: OpaqueBytes`<br>`pairingProof: OpaqueBytes` |
 | `PairResult` | `accepted: Bool`<br>`reason: UInt8` |
-| `ClaimOwner` | `sessionIdHint: UInt32  // 0 for new runtime session` |
+| `ClaimOwner` | `empty payload` |
 
-Pair establishes long-term phone identity. ClaimOwner requests runtime HID ownership for an already-paired phone. ClaimOwner without valid pairing/authentication is rejected.
+Pair establishes long-term phone identity. ClaimOwner requests runtime HID ownership for an already-paired phone. Every granted ClaimOwner creates a fresh runtime `sessionId`; old ownership sessions are not resumed. ClaimOwner without valid pairing/authentication is rejected.
 
 | Payload | Fields |
 | --- | --- |
@@ -727,59 +727,297 @@ iOS sends ReleaseOwner before intentionally leaving BLE HID ownership, such as w
 
 ---
 
-## 5. Wi-Fi Network Change And Recovery Rules
+## 5. Mode Switching And Ownership State Machine
 
-Status: Draft reference for task 2.5. Not locked yet.
+ESP is the HID ownership authority. iOS may request a mode, but HID input is accepted only after ESP grants ownership for that mode.
 
-These notes cover ESP-side Wi-Fi loss/change behavior and must be reviewed during the mode-switching state machine spec.
+### 5.1 Ownership State
 
-### 5.1 Rules
-
-- ESP must not roam while the current Wi-Fi owner session is healthy.
-- ESP may try another saved network only if current Wi-Fi is unhealthy, no Wi-Fi owner exists, or user starts setup/recovery.
-- ESP joining Wi-Fi does not prove iOS can reach it; iOS must verify Bonjour/TCP reachability.
-- Visible unsaved SSIDs are not usable by default. They may be neighbor/guest/captive networks.
-- If no saved usable Wi-Fi exists, BLE remains active fallback and setup is optional.
-
-### 5.2 ESP Loses Current Wi-Fi
+ESP tracks one active owner:
 
 ```text
-stop TCP control
+NoOwner
+BleOwner(sessionId, phoneId)
+WifiOwner(sessionId, phoneId, tcpEndpoint, udpToken, inputEpoch)
+```
+
+`phoneId` is the long-term pairing identity from the Pair flow.
+
+Availability is separate from ownership:
+
+```text
+bleConnected: Bool
+wifiAvailable: Bool
+tcpOwnerAlive: Bool
+udpGateValid: Bool
+```
+
+iOS tracks transport availability separately from routed input mode:
+
+```text
+bleAvailable: Bool
+wifiPathAvailable: Bool
+localNetworkAllowed: Bool
+bonjourReachable: Bool
+tcpConnected: Bool
+activeMode: none | ble | wifi
+inputIdle: Bool
+```
+
+Lifecycle labels from the task plan map to this model:
+
+| Label | Formal state |
+|---|---|
+| BLE setup | `NoOwner` + iOS pairing/provisioning over BLE |
+| BLE active | `BleOwner` + `activeMode == ble` |
+| Wi-Fi connecting | intentional handoff toward `WifiOwner` |
+| Wi-Fi active | `WifiOwner` + `activeMode == wifi` |
+| Reconnecting | failure recovery while trying to restore Wi-Fi ownership |
+| Fallback | BLE recovery or `BleOwner` after Wi-Fi is unavailable |
+
+### 5.2 Ownership Rules
+
+- Only the active ESP owner may drive HID.
+- Inactive transports may connect, discover, authenticate, request status, perform setup, negotiate ownership, send heartbeat, and send authenticated release-all safety commands.
+- Candidate TCP may exist while BLE owns HID, but it cannot drive HID or validate UDP until Wi-Fi ownership is granted.
+- ESP grants `ClaimOwner` only when `activeOwner == NoOwner`.
+- ESP rejects `ClaimOwner` while another owner is active.
+- Same-phone atomic owner transfer is deferred; v1 uses explicit release then claim.
+- Wi-Fi UDP is accepted only while `activeOwner == WifiOwner` and the UDP gate in Section 3 passes.
+
+### 5.3 Wi-Fi Usability
+
+The state machine does not compare SSIDs.
+
+Wi-Fi Mode is usable only when:
+
+```text
+iOS Wi-Fi path is available
+iOS Local Network permission allows discovery/connection
+ESP is reachable by Bonjour/TCP
+TCP ownership is granted
+UDP gate is valid
+```
+
+Rules:
+
+- Any Wi-Fi path loss or TCP owner loss invalidates current Wi-Fi ownership.
+- Any Wi-Fi availability only creates a chance to rediscover ESP and claim fresh ownership.
+- Old Wi-Fi ownership never resumes automatically.
+- Every Wi-Fi recovery requires a fresh TCP `ClaimOwner`.
+- Every new Wi-Fi ownership grant provides a fresh `sessionId`, `udpToken`, and `inputEpoch`.
+- iOS resets UDP epoch tracking when it receives Wi-Fi `OwnerResult(granted=true)`.
+- A Wi-Fi owner session is healthy only while all usability conditions above hold concurrently.
+- Loss of any Wi-Fi usability condition makes the session unhealthy and triggers failure recovery.
+- ESP must not intentionally roam while a healthy Wi-Fi owner session exists.
+- ESP may try saved Wi-Fi profiles only when no healthy Wi-Fi owner exists or user starts setup/recovery.
+
+### 5.4 Transition Classes
+
+Intentional switches happen while the current mode is healthy:
+
+```text
+user requests Wi-Fi
+user requests BLE
+automatic BLE -> Wi-Fi upgrade
+```
+
+Intentional switches require idle input.
+
+Failure recovery happens because the current mode is broken:
+
+```text
+iOS Wi-Fi path lost
+ESP Wi-Fi lost
+TCP disconnected
+owner heartbeat timed out
+BLE disconnected while BLE owns HID
+```
+
+Failure recovery must not wait for idle. It immediately blocks old input, clears local queues, attempts release-all through any surviving path, and enters fallback/recovery.
+
+Failure recovery is not an intentional mode switch. The idle requirement applies only to intentional switching.
+
+### 5.5 Idle And SwitchingMode
+
+Input is idle when:
+
+```text
+no active touch gesture
+buttons == 0
+no key combo currently being submitted
+no wheel pending
+local motion queues are clear or discarded
+```
+
+The latest key combo must have been written to its transport before input is considered idle.
+
+During intentional switching:
+
+```text
+InputRouter enters SwitchingMode
+new HID input is dropped, not queued
+current owner receives ReleaseAll
+handoff waits for ReleaseAll delivery result or bounded timeout
+current owner is released
+target owner is claimed
+InputRouter resumes only after OwnerResult(granted=true)
+```
+
+Exact release-all timeout values are defined in the release-all/heartbeat task.
+
+Intentional switches wait for `inputIdle` indefinitely from the state machine perspective. iOS UI may offer cancel; cancel leaves current ownership untouched.
+
+### 5.6 Intentional Handoff With Rollback
+
+BLE -> Wi-Fi:
+
+```text
+wait for inputIdle
+block new HID input
+send BLE ReleaseAll
+send BLE ReleaseOwner
+open or use candidate TCP
+Hello -> Auth -> ClaimOwner(wifi)
+if granted:
+  activeMode = wifi
+  start TCP heartbeat
+  enable UDP motion
+else:
+  try ClaimOwner(ble)
+  if granted: activeMode = ble
+  else: activeMode = none
+```
+
+Wi-Fi -> BLE:
+
+```text
+wait for inputIdle
+block new HID input
 stop UDP motion
-clear Wi-Fi ownership
-enter BLE fallback/recovery availability
-scan visible Wi-Fi
-release-all via heartbeat/timeout safety path
+send TCP ReleaseAll
+release/close Wi-Fi owner session
+send BLE ClaimOwner
+if granted:
+  activeMode = ble
+  start BLE heartbeat
+else:
+  try ClaimOwner(wifi) if still reachable
+  if granted: activeMode = wifi
+  else: activeMode = none
 ```
 
-### 5.3 Saved Wi-Fi Available
+Wi-Fi has no explicit `ReleaseOwner` message. iOS releases Wi-Fi ownership by sending TCP `ReleaseAll` and closing the TCP owner connection; ESP clears `WifiOwner` on TCP close.
+
+If both target and rollback ownership fail, iOS enters no-owner recovery/setup state.
+
+During intentional handoff, ESP briefly transitions through `NoOwner` between old-owner release and new-owner grant. This is acceptable for v1; multi-phone contention UX is deferred.
+
+### 5.7 Failure Recovery
+
+Both sides clean up independently. iOS attempts release-all through any surviving authenticated channel; ESP releases HID locally when it detects owner failure. Cross-side notification is best-effort, and brief iOS/ESP state mismatch during failure recovery is acceptable.
+
+iOS Wi-Fi path lost or TCP disconnected:
 
 ```text
-ESP connects using stored credentials
-ESP advertises/discovers over Wi-Fi
-iOS verifies reachability
-reachable   -> Wi-Fi Mode may become active
-unreachable -> BLE remains available; prompt user to switch iPhone Wi-Fi or continue BLE
+block new Wi-Fi HID input
+stop UDP immediately
+clear local motion/control queues
+attempt TCP ReleaseAll if still possible
+attempt authenticated BLE ReleaseAll if BLE is available
+clear local Wi-Fi active state
+claim BLE owner if available
+otherwise enter no-owner recovery
 ```
 
-### 5.4 No Saved Usable Wi-Fi
+ESP Wi-Fi lost:
 
 ```text
-BLE Mode remains active fallback
-optional actions: Set Up Smooth Wi-Fi / Continue With BLE
+release-all
+stop UDP motion
+clear WifiOwner
+reject UDP
+stop TCP control
+keep BLE available for fallback/recovery
 ```
 
-Do not prompt for password only because unsaved SSIDs are visible.
-
-### 5.5 New Wi-Fi Setup
+ESP Wi-Fi owner heartbeat timeout:
 
 ```text
-ESP provides visible SSID list
-user selects accessible network
-user enters password
-ESP stores SSID/password after successful setup
-ESP connects
-iOS verifies reachability before Wi-Fi Mode
+release-all
+stop UDP motion
+clear WifiOwner
+reject UDP
+close TCP control
+keep Wi-Fi services available for fresh ClaimOwner
 ```
 
-iOS current-SSID lookup may preselect a network if available, but must not be required.
+ESP BLE owner heartbeat timeout:
+
+```text
+release-all
+clear BleOwner
+keep BLE available for fresh ClaimOwner/setup
+```
+
+ESP Wi-Fi available:
+
+```text
+start Wi-Fi services
+advertise by Bonjour/mDNS
+accept TCP connection attempts
+do not restore old Wi-Fi ownership automatically
+```
+
+BLE disconnected while BLE owns HID:
+
+```text
+release-all
+clear BleOwner
+enter no-owner recovery
+```
+
+BLE disconnected while Wi-Fi owns HID:
+
+```text
+keep Wi-Fi Mode active if Wi-Fi owner session is healthy
+mark BLE fallback/setup unavailable
+attempt BLE rediscovery when appropriate
+```
+
+ResetPairing:
+
+```text
+release-all
+clear any active owner
+clear stored pairing
+enter NoOwner
+iOS must pair again before future ClaimOwner
+```
+
+### 5.8 Mode Selection Policy
+
+In NoOwner recovery, iOS keeps available transports in discovery/setup mode, may show setup UI, and routes no HID input until an owner claim succeeds.
+
+Default v1 policy:
+
+```text
+Wi-Fi usable and owner granted -> Wi-Fi Mode
+Wi-Fi unavailable/rejected     -> BLE Mode if BLE owner can be granted
+Neither owner available        -> NoOwner recovery/setup
+```
+
+Auto-upgrade from BLE to Wi-Fi is allowed only through intentional switching and only when input is idle. Auto-fallback from Wi-Fi to BLE is allowed immediately during failure recovery.
+
+Auto-upgrade probes may run when iOS observes Wi-Fi path availability, Bonjour discovery, or explicit user request. Probes must not interrupt active BLE input.
+
+BLE may remain connected during Wi-Fi Mode for fallback/setup/status. ESP rejects BLE HID input while Wi-Fi owns HID; authenticated release-all remains available as a safety path.
+
+### 5.9 Non-Goals
+
+- Exact heartbeat intervals and timeout values.
+- Final onboarding or error copy.
+- Multi-phone conflict UX.
+- Same-phone atomic owner transfer.
+- Advanced SSID/BSSID/router identity handling.
+- ESP hotspot/direct mode.

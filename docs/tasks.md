@@ -60,10 +60,10 @@ Exit criteria: Wi-Fi, BLE, ownership, heartbeat, release-all, and versioning beh
   Non-goals: Make BLE cursor match Wi-Fi smoothness.
   Check: Cursor, click, drag, scroll, keyboard, system commands, setup, status, and release-all are covered.
 
-- [ ] 2.5 Define mode switching and ownership state machine
-  Output: State machine for BLE setup, BLE active, Wi-Fi connecting, Wi-Fi active, reconnecting, and fallback.
+- [x] 2.5 Define mode switching and ownership state machine
+  Output: `docs/Production_Transport_Spec.md` section 5, defining ESP ownership authority, transport availability, Wi-Fi usability, intentional switching, failure recovery, and ownership handoff rollback.
   Non-goals: Final UI design.
-  Check: Switching only occurs when input is idle, and inactive mode cannot drive HID except allowed safety/setup messages.
+  Check: Intentional switching only occurs when input is idle; failure recovery blocks input immediately; inactive mode cannot drive HID except allowed safety/setup messages.
 
 - [ ] 2.6 Define release-all and heartbeat safety contract
   Output: Timeout rules and required cleanup behavior for backgrounding, disconnects, mode switches, app crashes, and ESP owner timeout.
@@ -262,3 +262,5 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-05-06: Tightened UDP motion session gate epoch, packet version, frame count, endpoint, and sequence rules after strict review.
 - 2026-05-07: Added BLE fallback protocol contract to `docs/Production_Transport_Spec.md` and marked task 2.4 complete.
 - 2026-05-07: Tightened BLE fallback dispatch, delivery, chunking, ownership payload, no-epoch, and error rules after review.
+- 2026-05-07: Added mode switching and ownership state machine to `docs/Production_Transport_Spec.md` and marked task 2.5 complete.
+- 2026-05-07: Tightened Section 5 lifecycle mapping, heartbeat failure transitions, Wi-Fi owner epoch state, handoff rollback notes, and NoOwner recovery rules after review.
