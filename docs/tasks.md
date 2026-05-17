@@ -1,7 +1,7 @@
 # Tasks
 
 Status: Canonical completion source of truth
-Last Updated: 2026-05-07
+Last Updated: 2026-05-17
 
 ## Status Legend
 
@@ -65,8 +65,8 @@ Exit criteria: Wi-Fi, BLE, ownership, heartbeat, release-all, and versioning beh
   Non-goals: Final UI design.
   Check: Intentional switching only occurs when input is idle; failure recovery blocks input immediately; inactive mode cannot drive HID except allowed safety/setup messages.
 
-- [ ] 2.6 Define release-all and heartbeat safety contract
-  Output: Timeout rules and required cleanup behavior for backgrounding, disconnects, mode switches, app crashes, and ESP owner timeout.
+- [x] 2.6 Define release-all and heartbeat safety contract
+  Output: `docs/Production_Transport_Spec.md` section 6, defining release-all cleanup, heartbeat ownership, timeout defaults, background/crash/disconnect behavior, mode-switch cleanup, and ack policy.
   Non-goals: Tune final timeout values from field testing.
   Check: Mouse buttons, keyboard keys, scroll, motion queues, and HID state are cleared by release-all.
 
@@ -264,3 +264,6 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-05-07: Tightened BLE fallback dispatch, delivery, chunking, ownership payload, no-epoch, and error rules after review.
 - 2026-05-07: Added mode switching and ownership state machine to `docs/Production_Transport_Spec.md` and marked task 2.5 complete.
 - 2026-05-07: Tightened Section 5 lifecycle mapping, heartbeat failure transitions, Wi-Fi owner epoch state, handoff rollback notes, and NoOwner recovery rules after review.
+- 2026-05-17: Added release-all and heartbeat safety contract to `docs/Production_Transport_Spec.md` and marked task 2.6 complete.
+- 2026-05-17: Tightened Section 6 release reason mapping, neutral HID reports, liveness refresh, disconnect coverage, and rollback references after review.
+- 2026-05-17: Polished Section 6 terminology for iOS button state, BLE availability, TCP session health, and cleanup cross-references.

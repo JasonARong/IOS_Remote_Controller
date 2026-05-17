@@ -9,6 +9,7 @@ Status:
 - Section 3 locked: UDP motion session gate.
 - Section 4 locked: BLE fallback protocol contract.
 - Section 5 locked: mode switching and ownership state machine.
+- Section 6 locked: release-all and heartbeat safety contract.
 
 ---
 
@@ -1021,3 +1022,244 @@ BLE may remain connected during Wi-Fi Mode for fallback/setup/status. ESP reject
 - Same-phone atomic owner transfer.
 - Advanced SSID/BSSID/router identity handling.
 - ESP hotspot/direct mode.
+
+---
+
+## 6. Release-All And Heartbeat Safety Contract
+
+`ReleaseAll` is the HID safety primitive. It is a local cleanup operation first and a transport message second.
+
+### 6.1 Constants
+
+Initial v1 defaults:
+
+```text
+ownerHeartbeatIntervalMs = 500
+ownerHeartbeatTimeoutMs  = 1500
+releaseAllHandoffWaitMs  = 250
+```
+
+Rules:
+
+- Timeout values are implementation defaults, not final tuning.
+- Field testing may adjust values without changing the state-machine contract.
+- Disconnect callbacks release immediately; heartbeat timeout is the backup path.
+
+### 6.2 ReleaseAll Semantics
+
+`ReleaseAll` is idempotent. Calling it repeatedly must be safe.
+
+`ReleaseAll` clears HID-driving state. It does not always clear ownership.
+
+```text
+ReleaseAll                         -> clear HID state
+ReleaseOwner / TCP close / timeout -> clear ownership after release-all
+```
+
+Examples:
+
+```text
+userEmergency -> release HID state; owner may remain
+background    -> release HID state; owner is cleared by follow-up owner release/TCP close
+modeSwitch    -> release HID state, then release owner
+disconnect    -> release HID state and clear owner
+timeout       -> release HID state and clear owner
+```
+
+`ResetPairing` is a setup/admin command, not a `ReleaseReason` wire value. It triggers internal release-all before clearing ownership and pairing state.
+
+ESP must perform local release-all before clearing any active owner.
+
+### 6.3 ESP Cleanup
+
+ESP `releaseAllHidState(reason)` must clear:
+
+```text
+mouse button state
+keyboard keys
+wheel pending
+HID report staging buffers and movement/wheel accumulators
+UDP motion queue
+BLE pending mouse aggregate
+stale pending input
+```
+
+`BLE pending mouse aggregate` means any BLE-derived pending dx/dy, wheel, and button-dirty state waiting for the HID pacer.
+
+If USB HID is mounted, ESP should send neutral HID reports:
+
+```text
+mouse:
+buttons = 0
+x = 0
+y = 0
+wheel = 0
+
+keyboard:
+modifiers = 0
+keycodes = [0, 0, 0, 0, 0, 0]
+```
+
+ESP release-all must be called by:
+
+```text
+ReleaseAll message from active owner
+authenticated cross-transport safety ReleaseAll permitted by Sections 4.6 and 4.7
+owner heartbeat timeout
+TCP owner disconnect
+BLE disconnect while BLE owns HID
+Wi-Fi loss while Wi-Fi owns HID
+ResetPairing
+firmware-side unrecoverable owner/session error
+```
+
+### 6.4 iOS Cleanup
+
+iOS local release-all cleanup must clear:
+
+```text
+button state bitfield sent to ESP
+all button held/drag tracking flags
+wheelDelta
+accumulated pointer motion
+UDP sender queue
+BLE pending mouse state
+keyboard submission state
+InputRouter active input buffers
+```
+
+iOS must stop routing stale HID input before attempting recovery or ownership handoff.
+
+### 6.5 Heartbeat Ownership
+
+Only the active owner keeps HID ownership alive.
+
+```text
+WifiOwner -> TCP Heartbeat
+BleOwner  -> BLE Heartbeat
+NoOwner   -> no owner heartbeat
+```
+
+Rules:
+
+- iOS sends owner heartbeat every `ownerHeartbeatIntervalMs` while it owns HID.
+- ESP clears ownership after no valid owner liveness for `ownerHeartbeatTimeoutMs`.
+- Inactive transport heartbeat/status traffic does not keep HID ownership alive.
+- UDP motion never refreshes owner liveness.
+- Valid reliable active-owner control messages refresh the owner liveness timer.
+
+Reliable active-owner control messages include:
+
+```text
+TCP Heartbeat
+TCP ButtonState
+TCP WheelTick
+TCP KeyCombo
+TCP ReleaseAll
+BLE Heartbeat
+BLE reliable button/wheel/key/release/control writes
+```
+
+Pure motion packets should not be relied on for owner liveness.
+
+### 6.6 Background, Crash, And Disconnect
+
+iOS entering background/inactive:
+
+```text
+block new input
+perform iOS local release-all cleanup
+send ReleaseAll on active owner if possible
+release/close active owner
+resume later through fresh ClaimOwner
+```
+
+iOS crash, force kill, or suspension before cleanup:
+
+```text
+iOS may send nothing
+ESP heartbeat timeout performs release-all
+ESP clears active owner
+```
+
+iOS Wi-Fi path lost or TCP disconnected:
+
+```text
+block Wi-Fi HID input
+perform iOS local release-all cleanup
+stop UDP immediately
+attempt TCP ReleaseAll if still possible
+attempt authenticated BLE ReleaseAll if BLE is available
+enter fallback/no-owner recovery
+```
+
+Wi-Fi TCP disconnect:
+
+```text
+ESP release-all immediately
+ESP clears WifiOwner
+ESP rejects UDP
+```
+
+ESP Wi-Fi loss while Wi-Fi owns HID:
+
+```text
+ESP release-all immediately
+ESP clears WifiOwner
+ESP rejects UDP
+ESP keeps BLE available for fallback/recovery
+```
+
+BLE disconnect while BLE owns HID:
+
+```text
+ESP release-all immediately
+ESP clears BleOwner
+```
+
+BLE availability is independent of Wi-Fi/TCP failure unless BLE itself disconnects.
+
+BLE disconnect while Wi-Fi owns HID:
+
+```text
+Wi-Fi owner remains valid if TCP owner session is healthy and Wi-Fi session tokens remain valid
+ESP does not release HID only because fallback BLE disconnected
+iOS marks BLE fallback/setup unavailable
+```
+
+### 6.7 Mode Switch And Failure Recovery
+
+Intentional mode switch:
+
+```text
+wait for inputIdle
+InputRouter enters SwitchingMode
+perform full iOS cleanup from Section 6.4
+send ReleaseAll on current owner
+wait for transport delivery result or releaseAllHandoffWaitMs
+release current owner
+claim target owner
+if target claim fails, follow Section 5.6 rollback
+```
+
+Failure recovery:
+
+```text
+do not wait for inputIdle
+block old input immediately
+perform full iOS cleanup from Section 6.4 immediately
+attempt ReleaseAll on any surviving authenticated channel
+ESP self-releases on detected disconnect/loss/timeout
+```
+
+Safety must not depend on a final cross-device packet arriving.
+
+### 6.8 Acknowledgement Policy
+
+No explicit `ReleaseAllAck` is required in v1.
+
+Rationale:
+
+- Reliable transport delivery result or bounded timeout is enough for intentional handoff.
+- Owner release, TCP close, BLE disconnect, and heartbeat timeout all force ESP-local release-all.
+- Adding an explicit ack can be revisited if testing exposes handoff races.
