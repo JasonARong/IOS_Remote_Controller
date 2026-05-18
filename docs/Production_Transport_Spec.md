@@ -10,6 +10,7 @@ Status:
 - Section 4 locked: BLE fallback protocol contract.
 - Section 5 locked: mode switching and ownership state machine.
 - Section 6 locked: release-all and heartbeat safety contract.
+- Section 7 locked: protocol version and capability negotiation.
 
 ---
 
@@ -92,10 +93,10 @@ reason: background | timeout | modeSwitch | disconnect | userEmergency
 
 ```text
 sessionId: UInt32 or wider
-activeMode: wifi | ble
 ```
 
 - Keeps the active owner alive.
+- `activeMode` is derived from the active owner/transport; it is not carried by heartbeat payloads.
 - Missing heartbeat eventually triggers ESP release-all.
 - Exact interval/timeout is defined later.
 
@@ -508,7 +509,7 @@ UDP drops must not:
 - iOS owns `inputEpoch`.
 - ESP initializes `inputEpoch` from `OwnerResult`.
 - iOS increments `inputEpoch` only for TCP `ButtonState` changes and TCP `ReleaseAll`.
-- ESP updates its current accepted epoch only from accepted TCP control messages.
+- ESP updates its current accepted epoch only from accepted TCP `ButtonState` and TCP `ReleaseAll`.
 - iOS includes the latest known `inputEpoch` in every UDP motion packet.
 - ESP accepts UDP only when packet epoch equals current accepted TCP epoch.
 - Packets with older or future epoch are dropped in v1.
@@ -1263,3 +1264,182 @@ Rationale:
 - Reliable transport delivery result or bounded timeout is enough for intentional handoff.
 - Owner release, TCP close, BLE disconnect, and heartbeat timeout all force ESP-local release-all.
 - Adding an explicit ack can be revisited if testing exposes handoff races.
+
+---
+
+## 7. Protocol Version And Capability Negotiation
+
+Version and capability checks prevent app/firmware mismatch before enabling a transport mode.
+
+### 7.1 Version Layers
+
+Do not confuse these fields:
+
+```text
+TCP frame.version: UInt8          // TCP byte-frame format
+BLE control frame.version: UInt8  // BLE control-frame format
+protocolVersion: UInt16           // product semantic protocol
+```
+
+Rules:
+
+- TCP frame version `1` is the v1 TCP frame format.
+- BLE control frame version `1` is the v1 BLE control-frame format.
+- Unsupported TCP frame version => close TCP.
+- Unsupported BLE control frame version => ignore frame or return `Error` only if parseable.
+- `protocolVersion` governs message semantics, payload fields, and capability meaning.
+- `firmwareVersion` is display/debug information only; it must not drive compatibility logic.
+
+### 7.2 Protocol Version
+
+`protocolVersion` uses major/minor encoding:
+
+```text
+high byte = major
+low byte  = minor
+
+0x0100 = 1.0
+0x0101 = 1.1
+0x0200 = 2.0
+```
+
+Rules:
+
+- Major version mismatch disables that transport path.
+- Minor versions may add backward-compatible features.
+- Unknown capability bits are ignored.
+
+### 7.3 TCP Negotiation
+
+TCP performs active negotiation through `Hello` / `HelloAck`.
+
+```text
+Hello:
+minProtocolVersion: UInt16
+maxProtocolVersion: UInt16
+clientCapabilities: UInt32
+
+HelloAck:
+selectedProtocolVersion: UInt16
+espCapabilities: UInt32
+deviceId: OpaqueBytes
+firmwareVersion: String
+```
+
+Rules:
+
+- ESP selects the highest mutually supported `protocolVersion`.
+- `selectedProtocolVersion` must be within the iOS requested range.
+- ESP capabilities are interpreted under `selectedProtocolVersion`.
+- In v1, mode requirements are checked against `espCapabilities`.
+- `clientCapabilities` reports app-side requested/available features for diagnostics and future negotiation; ESP must not use it to mask required device capabilities.
+- If no version overlaps, ESP sends `unsupportedVersion` error if possible, closes TCP, and Wi-Fi Mode is unavailable.
+
+### 7.4 BLE Compatibility Check
+
+BLE does not add a separate negotiation handshake in v1.
+
+iOS may send one minimal BLE control-frame v1 `StatusRequest` as a compatibility probe before full compatibility is known. If no parseable `StatusResponse` or `Error` returns, treat BLE control as unsupported.
+
+iOS checks BLE compatibility from:
+
+```text
+BLE control frame.version
+StatusResponse.protocolVersion
+StatusResponse.capabilities
+```
+
+Rules:
+
+- `StatusResponse.capabilities` reports ESP capabilities; iOS computes compatibility locally.
+- BLE v1 `StatusResponse.protocolVersion` reports one active/supported protocol version; multi-version BLE negotiation is out of scope.
+- If BLE control frame version is unsupported, iOS must not send BLE control commands.
+- If BLE `protocolVersion` has a major-version mismatch per Section 7.2, iOS must not send BLE HID input or Wi-Fi credentials.
+- If BLE status/control compatibility fails, iOS may show unsupported firmware/app state if possible.
+
+### 7.5 CapabilitySet
+
+`CapabilitySet` is a shared `UInt32` bitfield.
+
+```text
+bit 0  bleControlV1
+bit 1  bleLegacyInput
+bit 2  wifiTcpControlV1
+bit 3  wifiUdpMotionV1
+bit 4  tinyUsbHighRateHid
+bit 5  ownerSession
+bit 6  releaseAll
+bit 7  ownerHeartbeat
+bit 8  bleWifiProvisioning
+bit 9  bonjourDiscovery
+bit 10 mouseButtons
+bit 11 wheelInput
+bit 12 keyboardInput
+bit 13 savedWifiProfiles
+```
+
+Unknown bits must be ignored.
+
+Definitions:
+
+```text
+ownerSession = authenticated runtime ClaimOwner / OwnerResult ownership support
+savedWifiProfiles = list/forget/persist saved Wi-Fi profile support
+```
+
+### 7.6 Capability Requirements
+
+Capability checks do not replace runtime state checks from Section 5. HID input also requires `usbHidMounted == true`.
+
+Wi-Fi Mode requires:
+
+```text
+wifiTcpControlV1
+wifiUdpMotionV1
+tinyUsbHighRateHid
+ownerSession
+releaseAll
+ownerHeartbeat
+bonjourDiscovery
+mouseButtons
+wheelInput
+keyboardInput
+```
+
+BLE Mode requires:
+
+```text
+bleControlV1
+bleLegacyInput
+ownerSession
+releaseAll
+ownerHeartbeat
+mouseButtons
+wheelInput
+keyboardInput
+```
+
+BLE Wi-Fi setup requires:
+
+```text
+bleControlV1
+bleWifiProvisioning
+```
+
+Saved Wi-Fi profile management requires `savedWifiProfiles`.
+
+### 7.7 Partial Compatibility
+
+Rules:
+
+- If Wi-Fi requirements fail but BLE Mode requirements pass, disable Wi-Fi Mode and allow BLE Mode.
+- If BLE Wi-Fi setup requirements fail but BLE Mode requirements pass, allow BLE Mode and disable Wi-Fi setup/provisioning.
+- If both Wi-Fi Mode and BLE Mode requirements fail, iOS must not route HID input and should show unsupported firmware/app state.
+- Missing optional feature capabilities should disable only that feature when possible.
+
+### 7.8 Non-Goals
+
+- Full backward-compatibility matrix.
+- Firmware update flow.
+- App Store compatibility policy.
+- Per-feature UI copy for unsupported capabilities.

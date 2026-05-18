@@ -70,8 +70,8 @@ Exit criteria: Wi-Fi, BLE, ownership, heartbeat, release-all, and versioning beh
   Non-goals: Tune final timeout values from field testing.
   Check: Mouse buttons, keyboard keys, scroll, motion queues, and HID state are cleared by release-all.
 
-- [ ] 2.7 Define protocol version and capability negotiation
-  Output: Minimal version/capability fields for TCP hello and BLE status.
+- [x] 2.7 Define protocol version and capability negotiation
+  Output: `docs/Production_Transport_Spec.md` section 7, defining version layers, TCP negotiation, BLE compatibility checks, capability bits, mode requirements, and partial compatibility behavior.
   Non-goals: Full backward-compatibility matrix.
   Check: App can detect incompatible firmware or missing capabilities before enabling Wi-Fi Mode.
 
@@ -267,3 +267,7 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-05-17: Added release-all and heartbeat safety contract to `docs/Production_Transport_Spec.md` and marked task 2.6 complete.
 - 2026-05-17: Tightened Section 6 release reason mapping, neutral HID reports, liveness refresh, disconnect coverage, and rollback references after review.
 - 2026-05-17: Polished Section 6 terminology for iOS button state, BLE availability, TCP session health, and cleanup cross-references.
+- 2026-05-17: Added protocol version and capability negotiation to `docs/Production_Transport_Spec.md` and marked task 2.7 complete.
+- 2026-05-17: Tightened Section 7 effective capabilities, frame-version failure, BLE status capability meaning, ownerSession definition, and provisioning/profile requirements after strict review.
+- 2026-05-18: Clarified Section 7 v1 capability gating uses ESP capabilities directly and BLE incompatibility means major-version mismatch.
+- 2026-05-18: Tightened Sections 1, 3, and 7 for heartbeat payload derivation, epoch updates, and BLE compatibility probing after whole-spec review.
