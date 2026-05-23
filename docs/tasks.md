@@ -1,7 +1,7 @@
 # Tasks
 
 Status: Canonical completion source of truth
-Last Updated: 2026-05-17
+Last Updated: 2026-05-23
 
 ## Status Legend
 
@@ -77,55 +77,60 @@ Exit criteria: Wi-Fi, BLE, ownership, heartbeat, release-all, and versioning beh
 
 ## Step 3: Firmware Foundation
 
-Goal: Reorganize ESP firmware around the proven TinyUSB motion path while preparing clean boundaries for Wi-Fi control and BLE fallback.
+Goal: Reorganize ESP firmware around the proven TinyUSB motion path and the locked transport contract.
 Non-goals: Final pairing UX or polished diagnostics.
-Exit criteria: Firmware has separated modules or clearly separated sections for HID output, motion queue, Wi-Fi UDP, Wi-Fi TCP, BLE, input state, pairing storage, and diagnostics.
+Exit criteria: Firmware has separated modules or clearly separated sections for HID output, input state, owner/session state, Wi-Fi UDP, Wi-Fi TCP, BLE, setup storage, status/capability reporting, and diagnostics.
 
 - [ ] 3.1 Create production firmware base from TinyUSB POC
   Output: A production ESP sketch/source layout based on `ESP_Bridge_TinyUSB.ino`.
   Non-goals: Build on legacy `ESP_Bridge.ino` as the production base.
   Check: TinyUSB, `setPollInterval(1)`, high-rate HID pacer, one-frame-per-tick motion queue, and pointer-scale remainder behavior are preserved.
 
-- [ ] 3.2 Extract shared HID input state
-  Output: Shared ESP input state for buttons, wheel, keyboard, motion queue, active mode, and owner.
+- [ ] 3.2 Extract shared HID input state and release-all cleanup
+  Output: Shared ESP input state for buttons, wheel, keyboard, motion queue, HID staging, active mode, and release-all.
   Non-goals: New input features.
-  Check: Both Wi-Fi and BLE paths can feed the same HID output layer without duplicating HID logic.
+  Check: Both Wi-Fi and BLE paths feed the same HID output layer, and release-all clears mouse, keyboard, wheel, motion queues, and HID staging.
 
-- [ ] 3.3 Add Wi-Fi TCP control server
-  Output: ESP TCP server for control/session messages.
-  Non-goals: UDP motion changes beyond session gating.
-  Check: TCP can accept one owner, receive heartbeat/control commands, and reject non-owner input.
+- [ ] 3.3 Add ESP owner/session foundation
+  Output: ESP state for `NoOwner`, `BleOwner`, `WifiOwner`, `sessionId`, `udpToken`, `inputEpoch`, `phoneId`, and owner heartbeat deadline.
+  Non-goals: Final crypto format or multi-phone UX.
+  Check: ESP can grant one active owner, reject conflicting owners, timeout stale owners, and expose owner state to TCP/BLE code.
 
-- [ ] 3.4 Gate UDP motion by active TCP owner
-  Output: UDP receiver accepts motion only while Wi-Fi Mode has a valid TCP owner session.
+- [ ] 3.4 Add Wi-Fi TCP control server
+  Output: ESP TCP server for `Hello`, `Auth`, `ClaimOwner`, heartbeat, reliable HID controls, status, setup/admin, and errors.
+  Non-goals: UDP motion transport.
+  Check: TCP negotiates version/capabilities, grants Wi-Fi ownership, refreshes owner liveness, handles release-all, and rejects non-owner HID input.
+
+- [ ] 3.5 Gate production UDP motion by active TCP owner
+  Output: UDP receiver for production gated motion packets.
   Non-goals: Reliable UDP.
-  Check: UDP packets are ignored before authentication, after disconnect, and from non-owner source/session.
+  Check: UDP is accepted only when active mode is Wi-Fi and source endpoint, packet version, `sessionId`, `udpToken`, `inputEpoch`, frame count, and length all pass.
 
-- [ ] 3.5 Merge full-feature BLE fallback into TinyUSB firmware
-  Output: BLE path supporting cursor, buttons, drag, scroll, keyboard, setup/status, and release-all.
+- [ ] 3.6 Merge full-feature BLE fallback into TinyUSB firmware
+  Output: BLE path supporting cursor, buttons, drag, scroll, keyboard, ownership, setup/status, heartbeat, and release-all.
   Non-goals: Preserve BLE as the smooth cursor path.
-  Check: BLE Mode can drive all features when active, and cannot drive HID when Wi-Fi owns the ESP.
+  Check: BLE Mode drives all features only when it owns HID, uses the shared HID state, and cannot drive HID while Wi-Fi owns the ESP.
 
-- [ ] 3.6 Add ESP Wi-Fi profile storage
+- [ ] 3.7 Add ESP Wi-Fi profile storage
   Output: Storage for multiple simple `SSID + password` profiles.
   Non-goals: BSSID/mesh/router heuristics.
   Check: ESP can store, list, try, and clear saved profiles.
 
-- [ ] 3.7 Add ESP pairing/session storage
+- [ ] 3.8 Add ESP pairing identity storage
   Output: Storage for device identity and paired-phone secret(s).
   Non-goals: Final multi-phone UX.
-  Check: ESP can persist identity/secret across reboot and enforce one active runtime owner.
+  Check: ESP can persist device identity/secret across reboot and use it for TCP/BLE authentication hooks.
 
-- [ ] 3.8 Add ESP Wi-Fi scan over BLE
-  Output: BLE setup command that returns ESP-visible SSIDs for provisioning.
+- [ ] 3.9 Add ESP status, capability, and BLE Wi-Fi setup commands
+  Output: ESP status/capability reporting plus BLE scan/set/list/forget Wi-Fi setup commands.
   Non-goals: iOS current-SSID dependency.
-  Check: App can show only Wi-Fi networks the ESP can see.
+  Check: App can read firmware/protocol/capabilities/device ID, show only ESP-visible SSIDs, and provision Wi-Fi without hardcoded credentials.
 
 ## Step 4: iOS Transport Architecture
 
 Goal: Refactor the app so UI and gesture code produce semantic input events while the active transport decides how to send them.
 Non-goals: Final onboarding polish or settings UI.
-Exit criteria: iOS has an input router, Wi-Fi transport, BLE transport, and connection state model matching the architecture.
+Exit criteria: iOS has an input router, Wi-Fi transport, BLE transport, local cleanup behavior, and connection state model matching the locked spec.
 
 - [ ] 4.1 Create shared input event layer
   Output: Swift model/API for canonical input events independent of BLE or Wi-Fi.
@@ -133,19 +138,19 @@ Exit criteria: iOS has an input router, Wi-Fi transport, BLE transport, and conn
   Check: Touchpad, keyboard, scroll, and command UI can route through one event API.
 
 - [ ] 4.2 Create InputRouter with active mode ownership
-  Output: Router that sends events only through the active transport and blocks inactive transport input.
+  Output: Router that sends events only through the active transport, blocks inactive HID input, and supports SwitchingMode.
   Non-goals: Auto-switch tuning.
-  Check: Wi-Fi Mode and BLE Mode are mutually exclusive for HID-driving input.
+  Check: Wi-Fi Mode and BLE Mode are mutually exclusive for HID-driving input, and failure recovery blocks stale input immediately.
 
 - [ ] 4.3 Keep UDP motion sender as Wi-Fi motion lane
-  Output: Wi-Fi motion client preserving the successful 250 Hz one-subframe UDP pipeline.
+  Output: Wi-Fi motion client preserving the successful one-subframe UDP pipeline with production session/token/epoch fields.
   Non-goals: Re-batch UDP motion or move motion to TCP.
-  Check: Existing smooth-motion diagnostics remain comparable to the POC.
+  Check: Existing smooth-motion diagnostics remain comparable to the POC, and UDP motion stops immediately when Wi-Fi ownership is lost.
 
 - [ ] 4.4 Add TCP control client
-  Output: iOS TCP client for hello/auth, heartbeat, controls, scroll, keyboard, release-all, status, and settings.
+  Output: iOS TCP client for hello/auth, claim owner, heartbeat, buttons, scroll, keyboard, release-all, status, setup/admin, and errors.
   Non-goals: Replace UDP cursor motion.
-  Check: Buttons, keyboard, scroll, and release-all can be sent over Wi-Fi without BLE.
+  Check: Buttons, keyboard, scroll, release-all, capability checks, and owner liveness work over Wi-Fi without BLE.
 
 - [ ] 4.5 Refactor BLE into full fallback transport
   Output: BLE transport that handles all canonical input events in BLE Mode.
@@ -155,7 +160,7 @@ Exit criteria: iOS has an input router, Wi-Fi transport, BLE transport, and conn
 - [ ] 4.6 Add iOS connection state machine
   Output: App state model for unpaired, BLE setup, BLE active, Wi-Fi setup, Wi-Fi connecting, Wi-Fi active, reconnecting, and degraded states.
   Non-goals: Final visual design.
-  Check: User-visible status matches the active transport and health state.
+  Check: Intentional switches wait for idle, failure recovery does not wait for idle, and user-visible status matches active transport health.
 
 - [ ] 4.7 Add background/inactive release-all behavior
   Output: App lifecycle hooks that send release-all before suspension/inactive state.
@@ -166,7 +171,7 @@ Exit criteria: iOS has an input router, Wi-Fi transport, BLE transport, and conn
 
 Goal: Replace hardcoded Wi-Fi/IP assumptions with user setup, ESP scan results, Local Network permission handling, and automatic Wi-Fi discovery.
 Non-goals: ESP hotspot/direct mode.
-Exit criteria: A user can set up same-Wi-Fi mode without editing firmware or hardcoding an IP address.
+Exit criteria: A user can set up Wi-Fi Mode without editing firmware, hardcoding credentials, or hardcoding an ESP IP address.
 
 - [ ] 5.1 Add Local Network permission flow
   Output: iOS permission prompt timing and denied-permission handling for Wi-Fi Mode.
@@ -186,7 +191,7 @@ Exit criteria: A user can set up same-Wi-Fi mode without editing firmware or har
 - [ ] 5.4 Add Bonjour/mDNS discovery
   Output: ESP advertises service; iOS discovers device, ports, device ID, and capability summary.
   Non-goals: Final multi-dongle picker polish.
-  Check: Hardcoded ESP IP is removed from normal Wi-Fi Mode.
+  Check: Hardcoded ESP IP is removed from normal Wi-Fi Mode, and iOS can match Wi-Fi-discovered devices to known BLE/device identities.
 
 - [ ] 5.5 Handle Wi-Fi communication failure UX
   Output: User-facing fallback when ESP joins Wi-Fi but iPhone cannot reach it.
@@ -195,17 +200,17 @@ Exit criteria: A user can set up same-Wi-Fi mode without editing firmware or har
 
 ## Step 6: Pairing, Security, And Multi-Phone Ownership
 
-Goal: Prevent random LAN/BLE clients from driving HID while still allowing an ESP to be paired with different phones over time.
+Goal: Harden pairing, authentication, and ownership after the minimum transport paths are working.
 Non-goals: Enterprise-grade account system.
 Exit criteria: Runtime input is accepted only from the active authenticated owner/session.
 
-- [ ] 6.1 Define pairing secret flow
-  Output: Pairing sequence that creates/stores a phone identity and shared secret.
+- [ ] 6.1 Finalize pairing secret flow
+  Output: Pairing sequence that creates, stores, authenticates, and rotates/replaces a phone identity and shared secret.
   Non-goals: Final reset UI.
   Check: Rebooted ESP and app can re-authenticate without repeating Wi-Fi password setup.
 
-- [ ] 6.2 Enforce active owner on ESP
-  Output: ESP accepts HID-driving input only from the current owner session.
+- [ ] 6.2 Harden active-owner enforcement
+  Output: Security review and tests proving ESP accepts HID-driving input only from the current authenticated owner session.
   Non-goals: Simultaneous multi-phone control.
   Check: A second phone cannot move/click/type while another phone owns the dongle.
 
@@ -218,6 +223,11 @@ Exit criteria: Runtime input is accepted only from the active authenticated owne
   Output: Defined reset command/button behavior for clearing paired phones and Wi-Fi profiles.
   Non-goals: Firmware update recovery.
   Check: User can recover from lost phone or bad stored credentials.
+
+- [ ] 6.5 Remove lab-only secrets and hardcoded network assumptions
+  Output: No production path depends on hardcoded Wi-Fi credentials, hardcoded ESP IP, debug tokens, or example pairing secrets.
+  Non-goals: Enterprise device management.
+  Check: Normal setup and reconnect work from stored profiles, discovery, and authenticated sessions.
 
 ## Step 7: Validation And Release Readiness
 
@@ -250,6 +260,11 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
   Non-goals: Background input.
   Check: ESP always releases mouse buttons and keyboard keys after failure/timeout/background.
 
+- [ ] 7.6 Validate version and capability handling
+  Output: Tests for incompatible protocol versions, missing Wi-Fi/BLE capabilities, unsupported firmware, and partial compatibility.
+  Non-goals: Full firmware update flow.
+  Check: iOS disables only unsupported modes/features and never routes HID input to an incompatible transport.
+
 ## Plan Change Log
 
 - 2026-05-05: Initial production transport task plan based on `docs/Production_Transport_Architecture.md`.
@@ -271,3 +286,4 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-05-17: Tightened Section 7 effective capabilities, frame-version failure, BLE status capability meaning, ownerSession definition, and provisioning/profile requirements after strict review.
 - 2026-05-18: Clarified Section 7 v1 capability gating uses ESP capabilities directly and BLE incompatibility means major-version mismatch.
 - 2026-05-18: Tightened Sections 1, 3, and 7 for heartbeat payload derivation, epoch updates, and BLE compatibility probing after whole-spec review.
+- 2026-05-23: Optimized unfinished task steps around the locked spec, tightening firmware ownership, UDP gate, iOS routing, setup/discovery, and validation dependencies.

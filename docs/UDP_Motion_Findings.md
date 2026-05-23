@@ -1,5 +1,12 @@
 # UDP Motion POC — Findings & Decisions
 
+Status: Historical POC findings and motion reference.
+
+Canonical production contract: `docs/Production_Transport_Spec.md`.
+Canonical execution plan: `docs/tasks.md`.
+
+Use this document to preserve the motion lessons that made Wi-Fi cursor movement smooth. Do not use its packet markers, ports, credentials, or lab setup as the production protocol contract.
+
 This document records what we learned proving **Wi‑Fi UDP + ESP32‑S3 USB HID** can deliver **mouse‑like smooth cursor motion**, the engineering decisions that fixed it, and how constants must stay paired across iOS and firmware. Use it as the handoff from POC to integration.
 
 ---
@@ -87,9 +94,11 @@ UITouch (coalesced) → TouchPadViewModel / PointerMotionEngine
 
 ---
 
-## 5. Locked constants — iOS ↔ ESP contract
+## 5. POC constants — iOS ↔ ESP motion reference
 
-**Do not change one side without the other** where noted.
+These constants describe the successful POC motion pipeline. Production keeps the behavior, but the production wire protocol is gated by ownership/session fields in `docs/Production_Transport_Spec.md`.
+
+**Do not change one side without the other** where noted during POC or motion retuning.
 
 | Concern | iOS | ESP (`ESP_Bridge_TinyUSB.ino`) |
 |---------|-----|--------------------------------|
@@ -102,6 +111,11 @@ UITouch (coalesced) → TouchPadViewModel / PointerMotionEngine
 | Stale prune | `staleInterval` **0.032 s** | Queue stale: `UDP_FRAME_STALE_US` **48000** (~48 ms) — related but not identical purpose |
 | HID emit cadence | — | `HID_PACER_INTERVAL_MS` **2** (500 Hz attempts) |
 | USB polling | — | `setPollInterval(1)` |
+
+Production differences:
+
+- Production UDP motion uses the gated packet from `Production_Transport_Spec.md`, not raw unauthenticated POC packets.
+- Production mode ownership, `sessionId`, `udpToken`, `inputEpoch`, heartbeat, release-all, and capability rules are defined only in the spec.
 
 ---
 
@@ -129,12 +143,12 @@ Captured in `debug_logs.md` under **Log 13–16** (project root).
 
 ## 8. Integration checklist (post‑POC)
 
-- [ ] Merge **BLE control path** (buttons, scroll, keyboard, discovery) from `ESP_Bridge.ino` into **`ESP_Bridge_TinyUSB.ino`** (or rename unified sketch), **without** changing motion UDP → HID pacer **algorithm** (tasks/cores TBD; preserve isolation of UDP RX and HID pacer).
+- [ ] Merge **BLE control path** (buttons, scroll, keyboard, discovery) from `ESP_Bridge.ino` into **`ESP_Bridge_TinyUSB.ino`** (or rename unified sketch), **without** changing the motion UDP → HID pacer behavior proven here.
 - [ ] Re‑validate **BLE + Wi‑Fi coexistence** (connection interval / latency — earlier “coexistence breaker” in `ESP_Bridge.ino` is a reference).
 - [ ] Strip or `#if DEBUG` **verbose movement diagnostics** for release builds (`MovementDiagnostics.swift`).
-- [ ] Single **source of truth** for ports/markers/scale in one shared header or code‑gen if needed.
+- [ ] Single **source of truth** for production protocol constants if needed; `Production_Transport_Spec.md` is the written contract.
 - [ ] Remove or archive **`og_ESP_Bridge.ino`** if obsolete; keep git history.
-- [ ] Update **user‑facing docs** (setup: USB‑OTG TinyUSB, libraries, same subnet as phone).
+- [ ] Update developer setup docs for USB-OTG TinyUSB and required libraries. User-facing setup should avoid same-Wi-Fi/same-LAN theory unless communication fails.
 
 ---
 

@@ -1,5 +1,13 @@
 # Debug logs
 
+Status: Historical diagnostic evidence only.
+
+Canonical production contract: `docs/Production_Transport_Spec.md`.
+Canonical motion conclusions: `docs/UDP_Motion_Findings.md`.
+Canonical execution plan: `docs/tasks.md`.
+
+These logs record experiments, failed attempts, intermediate hypotheses, and final POC evidence. Future development should not treat packet formats, constants, timings, or temporary debug fields in this file as implementation contracts.
+
 ## Log 16
 📈 Movement diagnostics
   touch: callbacks=0 coalescedSamples=0 motionEvents=0

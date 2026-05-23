@@ -1,5 +1,13 @@
 # Production Transport Architecture
 
+Status: High-level architecture context.
+
+Canonical implementation contract: `docs/Production_Transport_Spec.md`.
+Canonical execution plan: `docs/tasks.md`.
+POC evidence: `docs/UDP_Motion_Findings.md` and `docs/debug_logs.md`.
+
+Use this document for product direction and architecture rationale. If this document conflicts with `Production_Transport_Spec.md`, the spec wins.
+
 This document records the production transport decisions after the UDP motion POC proved that **same-Wi-Fi UDP + TinyUSB** can produce smooth, mouse-like cursor movement. It should be read together with `docs/UDP_Motion_Findings.md`, which explains the motion-specific POC results and timing constraints.
 
 The goal here is to define the product architecture clearly enough to guide implementation without prematurely specifying every packet, timeout, storage key, or onboarding screen.
@@ -25,7 +33,9 @@ ESP hotspot/direct mode is intentionally deferred. It may become a future featur
 
 ---
 
-## 2. Locked Transport Contract
+## 2. High-Level Transport Direction
+
+Packet formats, ownership rules, release-all behavior, heartbeat behavior, and capability negotiation are defined in `docs/Production_Transport_Spec.md`.
 
 ### Wi-Fi Mode
 
@@ -87,6 +97,8 @@ valid TCP owner session -> UDP motion accepted
 no valid TCP owner      -> UDP motion ignored
 wrong owner/session     -> UDP motion ignored
 ```
+
+The production gate also checks packet version, source endpoint, `sessionId`, `udpToken`, `inputEpoch`, frame count, and packet length as specified in `docs/Production_Transport_Spec.md`.
 
 This gives the high-rate UDP motion path a safety boundary without adding heavy reliability logic to every motion packet.
 
@@ -242,7 +254,7 @@ This requires:
 - ownership timeout
 - clear handling for "dongle already in use"
 
-Detailed token format, storage layout, reset behavior, and multiple-phone UI are deferred.
+Detailed crypto/token format, storage layout, reset UX, and multiple-phone UX are deferred. Runtime ownership rules are specified in `docs/Production_Transport_Spec.md`.
 
 ---
 
@@ -253,31 +265,31 @@ The high-level rule is:
 ```text
 Prefer Wi-Fi Mode when healthy.
 Use BLE Mode when Wi-Fi is unavailable, unsupported, not provisioned, or unhealthy.
-Switch modes only when input is idle.
+Intentional switches wait for input idle.
+Failure recovery blocks input immediately and does not wait for idle.
 ```
 
 Wi-Fi should be considered healthy only when:
 
 - ESP is discoverable/reachable on Wi-Fi
 - TCP control session is connected and authenticated
-- UDP motion heartbeat/path is valid
+- UDP motion gate is valid for accepted packets
 - ESP reports USB HID is mounted/ready
 
 BLE should remain available as the complete fallback path.
 
-Exact switching timing is deferred, including:
+Switching and failure-recovery state rules are specified in `docs/Production_Transport_Spec.md`. Values still subject to field tuning include:
 
 - heartbeat timeout duration
 - reconnect grace period
 - number of failed pings before fallback
-- behavior during drag/key-hold if the active mode fails
 - BLE-to-Wi-Fi promotion timing
 
 ---
 
 ## 11. Safety Requirements
 
-The release-all safety behavior is required, though the full design is deferred.
+The release-all safety behavior is required and specified in `docs/Production_Transport_Spec.md`.
 
 Locked requirements:
 
@@ -292,46 +304,39 @@ This must be implemented before production because stuck mouse buttons or stuck 
 
 ## 12. Deferred Topics
 
-The following are intentionally not fully specified yet:
+The following remain intentionally deferred after the locked transport spec:
 
 1. **Bonjour/mDNS details**
    - service name
    - TXT fields
    - advertised TCP/UDP ports
-   - protocol/firmware/capability fields
    - multiple dongle picker UX
 
 2. **Pairing/security details**
    - token format
    - crypto approach
-   - reset flow
    - multiple paired phones
    - "dongle in use" behavior
 
-3. **Release-all and heartbeat details**
-   - timeout values
-   - reconnect grace periods
-   - mid-drag/mid-key failure behavior
-
-4. **ESP storage schema**
+3. **ESP storage schema**
    - Wi-Fi profile storage
    - paired phone secret storage
    - device name
    - factory reset behavior
 
-5. **Protocol versioning**
-   - TCP hello/version exchange
-   - capability negotiation
-   - app/firmware compatibility checks
+4. **Field tuning**
+   - final heartbeat timeout values
+   - reconnect grace periods
+   - automatic promotion/fallback timing
 
-6. **ESP hotspot/direct mode**
+5. **ESP hotspot/direct mode**
    - deferred future feature, not part of the current production architecture phase
 
 ---
 
-## 13. Current Architecture Contract
+## 13. Architecture Summary
 
-This is the implementation contract for the next architecture stage:
+This is a high-level summary. Use `docs/Production_Transport_Spec.md` for implementation details and `docs/tasks.md` for execution order.
 
 ```text
 Two modes:
@@ -360,4 +365,3 @@ Firmware base:
   Preserve TinyUSB smooth motion pipeline.
   Merge BLE fallback/control features into that architecture.
 ```
-
