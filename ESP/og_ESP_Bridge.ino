@@ -1,3 +1,9 @@
+// og_ESP_Bridge.ino
+//
+// Original legacy reference kept for historical behavior comparison.
+// Do not use this as the production firmware base.
+// See ESP/README.md for current firmware file roles.
+
 #include <Arduino.h>
 #include <USB.h>
 #include <USBHID.h>

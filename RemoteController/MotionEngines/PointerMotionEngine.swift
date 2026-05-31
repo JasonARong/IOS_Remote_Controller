@@ -9,6 +9,11 @@ import Foundation
 import CoreGraphics
 
 final class PointerMotionEngine {
+    enum DtMode: String {
+        case clamped90Hz
+        case highRateTouch
+    }
+
     /// Resolution multiplier shared by both the UDP sender and the ESP HID
     /// pacer. Multiplying motion before quantization eliminates the
     /// "round-to-zero" gap on slow drags so the iOS subframe stream stays
@@ -26,7 +31,7 @@ final class PointerMotionEngine {
     private var accumY: CGFloat = 0
     private var filteredSpeed: CGFloat = 0
 
-    private let minDt: CFTimeInterval = 1.0 / 90.0
+    private let minDt: CFTimeInterval
     private let maxDt: CFTimeInterval = 1.0 / 30.0
     private let velocityAlpha: CGFloat = 0.35
     private let maxSpeedForGain: CGFloat = 1800
@@ -37,10 +42,18 @@ final class PointerMotionEngine {
     
     init (
         connection: ConnectionManager,
-        settings: MotionCurveSettings = PointerMotionEngine.defaultSettings
+        settings: MotionCurveSettings = PointerMotionEngine.defaultSettings,
+        dtMode: DtMode = .clamped90Hz
     ) {
         self.connection = connection
         self.settings = settings
+        switch dtMode {
+        case .clamped90Hz:
+            self.minDt = 1.0 / 90.0
+        case .highRateTouch:
+            self.minDt = 1.0 / 240.0
+        }
+        MovementDiagnostics.shared.setExperimentLabels(pointerDtMode: dtMode.rawValue)
     }
     
     /// Apply raw pointer delta from the touchpad, with a time delta for speed-based acceleration.
@@ -85,7 +98,12 @@ final class PointerMotionEngine {
         // reports to smooth ~200 Hz reports -- macOS's accel curve underweights
         // small per-report deltas, so we restore the lost gain ourselves.
         let gain = motionGain(forSpeed: filteredSpeed, settings: settings)
-        MovementDiagnostics.shared.recordPointerGain(speed: filteredSpeed, gain: gain, safeDt: safeDt)
+        MovementDiagnostics.shared.recordPointerGain(
+            speed: filteredSpeed,
+            gain: gain,
+            rawDt: dt,
+            safeDt: safeDt
+        )
 
         // Multiply by pointerScale so downstream UDP quantization keeps
         // sub-pixel motion. ESP applies the inverse divide before the HID

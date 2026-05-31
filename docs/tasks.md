@@ -1,7 +1,7 @@
 # Tasks
 
 Status: Canonical completion source of truth
-Last Updated: 2026-05-23
+Last Updated: 2026-05-31
 
 ## Status Legend
 
@@ -30,7 +30,7 @@ Exit criteria: The architecture document clearly defines Wi-Fi Mode, BLE Mode, a
   Check: Document includes UDP motion + TCP control for Wi-Fi, full-feature BLE fallback, one active owner, and TinyUSB firmware direction.
 
 - [x] 1.2 Preserve UDP motion POC findings as the motion reference
-  Output: `docs/UDP_Motion_Findings.md`
+  Output: `docs/reference/UDP_Motion_Findings.md`
   Non-goals: Rewrite the POC or re-evaluate BLE motion smoothness.
   Check: Document records the successful TinyUSB + UDP smooth-motion pipeline and locked iOS/ESP constants.
 
@@ -75,11 +75,18 @@ Exit criteria: Wi-Fi, BLE, ownership, heartbeat, release-all, and versioning beh
   Non-goals: Full backward-compatibility matrix.
   Check: App can detect incompatible firmware or missing capabilities before enabling Wi-Fi Mode.
 
+- [x] 2.8 Lock performance baseline and optimization policy
+  Output: `docs/reference/Performance_Findings.md` and `docs/Production_Transport_Architecture.md` section 7.
+  Non-goals: Solve native-perfect cursor feel or final active-use thermal tuning.
+  Check: Idle heat fix, acceptable smoothness baseline, minimum gates, and deferred optimization policy are recorded.
+
 ## Step 3: Firmware Foundation
 
 Goal: Reorganize ESP firmware around the proven TinyUSB motion path and the locked transport contract.
 Non-goals: Final pairing UX or polished diagnostics.
 Exit criteria: Firmware has separated modules or clearly separated sections for HID output, input state, owner/session state, Wi-Fi UDP, Wi-Fi TCP, BLE, setup storage, status/capability reporting, and diagnostics.
+
+Performance baseline: Continue product implementation unless a minimum gate in `docs/reference/Performance_Findings.md` regresses. Do not block Step 3 on further smoothness tuning.
 
 - [ ] 3.1 Create production firmware base from TinyUSB POC
   Output: A production ESP sketch/source layout based on `ESP_Bridge_TinyUSB.ino`.
@@ -238,7 +245,7 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - [ ] 7.1 Validate Wi-Fi smooth motion remains POC-quality
   Output: Logs comparing iOS UDP cadence, ESP UDP rx, ESP HID reports, queue depth, and subjective feel.
   Non-goals: Retune acceleration unless regression is observed.
-  Check: Wi-Fi Mode preserves the smooth TinyUSB motion behavior from `docs/UDP_Motion_Findings.md`.
+  Check: Wi-Fi Mode preserves the smooth TinyUSB motion behavior from `docs/reference/UDP_Motion_Findings.md` and stays within `docs/reference/Performance_Findings.md` gates.
 
 - [ ] 7.2 Validate Wi-Fi controls over TCP
   Output: Test results for click, drag, right click, scroll, keyboard combos, release-all, heartbeat, and reconnect.
@@ -287,3 +294,4 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-05-18: Clarified Section 7 v1 capability gating uses ESP capabilities directly and BLE incompatibility means major-version mismatch.
 - 2026-05-18: Tightened Sections 1, 3, and 7 for heartbeat payload derivation, epoch updates, and BLE compatibility probing after whole-spec review.
 - 2026-05-23: Optimized unfinished task steps around the locked spec, tightening firmware ownership, UDP gate, iOS routing, setup/discovery, and validation dependencies.
+- 2026-05-31: Moved historical findings/logs into `docs/reference/`, added `Performance_Findings.md`, recorded the performance baseline, and marked task 2.8 complete.

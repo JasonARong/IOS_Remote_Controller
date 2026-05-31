@@ -135,6 +135,14 @@ final class MovementDiagnostics {
     private var bleSendIntervalHistogram = IntervalHistogram(bucketUpperBoundsMs: [8, 12, 17, 25, 34, 50])
     private var udpSendIntervalHistogram = IntervalHistogram(bucketUpperBoundsMs: [8, 12, 17, 25, 34, 50])
     private var udpTimerIntervalHistogram = IntervalHistogram(bucketUpperBoundsMs: [4, 8, 12, 17, 25, 34, 50])
+    private var touchSampleAgeHistogram = IntervalHistogram(bucketUpperBoundsMs: [4, 8, 12, 20, 33, 50, 100])
+    private var pointerSafeDtHistogram = IntervalHistogram(bucketUpperBoundsMs: [4, 8, 12, 17, 25, 34, 50])
+    private var udpQueueAgeHistogram = IntervalHistogram(bucketUpperBoundsMs: [4, 8, 12, 20, 33, 50])
+    private var rawDeltaHistogram = ValueHistogram(bucketUpperBounds: [0.25, 0.5, 1, 2, 4, 8, 16, 32])
+    private var rawTurnHistogram = ValueHistogram(bucketUpperBounds: [2, 5, 10, 20, 35, 60, 90])
+    private var pointerTurnHistogram = ValueHistogram(bucketUpperBounds: [2, 5, 10, 20, 35, 60, 90])
+    private var udpDeltaHistogram = ValueHistogram(bucketUpperBounds: [1, 2, 4, 8, 16, 32, 64, 127])
+    private var udpTurnHistogram = ValueHistogram(bucketUpperBounds: [2, 5, 10, 20, 35, 60, 90])
     private var pointerSpeedHistogram = ValueHistogram(bucketUpperBounds: [50, 150, 300, 600, 1000, 1600, 2400])
     private var pointerGainHistogram = ValueHistogram(bucketUpperBounds: [1.1, 1.5, 2.0, 2.5, 3.0, 3.5])
     private var emittedDeltaHistogram = ValueHistogram(bucketUpperBounds: [1, 2, 4, 8, 16, 32, 64, 127])
@@ -162,15 +170,19 @@ final class MovementDiagnostics {
     private var droppedMovementAbsY: CGFloat = 0
     private var lastBleSendTime: CFTimeInterval?
     private var lastUdpSendTime: CFTimeInterval?
+    private var lastRawVector: CGVector?
+    private var lastPointerVector: CGVector?
+    private var lastUdpVector: CGVector?
+    private var pointerDtMinClamps = 0
+    private var pointerDtMaxClamps = 0
+    private var udpSchedulerMode = "unknown"
+    private var pointerDtMode = "unknown"
+    private var pointerFilterMode = "unknown"
     private var currentBleBlockStartedAt: CFTimeInterval?
     private var longestBleBlock: CFTimeInterval = 0
 
     private init() {
-        #if DEBUG
-        enabled = true
-        #else
-        enabled = false
-        #endif
+        enabled = RuntimeDiagnostics.movementPipeline
     }
 
     private func withLock(_ body: () -> Void) {
@@ -179,11 +191,43 @@ final class MovementDiagnostics {
         body()
     }
 
-    func recordTouchInterval(_ dt: CFTimeInterval, dx: CGFloat, dy: CGFloat) {
+    func setExperimentLabels(
+        udpSchedulerMode: String? = nil,
+        pointerDtMode: String? = nil,
+        pointerFilterMode: String? = nil
+    ) {
+        guard enabled else { return }
+        withLock {
+            if let udpSchedulerMode {
+                self.udpSchedulerMode = udpSchedulerMode
+            }
+            if let pointerDtMode {
+                self.pointerDtMode = pointerDtMode
+            }
+            if let pointerFilterMode {
+                self.pointerFilterMode = pointerFilterMode
+            }
+        }
+    }
+
+    func recordTouchInterval(
+        _ dt: CFTimeInterval,
+        dx: CGFloat,
+        dy: CGFloat,
+        sampleTimestamp: CFTimeInterval? = nil
+    ) {
         guard enabled else { return }
         withLock {
             touchEvents += 1
             touchIntervalHistogram.record(seconds: dt)
+            rawDeltaHistogram.record(Double(hypot(dx, dy)))
+            recordTurn(dx: dx, dy: dy, previous: &lastRawVector, histogram: &rawTurnHistogram, gap: dt)
+            if let sampleTimestamp {
+                let age = CACurrentMediaTime() - sampleTimestamp
+                if age >= 0, age < 2.0 {
+                    touchSampleAgeHistogram.record(seconds: age)
+                }
+            }
             maybeFlushSummary()
         }
     }
@@ -205,12 +249,18 @@ final class MovementDiagnostics {
         }
     }
 
-    func recordPointerGain(speed: CGFloat, gain: CGFloat, safeDt: CFTimeInterval) {
+    func recordPointerGain(speed: CGFloat, gain: CGFloat, rawDt: CFTimeInterval, safeDt: CFTimeInterval) {
         guard enabled else { return }
         withLock {
             pointerEvents += 1
             pointerSpeedHistogram.record(Double(speed))
             pointerGainHistogram.record(Double(gain))
+            pointerSafeDtHistogram.record(seconds: safeDt)
+            if safeDt > rawDt + 0.000_5 {
+                pointerDtMinClamps += 1
+            } else if safeDt < rawDt - 0.000_5 {
+                pointerDtMaxClamps += 1
+            }
             maybeFlushSummary()
         }
     }
@@ -220,6 +270,7 @@ final class MovementDiagnostics {
         withLock {
             emittedPointerPackets += 1
             emittedDeltaHistogram.record(Double(hypot(dx, dy)))
+            recordTurn(dx: dx, dy: dy, previous: &lastPointerVector, histogram: &pointerTurnHistogram)
             maybeFlushSummary()
         }
     }
@@ -267,11 +318,21 @@ final class MovementDiagnostics {
         }
     }
 
-    func recordUdpSubframeSent(dx: Int16, dy: Int16) {
+    func recordUdpSubframeSent(dx: Int16, dy: Int16, queueAge: CFTimeInterval? = nil) {
         guard enabled else { return }
         withLock {
             udpSubframesSent += 1
             emittedDeltaHistogram.record(Double(hypot(Double(dx), Double(dy))))
+            udpDeltaHistogram.record(Double(hypot(Double(dx), Double(dy))))
+            recordTurn(
+                dx: CGFloat(dx),
+                dy: CGFloat(dy),
+                previous: &lastUdpVector,
+                histogram: &udpTurnHistogram
+            )
+            if let queueAge, queueAge >= 0, queueAge < 2.0 {
+                udpQueueAgeHistogram.record(seconds: queueAge)
+            }
             maybeFlushSummary()
         }
     }
@@ -337,6 +398,15 @@ final class MovementDiagnostics {
         guard enabled else { return }
         withLock {
             lastUdpSendTime = nil
+            lastUdpVector = nil
+        }
+    }
+
+    func recordPointerStreamEnded() {
+        guard enabled else { return }
+        withLock {
+            lastRawVector = nil
+            lastPointerVector = nil
         }
     }
 
@@ -384,6 +454,37 @@ final class MovementDiagnostics {
         currentBleBlockStartedAt = nil
     }
 
+    private func recordTurn(
+        dx: CGFloat,
+        dy: CGFloat,
+        previous: inout CGVector?,
+        histogram: inout ValueHistogram,
+        gap: CFTimeInterval? = nil
+    ) {
+        let magnitude = hypot(dx, dy)
+        guard magnitude > 0.001 else { return }
+        defer {
+            previous = CGVector(dx: dx, dy: dy)
+        }
+
+        if let gap, gap > 0.050 {
+            previous = nil
+            return
+        }
+
+        guard let prior = previous else { return }
+        let priorMagnitude = hypot(prior.dx, prior.dy)
+        guard priorMagnitude > 0.001 else { return }
+
+        let a = atan2(Double(dy), Double(dx))
+        let b = atan2(Double(prior.dy), Double(prior.dx))
+        var diff = abs(a - b)
+        if diff > .pi {
+            diff = 2 * .pi - diff
+        }
+        histogram.record(diff * 180 / .pi)
+    }
+
     private func maybeFlushSummary(force: Bool = false) {
         let now = CACurrentMediaTime()
         guard force || now - lastSummaryTime >= summaryInterval else { return }
@@ -398,8 +499,12 @@ final class MovementDiagnostics {
         let udpSender = "UDP sender: ticks=\(udpSenderTicks) emitted=\(udpSenderEmittedTicks) emptyWhileActive=\(udpSenderEmptyWhileActive)"
         let pointer = "pointer: events=\(pointerEvents) emitted=\(emittedPointerPackets)"
         let touch = "touch: callbacks=\(touchCallbacks) coalescedSamples=\(coalescedSamples) motionEvents=\(touchEvents)"
+        let experiment = "experiment: udpMode=\(udpSchedulerMode) pointerDt=\(pointerDtMode) pointerFilter=\(pointerFilterMode)"
+        let probeRaw = "probe raw: \(rawDeltaHistogram.summary(name: "delta")) | \(rawTurnHistogram.summary(name: "turn")) | \(touchSampleAgeHistogram.summary(name: "age"))"
+        let probePointer = "probe pointer: dtMinClamp=\(pointerDtMinClamps) dtMaxClamp=\(pointerDtMaxClamps) | \(pointerSafeDtHistogram.summary(name: "safeDt")) | \(pointerTurnHistogram.summary(name: "turn"))"
+        let probeUdp = "probe UDP: \(udpQueueAgeHistogram.summary(name: "queueAge")) | \(udpDeltaHistogram.summary(name: "delta")) | \(udpTurnHistogram.summary(name: "turn"))"
 
-        print("📈 Movement diagnostics\n  \(touch)\n  \(touchIntervalHistogram.summary(name: "touch dt"))\n  \(coalescedSampleIntervalHistogram.summary(name: "coalesced dt"))\n  \(pointer)\n  \(pointerSpeedHistogram.summary(name: "speed"))\n  \(pointerGainHistogram.summary(name: "gain"))\n  \(emittedDeltaHistogram.summary(name: "emit delta"))\n  \(ble)\n  \(bleTickIntervalHistogram.summary(name: "BLE tick dt"))\n  \(bleSendIntervalHistogram.summary(name: "BLE send dt"))\n  \(udp)\n  \(udpSender)\n  \(udpTimerIntervalHistogram.summary(name: "UDP timer dt"))\n  \(udpSendIntervalHistogram.summary(name: "UDP send dt"))\n  \(dropped)")
+        print("📈 Movement diagnostics\n  \(experiment)\n  \(touch)\n  \(touchIntervalHistogram.summary(name: "touch dt"))\n  \(coalescedSampleIntervalHistogram.summary(name: "coalesced dt"))\n  \(pointer)\n  \(pointerSpeedHistogram.summary(name: "speed"))\n  \(pointerGainHistogram.summary(name: "gain"))\n  \(emittedDeltaHistogram.summary(name: "emit delta"))\n  \(probeRaw)\n  \(probePointer)\n  \(ble)\n  \(bleTickIntervalHistogram.summary(name: "BLE tick dt"))\n  \(bleSendIntervalHistogram.summary(name: "BLE send dt"))\n  \(udp)\n  \(udpSender)\n  \(udpTimerIntervalHistogram.summary(name: "UDP timer dt"))\n  \(udpSendIntervalHistogram.summary(name: "UDP send dt"))\n  \(probeUdp)\n  \(dropped)")
 
         touchCallbacks = 0
         coalescedSamples = 0
@@ -419,6 +524,8 @@ final class MovementDiagnostics {
         udpSenderEmptyWhileActive = 0
         maxUdpBatchedSubframes = 0
         maxUdpPendingAbs = 0
+        pointerDtMinClamps = 0
+        pointerDtMaxClamps = 0
         droppedMovementEvents = 0
         droppedMovementAbsX = 0
         droppedMovementAbsY = 0

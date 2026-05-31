@@ -7,7 +7,7 @@
 		<dict/>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>This app sends local UDP motion packets to your USB dongle for the Wi-Fi cursor movement experiment.</string>
+	<string>This app connects to your USB dongle on the local network for Wi-Fi cursor control.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>PixelifySans-VariableFont_wght.ttf</string>

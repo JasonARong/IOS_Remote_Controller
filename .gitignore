@@ -7,6 +7,9 @@ xcuserdata/
 build/
 DerivedData/
 
+# Claude
+.claude
+
 # macOS
 .DS_Store
 .AppleDouble

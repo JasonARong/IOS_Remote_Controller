@@ -21,6 +21,8 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     
     // --- Smooth move & scroll  ---
     private let pointerEngine: PointerMotionEngine
+    private let pointerPathSmoothingMode = AppRuntimeConfig.PointerPath.smoothingMode
+    private let pointerPathSmoother = TouchPathSmoother()
     private var pendingPointerDX: CGFloat = 0
     private var pendingPointerDY: CGFloat = 0
     private let scrollEngine: ScrollMotionEngine
@@ -117,8 +119,9 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     init(connection: ConnectionManager, matrixViewModel: DynamicMatrixViewModel? = nil){
         self.connection = connection
         self.matrixViewModel = matrixViewModel
-        self.pointerEngine = PointerMotionEngine(connection: connection)
+        self.pointerEngine = PointerMotionEngine(connection: connection, dtMode: connection.udpPointerDtMode)
         self.scrollEngine = ScrollMotionEngine(connection: connection, inertiaEnabled: false)
+        MovementDiagnostics.shared.setExperimentLabels(pointerFilterMode: pointerPathSmoothingMode.rawValue)
         
         twoFingerHapticLight.prepare()
         twoFingerHapticStrong.prepare()
@@ -127,7 +130,7 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         
         connection.onTick = { [weak self] dt in
             guard let self else { return }
-            if !self.connection.isUdpMotionPOCEnabled {
+            if !self.connection.isWifiUdpMotionEnabled {
                 self.pointerTick(dt: dt)
             }
             self.scrollEngine.update(dt: dt)
@@ -183,9 +186,10 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             touchInfo.startPoint = current
             touchInfo.previousPoint = current
             touchInfo.lastMoveTime = latestSample.timestamp
-            touchInfo.movedBeyondSlop = false
-            touchInfo.isHolding = false
-            resetPointerSampling()
+                touchInfo.movedBeyondSlop = false
+                touchInfo.isHolding = false
+                resetPointerSampling()
+                pointerPathSmoother.reset(to: current, timestamp: latestSample.timestamp)
             
             // Decide mode based on starting X position
             if isInScrollZone(current, in: view) {
@@ -268,7 +272,13 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
             let dy = point.y - lastPoint.y
             let dt = sample.timestamp - lastTimestamp
             MovementDiagnostics.shared.recordCoalescedSampleInterval(dt)
-            processPointerDelta(dx: dx, dy: dy, dt: dt, timestamp: sample.timestamp)
+            processPointerSample(
+                rawDx: dx,
+                rawDy: dy,
+                rawPoint: point,
+                dt: dt,
+                timestamp: sample.timestamp
+            )
             lastPoint = point
             latestPoint = point
             lastTimestamp = sample.timestamp
@@ -283,7 +293,13 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
                 let timestamp = max(lastTimestamp, fallbackTouch.timestamp)
                 let dt = max(1.0 / 120.0, timestamp - lastTimestamp)
                 MovementDiagnostics.shared.recordCoalescedSampleInterval(dt)
-                processPointerDelta(dx: dx, dy: dy, dt: dt, timestamp: timestamp)
+                processPointerSample(
+                    rawDx: dx,
+                    rawDy: dy,
+                    rawPoint: point,
+                    dt: dt,
+                    timestamp: timestamp
+                )
                 latestPoint = point
             }
             lastTimestamp = max(lastTimestamp, fallbackTouch.timestamp)
@@ -293,17 +309,34 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
         return latestPoint
     }
 
-    private func processPointerDelta(dx: CGFloat, dy: CGFloat, dt: CFTimeInterval, timestamp: CFTimeInterval) {
-        guard dx != 0 || dy != 0 else { return }
+    private func processPointerSample(
+        rawDx: CGFloat,
+        rawDy: CGFloat,
+        rawPoint: CGPoint,
+        dt: CFTimeInterval,
+        timestamp: CFTimeInterval
+    ) {
+        guard rawDx != 0 || rawDy != 0 else { return }
 
-        if connection.isUdpMotionPOCEnabled {
-            MovementDiagnostics.shared.recordTouchInterval(dt, dx: dx, dy: dy)
-            guard let scaledDelta = pointerEngine.scaledRawDelta(dx: dx, dy: dy, dt: dt) else { return }
+        MovementDiagnostics.shared.recordTouchInterval(dt, dx: rawDx, dy: rawDy, sampleTimestamp: timestamp)
+
+        if connection.isWifiUdpMotionEnabled {
+            let motionDelta: CGVector?
+            switch pointerPathSmoothingMode {
+            case .off:
+                motionDelta = CGVector(dx: rawDx, dy: rawDy)
+            case .oneEuroLight:
+                motionDelta = pointerPathSmoother.filteredDelta(for: rawPoint, timestamp: timestamp)
+            }
+
+            guard let motionDelta else { return }
+            guard let scaledDelta = pointerEngine.scaledRawDelta(dx: motionDelta.dx, dy: motionDelta.dy, dt: dt) else { return }
             MovementDiagnostics.shared.recordPointerEmit(dx: scaledDelta.dx, dy: scaledDelta.dy)
             connection.enqueueUdpPointerMotion(dx: scaledDelta.dx, dy: scaledDelta.dy, timestamp: timestamp)
         } else {
-            pendingPointerDX += dx
-            pendingPointerDY += dy
+            pendingPointerDX += rawDx
+            pendingPointerDY += rawDy
+            connection.wakeDisplayLinkForInput()
         }
     }
 
@@ -323,7 +356,9 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     private func resetPointerSampling() {
         pendingPointerDX = 0
         pendingPointerDY = 0
+        pointerPathSmoother.reset()
         pointerEngine.reset()
+        MovementDiagnostics.shared.recordPointerStreamEnded()
         connection.endUdpMotionStream()
     }
     
@@ -848,4 +883,94 @@ class TouchPadViewModel: ObservableObject { // use class: only 1 instance of Tou
     }
     
 
+}
+
+enum PointerPathSmoothingMode: String {
+    case off
+    case oneEuroLight
+}
+
+private final class TouchPathSmoother {
+    private struct LowPass {
+        private(set) var value: CGFloat?
+
+        mutating func reset(to newValue: CGFloat? = nil) {
+            value = newValue
+        }
+
+        mutating func filter(_ newValue: CGFloat, alpha: CGFloat) -> CGFloat {
+            guard let value else {
+                self.value = newValue
+                return newValue
+            }
+            let filtered = alpha * newValue + (1 - alpha) * value
+            self.value = filtered
+            return filtered
+        }
+    }
+
+    private let minCutoff: CGFloat = 18
+    private let beta: CGFloat = 0.025
+    private let derivativeCutoff: CGFloat = 12
+    private let maxContinuousGap: CFTimeInterval = 0.050
+
+    private var xFilter = LowPass()
+    private var yFilter = LowPass()
+    private var dxFilter = LowPass()
+    private var dyFilter = LowPass()
+    private var lastRawPoint: CGPoint?
+    private var lastFilteredPoint: CGPoint?
+    private var lastTimestamp: CFTimeInterval?
+
+    func reset(to point: CGPoint? = nil, timestamp: CFTimeInterval? = nil) {
+        xFilter.reset(to: point?.x)
+        yFilter.reset(to: point?.y)
+        dxFilter.reset()
+        dyFilter.reset()
+        lastRawPoint = point
+        lastFilteredPoint = point
+        lastTimestamp = timestamp
+    }
+
+    func filteredDelta(for point: CGPoint, timestamp: CFTimeInterval) -> CGVector? {
+        guard let lastRawPoint, let lastFilteredPoint, let lastTimestamp else {
+            reset(to: point, timestamp: timestamp)
+            return nil
+        }
+
+        let rawDt = timestamp - lastTimestamp
+        guard rawDt > 0 else { return nil }
+
+        if rawDt > maxContinuousGap {
+            reset(to: point, timestamp: timestamp)
+            return nil
+        }
+
+        let dt = min(max(rawDt, 1.0 / 240.0), 1.0 / 30.0)
+        let rawVelocityX = (point.x - lastRawPoint.x) / CGFloat(dt)
+        let rawVelocityY = (point.y - lastRawPoint.y) / CGFloat(dt)
+        let derivativeAlpha = alpha(cutoff: derivativeCutoff, dt: dt)
+        let velocityX = dxFilter.filter(rawVelocityX, alpha: derivativeAlpha)
+        let velocityY = dyFilter.filter(rawVelocityY, alpha: derivativeAlpha)
+        let speed = hypot(velocityX, velocityY)
+        let cutoff = minCutoff + beta * speed
+        let positionAlpha = alpha(cutoff: cutoff, dt: dt)
+        let filteredX = xFilter.filter(point.x, alpha: positionAlpha)
+        let filteredY = yFilter.filter(point.y, alpha: positionAlpha)
+        let filteredPoint = CGPoint(x: filteredX, y: filteredY)
+
+        self.lastRawPoint = point
+        self.lastFilteredPoint = filteredPoint
+        self.lastTimestamp = timestamp
+
+        let dx = filteredPoint.x - lastFilteredPoint.x
+        let dy = filteredPoint.y - lastFilteredPoint.y
+        guard dx != 0 || dy != 0 else { return nil }
+        return CGVector(dx: dx, dy: dy)
+    }
+
+    private func alpha(cutoff: CGFloat, dt: CFTimeInterval) -> CGFloat {
+        let tau = 1.0 / (2.0 * CGFloat.pi * cutoff)
+        return CGFloat(dt) / (CGFloat(dt) + tau)
+    }
 }

@@ -1,14 +1,20 @@
-// ESP_Bridge_TinyUSB.ino
+// ESP_Bridge_Production.ino
 //
-// Clean-room, motion-only USB HID mouse bridge for ESP32-S3 using
-// Adafruit_TinyUSB. The single goal of this sketch is cursor smoothness:
-// it intentionally drops BLE control, keyboard, scroll, and button paths
-// so that any remaining un-smoothness can only come from
-//   (1) the iOS UDP motion sender,
-//   (2) the Wi-Fi link, or
-//   (3) the USB HID stack on the ESP side.
+// Production firmware base for ESP32-S3 using Adafruit TinyUSB.
+// Slice 3A scope:
+//   - preserve the proven UDP -> queue -> HID pacer motion behavior
+//   - add shared HID input state for mouse buttons, wheel, keyboard, and
+//     report staging
+//   - add releaseAllHidState() that clears all HID-driving state and emits
+//     neutral mouse + keyboard reports through the single HID pacer writer
 //
-// Wire format consumed (must match RemoteController/UDPMotionSender.swift):
+// Not in Slice 3A:
+//   - TCP ownership/session gate
+//   - BLE fallback transport
+//   - pairing/security
+//   - Wi-Fi provisioning/storage
+//
+// Temporary POC UDP wire format consumed until the production UDP gate lands:
 //   marker(0xB2) | seq(u8) | count(u8: 1..8) | (dxLE16, dyLE16) * count
 // iOS pre-multiplies dx/dy by POINTER_SCALE; this sketch divides back with
 // a fractional remainder so host-perceived sensitivity is preserved.
@@ -61,23 +67,24 @@
 // want Wi-Fi/UDP to come up so the diagnostic line tells us what failed.
 #define USB_MOUNT_TIMEOUT_MS      3000
 
-#define ENABLE_MOVEMENT_DIAGNOSTICS 0
 #define DIAGNOSTICS_INTERVAL_MS   1000
+
+// Optional local test knobs. Keep disabled in the normal production base.
+#define HID_LOCAL_GENERATOR_TEST  0
+#define HID_RELEASE_SELF_TEST     0
 
 
 /************** USB HID DESCRIPTOR **************/
-// Single-report mouse with 16-bit relative X/Y so a fast flick (>127 px)
-// still fits in one report. No Report ID -- this is the only HID device
-// on the descriptor, so the report-ID prefix byte would just be dead
-// weight on every USB transfer.
+// Slice 3A keeps the exact POC-compatible mouse HID shape because this is
+// the known-good smooth cursor path. Keyboard state is staged below, but
+// keyboard HID descriptor/report emission is deferred until the mouse path
+// is green again.
 //
-// Report layout (6 bytes):
+// Mouse report payload (6 bytes, no Report ID):
 //   [0]    buttons (bit0=L, bit1=R, bits2..7 padding)
 //   [1..2] dx int16 LE
 //   [3..4] dy int16 LE
-//   [5]    wheel int8 (always 0 in this sketch but kept so the descriptor
-//                      matches a standard mouse and the host's HID parser
-//                      is happy)
+//   [5]    wheel int8
 static uint8_t const desc_hid_report[] = {
   0x05, 0x01,        // Usage Page (Generic Desktop)
   0x09, 0x02,        // Usage (Mouse)
@@ -128,8 +135,44 @@ struct __attribute__((packed)) MouseReport {
 };
 static_assert(sizeof(MouseReport) == 6, "HID report must be 6 bytes");
 
+struct __attribute__((packed)) KeyboardReport {
+  uint8_t modifiers;
+  uint8_t reserved;
+  uint8_t keycodes[6];
+};
+static_assert(sizeof(KeyboardReport) == 8, "Keyboard report must be 8 bytes");
+
 static Adafruit_USBD_HID usb_hid;
 
+
+/************** SHARED HID STATE **************/
+enum ReleaseReason : uint8_t {
+  RELEASE_REASON_BACKGROUND = 1,
+  RELEASE_REASON_TIMEOUT = 2,
+  RELEASE_REASON_MODE_SWITCH = 3,
+  RELEASE_REASON_DISCONNECT = 4,
+  RELEASE_REASON_USER_EMERGENCY = 5,
+};
+
+struct HidInputState {
+  uint8_t currentButtons = 0;
+  int16_t pendingWheel = 0;
+  bool buttonDirty = false;
+
+  uint8_t keyboardModifiers = 0;
+  uint8_t keyboardKeycodes[6] = {0, 0, 0, 0, 0, 0};
+  bool keyboardDirty = false;
+
+  // Scaled motion remainder after POINTER_SCALE division.
+  int32_t scaledAccumX = 0;
+  int32_t scaledAccumY = 0;
+
+  bool releaseAllMousePending = false;
+  bool releaseAllKeyboardPending = false;
+};
+
+static HidInputState hidState;
+static portMUX_TYPE hidStateMux = portMUX_INITIALIZER_UNLOCKED;
 
 /************** UDP / MOTION GLOBALS **************/
 static WiFiUDP udpMotion;
@@ -145,6 +188,8 @@ static volatile uint8_t motionFrameHead = 0;
 static volatile uint8_t motionFrameTail = 0;
 static volatile uint8_t motionFrameCount = 0;
 static portMUX_TYPE motionFrameQueueMux = portMUX_INITIALIZER_UNLOCKED;
+
+static void resetMotionFrameQueue();
 
 static TaskHandle_t udpRxTaskHandle = nullptr;
 static TaskHandle_t hidPacerTaskHandle = nullptr;
@@ -171,8 +216,10 @@ struct Diagnostics {
   // HID pacer
   volatile uint32_t hidTicks = 0;
   volatile uint32_t hidReports = 0;
+  volatile uint32_t hidKeyboardReports = 0;
   volatile uint32_t hidReportFails = 0;
   volatile uint32_t hidMotionStaleDrops = 0;
+  volatile uint32_t releaseAllCount = 0;
   volatile uint32_t hidLateMaxUs = 0;
 
   // HID interval histogram (between successful sends): <2, 2-4, 4-8,
@@ -229,8 +276,10 @@ struct Diagnostics {
     udpQueueDepthMax = 0;
     hidTicks = 0;
     hidReports = 0;
+    hidKeyboardReports = 0;
     hidReportFails = 0;
     hidMotionStaleDrops = 0;
+    releaseAllCount = 0;
     hidLateMaxUs = 0;
     for (int i = 0; i < 5; i++) hidIntervalBuckets[i] = 0;
     for (int i = 0; i < 8; i++) emitDeltaBuckets[i] = 0;
@@ -239,6 +288,64 @@ struct Diagnostics {
 
 static Diagnostics diag;
 
+
+/************** SHARED HID STATE HELPERS **************/
+static int8_t clampWheel(int16_t value) {
+  if (value > 127) return 127;
+  if (value < -127) return -127;
+  return (int8_t)value;
+}
+
+static void resetSharedHidState() {
+  portENTER_CRITICAL(&hidStateMux);
+  hidState = HidInputState{};
+  portEXIT_CRITICAL(&hidStateMux);
+}
+
+static void stageMouseButtons(uint8_t buttons) {
+  buttons &= 0x03;
+  portENTER_CRITICAL(&hidStateMux);
+  if (hidState.currentButtons != buttons) {
+    hidState.currentButtons = buttons;
+    hidState.buttonDirty = true;
+  }
+  portEXIT_CRITICAL(&hidStateMux);
+}
+
+static void stageWheelTicks(int16_t wheelDelta) {
+  if (wheelDelta == 0) return;
+  portENTER_CRITICAL(&hidStateMux);
+  int32_t nextWheel = (int32_t)hidState.pendingWheel + wheelDelta;
+  if (nextWheel > INT16_MAX) nextWheel = INT16_MAX;
+  if (nextWheel < INT16_MIN) nextWheel = INT16_MIN;
+  hidState.pendingWheel = (int16_t)nextWheel;
+  portEXIT_CRITICAL(&hidStateMux);
+}
+
+static void stageKeyboardReport(uint8_t modifiers, const uint8_t keycodes[6]) {
+  portENTER_CRITICAL(&hidStateMux);
+  hidState.keyboardModifiers = modifiers;
+  for (uint8_t i = 0; i < 6; i++) {
+    hidState.keyboardKeycodes[i] = keycodes[i];
+  }
+  hidState.keyboardDirty = true;
+  portEXIT_CRITICAL(&hidStateMux);
+}
+
+static void releaseAllHidState(ReleaseReason reason) {
+  (void)reason;
+  resetMotionFrameQueue();
+
+  portENTER_CRITICAL(&hidStateMux);
+  hidState = HidInputState{};
+  hidState.buttonDirty = true;
+  hidState.keyboardDirty = true;
+  hidState.releaseAllMousePending = true;
+  hidState.releaseAllKeyboardPending = true;
+  portEXIT_CRITICAL(&hidStateMux);
+
+  diag.releaseAllCount++;
+}
 
 /************** MOTION QUEUE **************/
 static void resetMotionFrameQueue() {
@@ -350,29 +457,21 @@ static void pollUdpMotionPackets() {
     int packetSize = udpMotion.parsePacket();
     if (packetSize <= 0) return;
 
-    #if ENABLE_MOVEMENT_DIAGNOSTICS
     diag.udpRawPackets++;
-    #endif
 
     int readLen = udpMotion.read(packet, sizeof(packet));
     if (readLen <= 0) {
-      #if ENABLE_MOVEMENT_DIAGNOSTICS
       diag.udpMalformed++;
-      #endif
       continue;
     }
 
     if (packet[0] != UDP_MOTION_PACKET_MARKER) {
-      #if ENABLE_MOVEMENT_DIAGNOSTICS
       diag.udpMalformed++;
-      #endif
       continue;
     }
 
     if (packetSize < 7 || readLen < 7) {
-      #if ENABLE_MOVEMENT_DIAGNOSTICS
       diag.udpMalformed++;
-      #endif
       continue;
     }
 
@@ -385,29 +484,21 @@ static void pollUdpMotionPackets() {
         frameCount > UDP_SUBFRAMES_PER_PACKET ||
         (size_t)packetSize != expectedLen ||
         (size_t)readLen != expectedLen) {
-      #if ENABLE_MOVEMENT_DIAGNOSTICS
       diag.udpMalformed++;
-      #endif
       continue;
     }
 
-    #if ENABLE_MOVEMENT_DIAGNOSTICS
     diag.udpDatagrams++;
     diag.udpSubframes += frameCount;
-    #endif
 
     for (uint8_t i = 0; i < frameCount; i++) {
       size_t offset = 3 + ((size_t)i * 4);
       int16_t dx = (int16_t)(packet[offset]     | (packet[offset + 1] << 8));
       int16_t dy = (int16_t)(packet[offset + 2] | (packet[offset + 3] << 8));
-      #if ENABLE_MOVEMENT_DIAGNOSTICS
       bool overflow = false;
       uint8_t depth = enqueueMotionFrame(dx, dy, &overflow);
       if (overflow) diag.udpQueueOverflow++;
       if (depth > diag.udpQueueDepthMax) diag.udpQueueDepthMax = depth;
-      #else
-      enqueueMotionFrame(dx, dy, nullptr);
-      #endif
     }
   }
 }
@@ -415,9 +506,7 @@ static void pollUdpMotionPackets() {
 static void udpRxTask(void* /*parameter*/) {
   Serial.println("🚦 udp-rx task running on core 0");
   while (true) {
-    #if ENABLE_MOVEMENT_DIAGNOSTICS
     diag.udpRxIters++;
-    #endif
     pollUdpMotionPackets();
     vTaskDelay(pdMS_TO_TICKS(1));
   }
@@ -446,16 +535,22 @@ static void startUdpRxTask() {
 // false only when the previous report hasn't been picked up by the host
 // yet -- with bInterval=1 ms and a 2 ms pacer, expected to be true on
 // effectively every call.
-static bool sendMouseHidReport(int16_t dx, int16_t dy) {
+static bool sendMouseHidReport(int16_t dx, int16_t dy, int8_t wheel, uint8_t buttons) {
   if (!TinyUSBDevice.mounted()) return false;
   if (!usb_hid.ready()) return false;
 
   MouseReport r{};
-  r.buttons = 0;
+  r.buttons = buttons & 0x03;
   r.x = dx;
   r.y = dy;
-  r.wheel = 0;
+  r.wheel = wheel;
   return usb_hid.sendReport(0, &r, sizeof(r));
+}
+
+static bool sendKeyboardHidReport(uint8_t modifiers, const uint8_t keycodes[6]) {
+  (void)modifiers;
+  (void)keycodes;
+  return false;
 }
 
 
@@ -467,24 +562,17 @@ static void hidPacerTask(void* /*parameter*/) {
   TickType_t lastWake = xTaskGetTickCount();
   uint32_t lastTickUs = micros();
 
-  // Carry sub-POINTER_SCALE remainders across ticks so a slow drag of e.g.
-  // 0.25 px/ms doesn't get rounded to zero forever.
-  int32_t scaledAccumX = 0;
-  int32_t scaledAccumY = 0;
-
   while (true) {
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(HID_PACER_INTERVAL_MS));
 
     uint32_t nowUs = micros();
-    #if ENABLE_MOVEMENT_DIAGNOSTICS
     uint32_t elapsedUs = nowUs - lastTickUs;
     uint32_t lateUs = elapsedUs > HID_PACER_INTERVAL_US
                         ? elapsedUs - HID_PACER_INTERVAL_US
                         : 0;
+    lastTickUs = nowUs;
     diag.hidTicks++;
     if (lateUs > diag.hidLateMaxUs) diag.hidLateMaxUs = lateUs;
-    #endif
-    lastTickUs = nowUs;
 
     // Pop AT MOST ONE fresh frame per pacer tick. The previous "drain ALL"
     // policy looked safer but actually re-coalesced the iOS-side per-sample
@@ -493,29 +581,52 @@ static void hidPacerTask(void* /*parameter*/) {
     // ~30 Hz, exactly the iOS touchesMoved callback rate). One-per-tick
     // turns a 5-burst into 5 reports paced 2 ms apart, which is what a
     // mouse-like input stream looks like to the host.
-    {
-      MotionFrame frame;
-      #if ENABLE_MOVEMENT_DIAGNOSTICS
-      uint32_t staleDrops = 0;
-      uint8_t depth = 0;
-      if (popFreshMotionFrame(&frame, nowUs, &staleDrops, &depth)) {
-        scaledAccumX += frame.dx;
-        scaledAccumY += frame.dy;
-      }
-      if (staleDrops > 0) diag.hidMotionStaleDrops += staleDrops;
-      #else
-      if (popFreshMotionFrame(&frame, nowUs, nullptr, nullptr)) {
-        scaledAccumX += frame.dx;
-        scaledAccumY += frame.dy;
-      }
-      #endif
+    uint32_t staleDrops = 0;
+    uint8_t depth = 0;
+    bool hasFrame = false;
+    MotionFrame frame{};
+    #if HID_LOCAL_GENERATOR_TEST
+    static int8_t localDirection = 1;
+    static uint16_t localTicks = 0;
+    localTicks++;
+    if (localTicks >= 125) {
+      localTicks = 0;
+      localDirection = -localDirection;
     }
+    frame = {localDirection, 0, nowUs};
+    hasFrame = true;
+    #else
+    {
+      hasFrame = popFreshMotionFrame(&frame, nowUs, &staleDrops, &depth);
+    }
+    #endif
+    if (staleDrops > 0) diag.hidMotionStaleDrops += staleDrops;
 
     int16_t reportDx = 0;
     int16_t reportDy = 0;
-    if (scaledAccumX != 0 || scaledAccumY != 0) {
-      int32_t outX = scaledAccumX / POINTER_SCALE;
-      int32_t outY = scaledAccumY / POINTER_SCALE;
+    int8_t reportWheel = 0;
+    uint8_t reportButtons = 0;
+    bool mouseShouldSend = false;
+
+    uint8_t keyboardModifiers = 0;
+    uint8_t keyboardKeycodes[6] = {0, 0, 0, 0, 0, 0};
+    bool keyboardShouldSend = false;
+
+    portENTER_CRITICAL(&hidStateMux);
+
+    if (hasFrame) {
+      #if HID_LOCAL_GENERATOR_TEST
+      hidState.scaledAccumX += (int32_t)frame.dx * POINTER_SCALE;
+      hidState.scaledAccumY += (int32_t)frame.dy * POINTER_SCALE;
+      #else
+      hidState.scaledAccumX += frame.dx;
+      hidState.scaledAccumY += frame.dy;
+      #endif
+    }
+
+    if (hidState.scaledAccumX != 0 || hidState.scaledAccumY != 0) {
+      int32_t outX = hidState.scaledAccumX / POINTER_SCALE;
+      int32_t outY = hidState.scaledAccumY / POINTER_SCALE;
       if (outX > MAX_HID_DELTA_PER_REPORT)       outX = MAX_HID_DELTA_PER_REPORT;
       else if (outX < -MAX_HID_DELTA_PER_REPORT) outX = -MAX_HID_DELTA_PER_REPORT;
       if (outY > MAX_HID_DELTA_PER_REPORT)       outY = MAX_HID_DELTA_PER_REPORT;
@@ -524,18 +635,58 @@ static void hidPacerTask(void* /*parameter*/) {
       reportDy = (int16_t)outY;
       // Subtract the *clamped* emit amount so over-cap motion stays in the
       // accumulator and rolls into the next tick.
-      scaledAccumX -= (int32_t)reportDx * POINTER_SCALE;
-      scaledAccumY -= (int32_t)reportDy * POINTER_SCALE;
+      hidState.scaledAccumX -= (int32_t)reportDx * POINTER_SCALE;
+      hidState.scaledAccumY -= (int32_t)reportDy * POINTER_SCALE;
     }
 
-    if (reportDx == 0 && reportDy == 0) continue;
+    reportWheel = clampWheel(hidState.pendingWheel);
+    hidState.pendingWheel -= reportWheel;
+    reportButtons = hidState.currentButtons;
 
-    #if ENABLE_MOVEMENT_DIAGNOSTICS
-    bool ok = sendMouseHidReport(reportDx, reportDy);
-    diag.recordHidSend(ok, reportDx, reportDy, nowUs);
-    #else
-    sendMouseHidReport(reportDx, reportDy);
-    #endif
+    mouseShouldSend = (reportDx != 0 ||
+                       reportDy != 0 ||
+                       reportWheel != 0 ||
+                       hidState.buttonDirty ||
+                       hidState.releaseAllMousePending);
+    hidState.buttonDirty = false;
+    hidState.releaseAllMousePending = false;
+
+    // Keyboard HID emission is intentionally disabled in this mouse-first
+    // recovery patch. Keep state cleanup/staging, but do not send keyboard
+    // reports until we reintroduce a verified composite descriptor.
+    keyboardShouldSend = false;
+    keyboardModifiers = hidState.keyboardModifiers;
+    for (uint8_t i = 0; i < 6; i++) {
+      keyboardKeycodes[i] = hidState.keyboardKeycodes[i];
+    }
+    hidState.keyboardDirty = false;
+    hidState.releaseAllKeyboardPending = false;
+
+    portEXIT_CRITICAL(&hidStateMux);
+
+    if (!mouseShouldSend && !keyboardShouldSend) continue;
+
+    if (mouseShouldSend) {
+      bool ok = sendMouseHidReport(reportDx, reportDy, reportWheel, reportButtons);
+      diag.recordHidSend(ok, reportDx, reportDy, nowUs);
+      if (!ok) {
+        portENTER_CRITICAL(&hidStateMux);
+        hidState.buttonDirty = true;
+        portEXIT_CRITICAL(&hidStateMux);
+      }
+    }
+
+    if (keyboardShouldSend) {
+      bool ok = sendKeyboardHidReport(keyboardModifiers, keyboardKeycodes);
+      if (ok) {
+        diag.hidKeyboardReports++;
+      } else {
+        diag.hidReportFails++;
+        portENTER_CRITICAL(&hidStateMux);
+        hidState.keyboardDirty = true;
+        portEXIT_CRITICAL(&hidStateMux);
+      }
+    }
   }
 }
 
@@ -555,7 +706,6 @@ static void startHidPacerTask() {
 
 /************** DIAGNOSTIC PRINT **************/
 static void printSummaryIfNeeded() {
-#if ENABLE_MOVEMENT_DIAGNOSTICS
   uint32_t now = millis();
   if (diag.lastSummaryMs == 0) {
     diag.lastSummaryMs = now;
@@ -573,8 +723,8 @@ static void printSummaryIfNeeded() {
   for (int i = 0; i < 8; i++) ed[i] = diag.emitDeltaBuckets[i];
 
   Serial.printf(
-    "📈 ESP smooth | UDP rawPkts=%lu/s datagrams=%lu/s subframes=%lu/s malformed=%lu queueMax=%u overflow=%lu | "
-    "HID ticks=%lu/s reports=%lu/s reportFails=%lu staleDrops=%lu lateMax=%.1fms\n",
+    "📈 ESP production | UDP rawPkts=%lu/s datagrams=%lu/s subframes=%lu/s malformed=%lu queueMax=%u overflow=%lu | "
+    "HID ticks=%lu/s mouseReports=%lu/s keyboardReports=%lu/s reportFails=%lu staleDrops=%lu releaseAll=%lu lateMax=%.1fms\n",
     (unsigned long)diag.udpRawPackets,
     (unsigned long)diag.udpDatagrams,
     (unsigned long)diag.udpSubframes,
@@ -583,8 +733,10 @@ static void printSummaryIfNeeded() {
     (unsigned long)diag.udpQueueOverflow,
     (unsigned long)diag.hidTicks,
     (unsigned long)diag.hidReports,
+    (unsigned long)diag.hidKeyboardReports,
     (unsigned long)diag.hidReportFails,
     (unsigned long)diag.hidMotionStaleDrops,
+    (unsigned long)diag.releaseAllCount,
     (float)diag.hidLateMaxUs / 1000.0f);
 
   Serial.printf(
@@ -607,7 +759,6 @@ static void printSummaryIfNeeded() {
 
   diag.resetWindow();
   diag.lastSummaryMs = now;
-#endif
 }
 
 
@@ -656,16 +807,26 @@ void setup() {
                 (unsigned long)(millis() - mountStart));
 
   resetMotionFrameQueue();
+  resetSharedHidState();
   startHidPacerTask();
 
   if (setupUdpMotionPoc()) {
     startUdpRxTask();
   }
 
-  Serial.println("🎯 ESP_Bridge_TinyUSB ready");
+  Serial.println("🎯 ESP_Bridge_Production ready");
 }
 
 void loop() {
+  #if HID_RELEASE_SELF_TEST
+  static bool releasedOnce = false;
+  if (!releasedOnce && millis() > 5000) {
+    releasedOnce = true;
+    releaseAllHidState(RELEASE_REASON_USER_EMERGENCY);
+    Serial.println("🧪 releaseAllHidState self-test requested");
+  }
+  #endif
+
   printSummaryIfNeeded();
   delay(10);
 }

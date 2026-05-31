@@ -3,8 +3,2339 @@
 Status: Historical diagnostic evidence only.
 
 Canonical production contract: `docs/Production_Transport_Spec.md`.
-Canonical motion conclusions: `docs/UDP_Motion_Findings.md`.
+Canonical motion conclusions: `docs/reference/UDP_Motion_Findings.md`.
+Performance baseline: `docs/reference/Performance_Findings.md`.
 Canonical execution plan: `docs/tasks.md`.
+
+Logs for further smoothness 
+
+log 6
+📈 Movement diagnostics
+  experiment: udpMode=fifo250Hz pointerDt=clamped90Hz pointerFilter=oneEuroLight
+  touch: callbacks=21 coalescedSamples=200 motionEvents=192
+  touch dt: 0-4ms=0 4-8ms=180 8-12ms=2 12-20ms=5 20-33ms=2 33-50ms=1 >=50ms=2 max=84.8ms
+  coalesced dt: 0-4ms=0 4-8ms=180 8-12ms=2 12-20ms=9 20-33ms=2 33-50ms=1 >=50ms=2 max=84.8ms
+  pointer: events=190 emitted=190
+  speed: 0-50=16 50-150=35 150-300=44 300-600=95 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=490.5
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=41 2.5-3=43 3-3.5=79 >=3.5=27 max=3.7
+  emit delta: 0-1=2 1-2=3 2-4=1 4-8=13 8-16=13 16-32=29 32-64=33 64-127=122 >=127=32 max=163.1
+  probe raw: delta: 0-0.2=6 0.2-0.5=12 0.5-1=11 1-2=25 2-4=67 4-8=70 8-16=1 16-32=0 >=32=0 max=9.0 | turn: 0-2=53 2-5=62 5-10=39 10-20=16 20-35=3 35-60=1 60-90=5 >=90=3 max=90 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=1 20-33ms=6 33-50ms=13 50-100ms=62 >=100ms=110 max=897.1ms
+  probe pointer: dtMinClamp=181 dtMaxClamp=1 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=182 12-17ms=4 17-25ms=1 25-34ms=3 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=99 2-5=56 5-10=16 10-20=7 20-35=2 35-60=1 60-90=1 >=90=2 max=137.7
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=2 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=28 34-50ms=0 >=50ms=15 max=1573.8ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=58 subframes=58 capped=0 staleDrops=29 maxBatch=53 maxPending=4015
+  UDP sender: ticks=501 emitted=58 emptyWhileActive=30
+  UDP timer dt: 0-4ms=261 4-8ms=240 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=47 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  probe UDP: queueAge: 0-4ms=11 4-8ms=11 8-12ms=6 12-20ms=13 20-33ms=17 33-50ms=0 >=50ms=0 max=32.0ms | delta: 0-1=0 1-2=1 2-4=0 4-8=5 8-16=0 16-32=9 32-64=7 64-127=36 >=127=0 max=120.9 | turn: 0-2=28 2-5=14 5-10=2 10-20=1 20-35=1 35-60=0 60-90=1 >=90=0 max=87.6
+  dropped movement: events=29 absDx=5351 absDy=9223
+📈 Movement diagnostics
+  experiment: udpMode=fifo250Hz pointerDt=clamped90Hz pointerFilter=oneEuroLight
+  touch: callbacks=6 coalescedSamples=55 motionEvents=54
+  touch dt: 0-4ms=0 4-8ms=53 8-12ms=1 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=8.3ms
+  coalesced dt: 0-4ms=0 4-8ms=53 8-12ms=1 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=8.3ms
+  pointer: events=54 emitted=54
+  speed: 0-50=2 50-150=22 150-300=11 300-600=19 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=521.9
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=9 2.5-3=25 3-3.5=10 >=3.5=10 max=3.8
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=5 8-16=2 16-32=20 32-64=26 64-127=13 >=127=23 max=188.3
+  probe raw: delta: 0-0.2=1 0.2-0.5=4 0.5-1=5 1-2=20 2-4=9 4-8=15 8-16=0 16-32=0 >=32=0 max=6.1 | turn: 0-2=13 2-5=12 5-10=14 10-20=10 20-35=0 35-60=3 60-90=0 >=90=1 max=90.0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=8 50-100ms=43 >=100ms=3 max=105.3ms
+  probe pointer: dtMinClamp=54 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=54 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.1ms | turn: 0-2=24 2-5=24 5-10=4 10-20=2 20-35=0 35-60=0 60-90=0 >=90=0 max=14.6
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=28 34-50ms=15 >=50ms=9 max=110.5ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=35 subframes=35 capped=0 staleDrops=20 maxBatch=16 maxPending=1446
+  UDP sender: ticks=501 emitted=35 emptyWhileActive=8
+  UDP timer dt: 0-4ms=254 4-8ms=247 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=30 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=4.7ms
+  probe UDP: queueAge: 0-4ms=6 4-8ms=5 8-12ms=3 12-20ms=9 20-33ms=12 33-50ms=0 >=50ms=0 max=31.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=2 8-16=0 16-32=7 32-64=11 64-127=4 >=127=11 max=188.3 | turn: 0-2=14 2-5=13 5-10=3 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=7.8
+  dropped movement: events=20 absDx=565 absDy=625
+📈 Movement diagnostics
+  experiment: udpMode=fifo250Hz pointerDt=clamped90Hz pointerFilter=oneEuroLight
+  touch: callbacks=27 coalescedSamples=276 motionEvents=235
+  touch dt: 0-4ms=0 4-8ms=226 8-12ms=6 12-20ms=0 20-33ms=2 33-50ms=1 >=50ms=0 max=37.5ms
+  coalesced dt: 0-4ms=0 4-8ms=227 8-12ms=7 12-20ms=0 20-33ms=2 33-50ms=1 >=50ms=0 max=37.5ms
+  pointer: events=235 emitted=235
+  speed: 0-50=31 50-150=55 150-300=90 300-600=59 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=464.3
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=61 2.5-3=97 3-3.5=63 >=3.5=14 max=3.6
+  emit delta: 0-1=0 1-2=0 2-4=9 4-8=22 8-16=35 16-32=55 32-64=108 64-127=118 >=127=25 max=152.4
+  probe raw: delta: 0-0.2=1 0.2-0.5=29 0.5-1=16 1-2=67 2-4=90 4-8=32 8-16=0 16-32=0 >=32=0 max=6.7 | turn: 0-2=87 2-5=34 5-10=51 10-20=37 20-35=13 35-60=6 60-90=2 >=90=2 max=90 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=6 33-50ms=24 50-100ms=181 >=100ms=24 max=131.7ms
+  probe pointer: dtMinClamp=232 dtMaxClamp=1 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=232 12-17ms=0 17-25ms=0 25-34ms=3 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=110 2-5=71 5-10=31 10-20=16 20-35=2 35-60=2 60-90=1 >=90=0 max=74.4
+  BLE: attempts=2 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=18 34-50ms=1 >=50ms=19 max=143.4ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=137 subframes=137 capped=0 staleDrops=67 maxBatch=22 maxPending=2090
+  UDP sender: ticks=500 emitted=137 emptyWhileActive=1
+  UDP timer dt: 0-4ms=244 4-8ms=256 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=121 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  probe UDP: queueAge: 0-4ms=16 4-8ms=17 8-12ms=17 12-20ms=35 20-33ms=52 33-50ms=0 >=50ms=0 max=32.0ms | delta: 0-1=0 1-2=0 2-4=3 4-8=8 8-16=12 16-32=21 32-64=43 64-127=41 >=127=9 max=152.4 | turn: 0-2=59 2-5=32 5-10=22 10-20=4 20-35=2 35-60=2 60-90=0 >=90=0 max=52.1
+  dropped movement: events=67 absDx=3271 absDy=3774
+📈 Movement diagnostics
+  experiment: udpMode=fifo250Hz pointerDt=clamped90Hz pointerFilter=oneEuroLight
+  touch: callbacks=31 coalescedSamples=396 motionEvents=395
+  touch dt: 0-4ms=0 4-8ms=391 8-12ms=0 12-20ms=3 20-33ms=1 33-50ms=0 >=50ms=0 max=25.9ms
+  coalesced dt: 0-4ms=0 4-8ms=391 8-12ms=0 12-20ms=3 20-33ms=1 33-50ms=0 >=50ms=0 max=25.9ms
+  pointer: events=395 emitted=395
+  speed: 0-50=1 50-150=3 150-300=147 300-600=240 600-1000=4 1000-1600=0 1600-2400=0 >=2400=0 max=624.7
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=2 2.5-3=83 3-3.5=228 >=3.5=82 max=4.1
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=6 32-64=63 64-127=389 >=127=164 max=232.1
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=3 2-4=217 4-8=175 8-16=0 16-32=0 >=32=0 max=7.6 | turn: 0-2=129 2-5=126 5-10=108 10-20=27 20-35=3 35-60=1 60-90=0 >=90=0 max=36.9 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=2 20-33ms=13 33-50ms=43 50-100ms=286 >=100ms=51 max=132.1ms
+  probe pointer: dtMinClamp=391 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=391 12-17ms=3 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=25.9ms | turn: 0-2=205 2-5=145 5-10=37 10-20=7 20-35=0 35-60=0 60-90=0 >=90=0 max=18.4
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=10 34-50ms=0 >=50ms=26 max=92.1ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=227 subframes=227 capped=0 staleDrops=158 maxBatch=24 maxPending=2291
+  UDP sender: ticks=500 emitted=227 emptyWhileActive=6
+  UDP timer dt: 0-4ms=239 4-8ms=261 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=201 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  probe UDP: queueAge: 0-4ms=28 4-8ms=30 8-12ms=28 12-20ms=57 20-33ms=84 33-50ms=0 >=50ms=0 max=32.0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=3 32-64=26 64-127=139 >=127=59 max=216.2 | turn: 0-2=99 2-5=75 5-10=22 10-20=5 20-35=0 35-60=0 60-90=0 >=90=0 max=17.8
+  dropped movement: events=158 absDx=9673 absDy=11961
+📈 Movement diagnostics
+  experiment: udpMode=fifo250Hz pointerDt=clamped90Hz pointerFilter=oneEuroLight
+  touch: callbacks=26 coalescedSamples=333 motionEvents=332
+  touch dt: 0-4ms=0 4-8ms=330 8-12ms=1 12-20ms=0 20-33ms=1 33-50ms=0 >=50ms=0 max=26.0ms
+  coalesced dt: 0-4ms=0 4-8ms=330 8-12ms=1 12-20ms=0 20-33ms=1 33-50ms=0 >=50ms=0 max=26.0ms
+  pointer: events=332 emitted=332
+  speed: 0-50=0 50-150=27 150-300=79 300-600=226 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=457.3
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=23 2.5-3=66 3-3.5=226 >=3.5=17 max=3.6
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=3 16-32=33 32-64=74 64-127=349 >=127=52 max=158.0
+  probe raw: delta: 0-0.2=0 0.2-0.5=2 0.5-1=3 1-2=39 2-4=157 4-8=130 8-16=1 16-32=0 >=32=0 max=9.0 | turn: 0-2=119 2-5=91 5-10=80 10-20=34 20-35=7 35-60=0 60-90=0 >=90=0 max=31.0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=1 20-33ms=3 33-50ms=31 50-100ms=264 >=100ms=33 max=113.1ms
+  probe pointer: dtMinClamp=331 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=331 12-17ms=0 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=26.0ms | turn: 0-2=145 2-5=132 5-10=47 10-20=7 20-35=0 35-60=0 60-90=0 >=90=0 max=13.8
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=14 34-50ms=0 >=50ms=24 max=113.3ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=179 subframes=179 capped=0 staleDrops=152 maxBatch=28 maxPending=1842
+  UDP sender: ticks=501 emitted=179 emptyWhileActive=2
+  UDP timer dt: 0-4ms=266 4-8ms=235 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=158 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  probe UDP: queueAge: 0-4ms=24 4-8ms=22 8-12ms=22 12-20ms=44 20-33ms=67 33-50ms=0 >=50ms=0 max=32.0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=8 32-64=23 64-127=128 >=127=20 max=158.0 | turn: 0-2=62 2-5=65 5-10=25 10-20=5 20-35=0 35-60=1 60-90=0 >=90=0 max=40.4
+  dropped movement: events=152 absDx=8346 absDy=8743
+📈 Movement diagnostics
+  experiment: udpMode=fifo250Hz pointerDt=clamped90Hz pointerFilter=oneEuroLight
+  touch: callbacks=33 coalescedSamples=440 motionEvents=439
+  touch dt: 0-4ms=0 4-8ms=438 8-12ms=0 12-20ms=0 20-33ms=1 33-50ms=0 >=50ms=0 max=20.8ms
+  coalesced dt: 0-4ms=0 4-8ms=438 8-12ms=0 12-20ms=0 20-33ms=1 33-50ms=0 >=50ms=0 max=20.8ms
+  pointer: events=439 emitted=439
+  speed: 0-50=0 50-150=1 150-300=16 300-600=299 600-1000=123 1000-1600=0 1600-2400=0 >=2400=0 max=862.4
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=1 2.5-3=13 3-3.5=97 >=3.5=328 max=4.7
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=13 64-127=143 >=127=525 max=379.5
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=1 2-4=42 4-8=353 8-16=43 16-32=0 >=32=0 max=10.1 | turn: 0-2=109 2-5=125 5-10=138 10-20=56 20-35=8 35-60=2 60-90=0 >=90=0 max=53.1 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=6 33-50ms=42 50-100ms=346 >=100ms=45 max=112.9ms
+  probe pointer: dtMinClamp=438 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=438 12-17ms=0 17-25ms=1 25-34ms=0 34-50ms=0 >=50ms=0 max=20.8ms | turn: 0-2=79 2-5=163 5-10=148 10-20=47 20-35=1 35-60=0 60-90=0 >=90=0 max=20.1
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=5 34-50ms=0 >=50ms=29 max=119.6ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=242 subframes=242 capped=0 staleDrops=181 maxBatch=20 maxPending=3782
+  UDP sender: ticks=500 emitted=242 emptyWhileActive=1
+  UDP timer dt: 0-4ms=245 4-8ms=255 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=214 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  probe UDP: queueAge: 0-4ms=30 4-8ms=30 8-12ms=28 12-20ms=60 20-33ms=94 33-50ms=0 >=50ms=0 max=32.0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=6 64-127=49 >=127=187 max=349.0 | turn: 0-2=40 2-5=70 5-10=73 10-20=26 20-35=3 35-60=1 60-90=1 >=90=0 max=63.9
+  dropped movement: events=181 absDx=19178 absDy=23297
+📈 Movement diagnostics
+  experiment: udpMode=fifo250Hz pointerDt=clamped90Hz pointerFilter=oneEuroLight
+  touch: callbacks=3 coalescedSamples=41 motionEvents=41
+  touch dt: 0-4ms=0 4-8ms=41 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  coalesced dt: 0-4ms=0 4-8ms=41 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  pointer: events=41 emitted=41
+  speed: 0-50=0 50-150=0 150-300=5 300-600=36 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=599.2
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=3 3-3.5=13 >=3.5=25 max=4.0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=4 64-127=16 >=127=45 max=205.2
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=10 4-8=31 8-16=0 16-32=0 >=32=0 max=6.3 | turn: 0-2=9 2-5=11 5-10=9 10-20=11 20-35=1 35-60=0 60-90=0 >=90=0 max=24.4 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=5 50-100ms=33 >=100ms=3 max=106.4ms
+  probe pointer: dtMinClamp=41 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=41 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.1ms | turn: 0-2=7 2-5=12 5-10=14 10-20=8 20-35=0 35-60=0 60-90=0 >=90=0 max=19.9
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=5 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=45 34-50ms=0 >=50ms=10 max=112.9ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=24 subframes=24 capped=0 staleDrops=25 maxBatch=16 maxPending=2229
+  UDP sender: ticks=501 emitted=24 emptyWhileActive=0
+  UDP timer dt: 0-4ms=265 4-8ms=235 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=21 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=4.8ms
+  probe UDP: queueAge: 0-4ms=3 4-8ms=3 8-12ms=3 12-20ms=6 20-33ms=9 33-50ms=0 >=50ms=0 max=30.8ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=1 64-127=3 >=127=20 max=205.2 | turn: 0-2=6 2-5=9 5-10=5 10-20=1 20-35=0 35-60=0 60-90=0 >=90=0 max=10.8
+  dropped movement: events=25 absDx=2818 absDy=3271
+
+23:10:37.436 -> 
+23:10:37.436 -> 🔧 Initializing TinyUSB HID Mouse...
+23:10:38.258 -> .......
+23:10:39.762 -> ✅ UDP motion listening on 192.168.18.125:4210
+23:10:39.762 -> 🎯 ESP_Bridge_TinyUSB ready
+23:10:39.762 -> 🚦 udp-rx task running on core 0
+23:10:40.747 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=1649/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:40.747 ->   net: wifi=connected ip=192.168.18.125 rssi=-50 mounted=yes | udpRx iters=1002/s
+23:10:40.747 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+23:10:40.747 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+23:10:41.766 -> 📈 ESP smooth | UDP rawPkts=1/s datagrams=1/s subframes=1/s malformed=0 queueMax=1 overflow=0 | HID ticks=500/s reports=1/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:41.766 ->   net: wifi=connected ip=192.168.18.125 rssi=-48 mounted=yes | udpRx iters=1001/s
+23:10:41.766 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+23:10:41.766 ->   emit delta:    0=0 1=0 2-4=0 4-8=1 8-16=0 16-32=0 32-64=0 64-127=0
+23:10:42.749 -> 📈 ESP smooth | UDP rawPkts=41/s datagrams=41/s subframes=41/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=38/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:42.749 ->   net: wifi=connected ip=192.168.18.125 rssi=-41 mounted=yes | udpRx iters=992/s
+23:10:42.749 ->   HID interval ms <2=4 2-4=21 4-8=2 8-16=3 >=16=8
+23:10:42.749 ->   emit delta:    0=0 1=3 2-4=4 4-8=9 8-16=22 16-32=0 32-64=0 64-127=0
+23:10:43.766 -> 📈 ESP smooth | UDP rawPkts=30/s datagrams=30/s subframes=30/s malformed=0 queueMax=5 overflow=0 | HID ticks=500/s reports=30/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:43.766 ->   net: wifi=connected ip=192.168.18.125 rssi=-31 mounted=yes | udpRx iters=997/s
+23:10:43.766 ->   HID interval ms <2=5 2-4=12 4-8=8 8-16=0 >=16=5
+23:10:43.766 ->   emit delta:    0=0 1=3 2-4=5 4-8=7 8-16=6 16-32=9 32-64=0 64-127=0
+23:10:44.782 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:44.782 ->   net: wifi=connected ip=192.168.18.125 rssi=-36 mounted=yes | udpRx iters=1001/s
+23:10:44.782 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+23:10:44.782 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+23:10:45.762 -> 📈 ESP smooth | UDP rawPkts=63/s datagrams=63/s subframes=63/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=61/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:45.762 ->   net: wifi=connected ip=192.168.18.125 rssi=-36 mounted=yes | udpRx iters=986/s
+23:10:45.762 ->   HID interval ms <2=9 2-4=36 4-8=6 8-16=0 >=16=10
+23:10:45.762 ->   emit delta:    0=0 1=5 2-4=7 4-8=22 8-16=27 16-32=0 32-64=0 64-127=0
+23:10:46.779 -> 📈 ESP smooth | UDP rawPkts=36/s datagrams=36/s subframes=36/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=36/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:46.779 ->   net: wifi=connected ip=192.168.18.125 rssi=-36 mounted=yes | udpRx iters=996/s
+23:10:46.779 ->   HID interval ms <2=7 2-4=13 4-8=12 8-16=1 >=16=3
+23:10:46.779 ->   emit delta:    0=0 1=0 2-4=1 4-8=11 8-16=15 16-32=9 32-64=0 64-127=0
+23:10:47.761 -> 📈 ESP smooth | UDP rawPkts=55/s datagrams=55/s subframes=55/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=52/s reportFails=0 staleDrops=0 lateMax=0.4ms
+23:10:47.761 ->   net: wifi=connected ip=192.168.18.125 rssi=-40 mounted=yes | udpRx iters=991/s
+23:10:47.761 ->   HID interval ms <2=13 2-4=18 4-8=14 8-16=0 >=16=7
+23:10:47.761 ->   emit delta:    0=0 1=5 2-4=6 4-8=12 8-16=18 16-32=11 32-64=0 64-127=0
+23:10:48.779 -> 📈 ESP smooth | UDP rawPkts=128/s datagrams=128/s subframes=128/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=127/s reportFails=0 staleDrops=1 lateMax=0.4ms
+23:10:48.779 ->   net: wifi=connected ip=192.168.18.125 rssi=-40 mounted=yes | udpRx iters=988/s
+23:10:48.779 ->   HID interval ms <2=27 2-4=51 4-8=32 8-16=1 >=16=16
+23:10:48.779 ->   emit delta:    0=0 1=0 2-4=0 4-8=29 8-16=70 16-32=28 32-64=0 64-127=0
+23:10:49.759 -> 📈 ESP smooth | UDP rawPkts=83/s datagrams=83/s subframes=83/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=83/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:49.791 ->   net: wifi=connected ip=192.168.18.125 rssi=-40 mounted=yes | udpRx iters=991/s
+23:10:49.791 ->   HID interval ms <2=15 2-4=38 4-8=14 8-16=4 >=16=12
+23:10:49.791 ->   emit delta:    0=0 1=0 2-4=0 4-8=23 8-16=42 16-32=18 32-64=0 64-127=0
+23:10:50.777 -> 📈 ESP smooth | UDP rawPkts=78/s datagrams=78/s subframes=78/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=77/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:50.777 ->   net: wifi=connected ip=192.168.18.125 rssi=-41 mounted=yes | udpRx iters=984/s
+23:10:50.777 ->   HID interval ms <2=12 2-4=41 4-8=8 8-16=3 >=16=13
+23:10:50.777 ->   emit delta:    0=0 1=0 2-4=0 4-8=12 8-16=64 16-32=1 32-64=0 64-127=0
+23:10:51.794 -> 📈 ESP smooth | UDP rawPkts=83/s datagrams=83/s subframes=83/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=83/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:51.794 ->   net: wifi=connected ip=192.168.18.125 rssi=-45 mounted=yes | udpRx iters=991/s
+23:10:51.794 ->   HID interval ms <2=11 2-4=31 4-8=25 8-16=3 >=16=13
+23:10:51.794 ->   emit delta:    0=0 1=0 2-4=8 4-8=8 8-16=30 16-32=34 32-64=3 64-127=0
+23:10:52.778 -> 📈 ESP smooth | UDP rawPkts=121/s datagrams=121/s subframes=121/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=121/s reportFails=0 staleDrops=0 lateMax=0.1ms
+23:10:52.778 ->   net: wifi=connected ip=192.168.18.125 rssi=-45 mounted=yes | udpRx iters=987/s
+23:10:52.778 ->   HID interval ms <2=27 2-4=48 4-8=24 8-16=3 >=16=19
+23:10:52.778 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=28 16-32=75 32-64=18 64-127=0
+23:10:53.793 -> 📈 ESP smooth | UDP rawPkts=69/s datagrams=69/s subframes=69/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=69/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:53.793 ->   net: wifi=connected ip=192.168.18.125 rssi=-43 mounted=yes | udpRx iters=997/s
+23:10:53.793 ->   HID interval ms <2=12 2-4=18 4-8=29 8-16=2 >=16=8
+23:10:53.793 ->   emit delta:    0=0 1=0 2-4=0 4-8=1 8-16=24 16-32=44 32-64=0 64-127=0
+23:10:54.775 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:54.775 ->   net: wifi=connected ip=192.168.18.125 rssi=-47 mounted=yes | udpRx iters=1001/s
+23:10:54.775 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+23:10:54.775 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+23:10:55.795 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.5ms
+23:10:55.795 ->   net: wifi=connected ip=192.168.18.125 rssi=-43 mounted=yes | udpRx iters=1001/s
+23:10:55.795 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+23:10:55.795 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+
+log 5
+📈 Movement diagnostics
+  experiment: udpMode=boundedFifo250Hz pointerDt=clamped90Hz
+  touch: callbacks=24 coalescedSamples=214 motionEvents=207
+  touch dt: 0-4ms=0 4-8ms=192 8-12ms=12 12-20ms=1 20-33ms=0 33-50ms=2 >=50ms=0 max=45.8ms
+  coalesced dt: 0-4ms=0 4-8ms=195 8-12ms=13 12-20ms=2 20-33ms=0 33-50ms=2 >=50ms=0 max=45.8ms
+  pointer: events=207 emitted=207
+  speed: 0-50=57 50-150=54 150-300=37 300-600=53 600-1000=6 1000-1600=0 1600-2400=0 >=2400=0 max=618.8
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=104 2.5-3=40 3-3.5=23 >=3.5=40 max=4.1
+  emit delta: 0-1=2 1-2=0 2-4=0 4-8=82 8-16=56 16-32=29 32-64=34 64-127=42 >=127=65 max=247.6
+  probe raw: delta: 0-0.2=2 0.2-0.5=57 0.5-1=33 1-2=27 2-4=34 4-8=54 8-16=0 16-32=0 >=32=0 max=7.7 | turn: 0-2=153 2-5=23 5-10=10 10-20=7 20-35=4 35-60=2 60-90=1 >=90=3 max=90.0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=1 20-33ms=9 33-50ms=28 50-100ms=152 >=100ms=17 max=110.7ms
+  probe pointer: dtMinClamp=204 dtMaxClamp=2 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=204 12-17ms=1 17-25ms=0 25-34ms=2 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=153 2-5=23 5-10=10 10-20=7 20-35=4 35-60=2 60-90=1 >=90=3 max=90.0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=3 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=15 34-50ms=0 >=50ms=22 max=110.1ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=103 subframes=103 capped=0 staleDrops=98 maxBatch=6 maxPending=1350
+  UDP sender: ticks=500 emitted=103 emptyWhileActive=44
+  UDP timer dt: 0-4ms=241 4-8ms=259 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=85 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=32.0ms
+  probe UDP: queueAge: 0-4ms=20 4-8ms=16 8-12ms=18 12-20ms=33 20-33ms=16 33-50ms=0 >=50ms=0 max=23.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=29 8-16=20 16-32=6 32-64=10 64-127=17 >=127=21 max=199.3 | turn: 0-2=68 2-5=8 5-10=4 10-20=2 20-35=0 35-60=2 60-90=0 >=90=2 max=90
+  dropped movement: events=98 absDx=6303 absDy=399
+📈 Movement diagnostics
+  experiment: udpMode=boundedFifo250Hz pointerDt=clamped90Hz
+  touch: callbacks=26 coalescedSamples=196 motionEvents=190
+  touch dt: 0-4ms=0 4-8ms=178 8-12ms=5 12-20ms=2 20-33ms=2 33-50ms=2 >=50ms=1 max=66.7ms
+  coalesced dt: 0-4ms=0 4-8ms=179 8-12ms=6 12-20ms=3 20-33ms=2 33-50ms=2 >=50ms=1 max=66.7ms
+  pointer: events=190 emitted=190
+  speed: 0-50=28 50-150=11 150-300=72 300-600=79 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=576.6
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=36 2.5-3=54 3-3.5=59 >=3.5=41 max=3.9
+  emit delta: 0-1=2 1-2=0 2-4=0 4-8=43 8-16=13 16-32=14 32-64=46 64-127=106 >=127=66 max=210
+  probe raw: delta: 0-0.2=2 0.2-0.5=24 0.5-1=8 1-2=14 2-4=81 4-8=61 8-16=0 16-32=0 >=32=0 max=6.7 | turn: 0-2=119 2-5=26 5-10=29 10-20=6 20-35=3 35-60=0 60-90=0 >=90=1 max=180.0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=9 20-33ms=13 33-50ms=33 50-100ms=128 >=100ms=7 max=108.2ms
+  probe pointer: dtMinClamp=183 dtMaxClamp=3 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=183 12-17ms=2 17-25ms=1 25-34ms=4 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=119 2-5=26 5-10=29 10-20=6 20-35=3 35-60=0 60-90=0 >=90=2 max=180.0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=2 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=20 34-50ms=0 >=50ms=21 max=113.1ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=100 subframes=100 capped=0 staleDrops=80 maxBatch=6 maxPending=1193
+  UDP sender: ticks=501 emitted=100 emptyWhileActive=44
+  UDP timer dt: 0-4ms=256 4-8ms=245 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=81 8-12ms=1 12-17ms=1 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=16.0ms
+  probe UDP: queueAge: 0-4ms=19 4-8ms=19 8-12ms=17 12-20ms=32 20-33ms=13 33-50ms=0 >=50ms=0 max=23.6ms | delta: 0-1=0 1-2=0 2-4=0 4-8=19 8-16=5 16-32=6 32-64=17 64-127=31 >=127=22 max=210 | turn: 0-2=57 2-5=8 5-10=10 10-20=5 20-35=1 35-60=1 60-90=0 >=90=1 max=180
+  dropped movement: events=80 absDx=6556 absDy=2336
+📈 Movement diagnostics
+  experiment: udpMode=boundedFifo250Hz pointerDt=clamped90Hz
+  touch: callbacks=33 coalescedSamples=480 motionEvents=480
+  touch dt: 0-4ms=0 4-8ms=480 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  coalesced dt: 0-4ms=0 4-8ms=480 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  pointer: events=480 emitted=480
+  speed: 0-50=0 50-150=11 150-300=218 300-600=251 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=403.0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=5 2.5-3=118 3-3.5=357 >=3.5=0 max=3.4
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=16 32-64=123 64-127=537 >=127=8 max=133.7
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=3 1-2=17 2-4=368 4-8=92 8-16=0 16-32=0 >=32=0 max=5.0 | turn: 0-2=210 2-5=112 5-10=118 10-20=38 20-35=2 35-60=0 60-90=0 >=90=0 max=25.6 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=50 50-100ms=392 >=100ms=38 max=110.4ms
+  probe pointer: dtMinClamp=480 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=480 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.1ms | turn: 0-2=210 2-5=112 5-10=118 10-20=38 20-35=2 35-60=0 60-90=0 >=90=0 max=25.6
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=33 max=60.9ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=204 subframes=204 capped=0 staleDrops=278 maxBatch=6 maxPending=719
+  UDP sender: ticks=500 emitted=204 emptyWhileActive=68
+  UDP timer dt: 0-4ms=249 4-8ms=251 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=171 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  probe UDP: queueAge: 0-4ms=35 4-8ms=34 8-12ms=35 12-20ms=68 20-33ms=32 33-50ms=0 >=50ms=0 max=23.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=4 32-64=36 64-127=162 >=127=2 max=133.0 | turn: 0-2=79 2-5=45 5-10=32 10-20=15 20-35=0 35-60=0 60-90=0 >=90=0 max=19.4
+  dropped movement: events=278 absDx=12591 absDy=14218
+📈 Movement diagnostics
+  experiment: udpMode=boundedFifo250Hz pointerDt=clamped90Hz
+  touch: callbacks=28 coalescedSamples=360 motionEvents=359
+  touch dt: 0-4ms=1 4-8ms=356 8-12ms=1 12-20ms=1 20-33ms=0 33-50ms=0 >=50ms=0 max=14.0ms
+  coalesced dt: 0-4ms=1 4-8ms=356 8-12ms=1 12-20ms=1 20-33ms=0 33-50ms=0 >=50ms=0 max=14.0ms
+  pointer: events=359 emitted=359
+  speed: 0-50=6 50-150=9 150-300=132 300-600=212 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=529.9
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=15 2.5-3=38 3-3.5=232 >=3.5=74 max=3.8
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=8 8-16=8 16-32=6 32-64=26 64-127=319 >=127=140 max=188.3
+  probe raw: delta: 0-0.2=0 0.2-0.5=9 0.5-1=5 1-2=0 2-4=198 4-8=147 8-16=0 16-32=0 >=32=0 max=6.2 | turn: 0-2=154 2-5=98 5-10=73 10-20=26 20-35=3 35-60=1 60-90=1 >=90=2 max=90.0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=32 50-100ms=299 >=100ms=28 max=110.8ms
+  probe pointer: dtMinClamp=358 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=358 12-17ms=1 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=14.0ms | turn: 0-2=154 2-5=98 5-10=73 10-20=26 20-35=3 35-60=1 60-90=1 >=90=2 max=90.0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=9 34-50ms=0 >=50ms=28 max=110.0ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=148 subframes=148 capped=0 staleDrops=206 maxBatch=6 maxPending=1031
+  UDP sender: ticks=500 emitted=148 emptyWhileActive=55
+  UDP timer dt: 0-4ms=235 4-8ms=265 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=123 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=4.9ms
+  probe UDP: queueAge: 0-4ms=25 4-8ms=26 8-12ms=25 12-20ms=49 20-33ms=23 33-50ms=0 >=50ms=0 max=24.0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=3 8-16=3 16-32=2 32-64=7 64-127=92 >=127=41 max=186.0 | turn: 0-2=45 2-5=33 5-10=32 10-20=8 20-35=2 35-60=1 60-90=0 >=90=2 max=90
+  dropped movement: events=206 absDx=11360 absDy=15225
+📈 Movement diagnostics
+  experiment: udpMode=boundedFifo250Hz pointerDt=clamped90Hz
+  touch: callbacks=30 coalescedSamples=389 motionEvents=388
+  touch dt: 0-4ms=0 4-8ms=387 8-12ms=0 12-20ms=0 20-33ms=1 33-50ms=0 >=50ms=0 max=29.1ms
+  coalesced dt: 0-4ms=0 4-8ms=387 8-12ms=0 12-20ms=0 20-33ms=1 33-50ms=0 >=50ms=0 max=29.1ms
+  pointer: events=388 emitted=388
+  speed: 0-50=0 50-150=15 150-300=52 300-600=141 600-1000=180 1000-1600=0 1600-2400=0 >=2400=0 max=946.1
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=8 2.5-3=45 3-3.5=39 >=3.5=296 max=5.0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=1 16-32=16 32-64=34 64-127=87 >=127=417 max=437.1
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=3 1-2=14 2-4=53 4-8=214 8-16=104 16-32=0 >=32=0 max=11.0 | turn: 0-2=99 2-5=96 5-10=132 10-20=49 20-35=9 35-60=1 60-90=1 >=90=0 max=63.4 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=3 20-33ms=6 33-50ms=44 50-100ms=301 >=100ms=34 max=111.6ms
+  probe pointer: dtMinClamp=387 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=387 12-17ms=0 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=29.1ms | turn: 0-2=99 2-5=96 5-10=132 10-20=49 20-35=9 35-60=1 60-90=1 >=90=0 max=63.4
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=5 34-50ms=0 >=50ms=28 max=109.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=167 subframes=167 capped=0 staleDrops=221 maxBatch=6 maxPending=2393
+  UDP sender: ticks=501 emitted=167 emptyWhileActive=57
+  UDP timer dt: 0-4ms=239 4-8ms=262 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=140 8-12ms=1 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=8.0ms
+  probe UDP: queueAge: 0-4ms=28 4-8ms=28 8-12ms=28 12-20ms=57 20-33ms=26 33-50ms=0 >=50ms=0 max=23.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=5 32-64=11 64-127=31 >=127=120 max=437.1 | turn: 0-2=37 2-5=27 5-10=53 10-20=17 20-35=6 35-60=0 60-90=1 >=90=0 max=63.2
+  dropped movement: events=221 absDx=24941 absDy=34484
+📈 Movement diagnostics
+  experiment: udpMode=boundedFifo250Hz pointerDt=clamped90Hz
+  touch: callbacks=30 coalescedSamples=381 motionEvents=363
+  touch dt: 0-4ms=2 4-8ms=361 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=5.8ms
+  coalesced dt: 0-4ms=2 4-8ms=361 8-12ms=0 12-20ms=1 20-33ms=0 33-50ms=0 >=50ms=0 max=12.5ms
+  pointer: events=363 emitted=363
+  speed: 0-50=0 50-150=4 150-300=7 300-600=212 600-1000=140 1000-1600=0 1600-2400=0 >=2400=0 max=911.0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=1 2.5-3=9 3-3.5=82 >=3.5=271 max=4.9
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=1 8-16=2 16-32=1 32-64=4 64-127=106 >=127=403 max=427.0
+  probe raw: delta: 0-0.2=0 0.2-0.5=1 0.5-1=2 1-2=2 2-4=39 4-8=261 8-16=58 16-32=0 >=32=0 max=11.0 | turn: 0-2=94 2-5=107 5-10=115 10-20=40 20-35=4 35-60=1 60-90=0 >=90=1 max=90 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=1 20-33ms=5 33-50ms=42 50-100ms=288 >=100ms=27 max=109.6ms
+  probe pointer: dtMinClamp=363 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=363 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.1ms | turn: 0-2=94 2-5=107 5-10=115 10-20=40 20-35=4 35-60=1 60-90=0 >=90=1 max=90
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=12 34-50ms=0 >=50ms=26 max=110.5ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=154 subframes=154 capped=0 staleDrops=204 maxBatch=6 maxPending=2358
+  UDP sender: ticks=500 emitted=154 emptyWhileActive=55
+  UDP timer dt: 0-4ms=254 4-8ms=246 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=129 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=7.8ms
+  probe UDP: queueAge: 0-4ms=28 4-8ms=26 8-12ms=25 12-20ms=50 20-33ms=25 33-50ms=0 >=50ms=0 max=23.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=1 64-127=33 >=127=120 max=426.2 | turn: 0-2=35 2-5=36 5-10=39 10-20=18 20-35=0 35-60=0 60-90=1 >=90=0 max=62.6
+  dropped movement: events=204 absDx=22288 absDy=28071
+📈 Movement diagnostics
+  experiment: udpMode=boundedFifo250Hz pointerDt=clamped90Hz
+  touch: callbacks=25 coalescedSamples=349 motionEvents=365
+  touch dt: 0-4ms=0 4-8ms=365 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  coalesced dt: 0-4ms=0 4-8ms=365 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  pointer: events=365 emitted=365
+  speed: 0-50=0 50-150=0 150-300=8 300-600=140 600-1000=196 1000-1600=21 1600-2400=0 >=2400=0 max=1116.0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=7 3-3.5=43 >=3.5=315 max=5.4
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=8 64-127=54 >=127=457 max=563.3
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=1 2-4=26 4-8=170 8-16=168 16-32=0 >=32=0 max=13.4 | turn: 0-2=110 2-5=108 5-10=99 10-20=43 20-35=5 35-60=0 60-90=0 >=90=0 max=24.3 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=31 50-100ms=299 >=100ms=35 max=111.9ms
+  probe pointer: dtMinClamp=365 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=365 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.1ms | turn: 0-2=110 2-5=108 5-10=99 10-20=43 20-35=5 35-60=0 60-90=0 >=90=0 max=24.3
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=12 34-50ms=0 >=50ms=27 max=109.6ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=154 subframes=154 capped=0 staleDrops=211 maxBatch=6 maxPending=3169
+  UDP sender: ticks=501 emitted=154 emptyWhileActive=50
+  UDP timer dt: 0-4ms=247 4-8ms=254 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=129 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=4.9ms
+  probe UDP: queueAge: 0-4ms=29 4-8ms=24 8-12ms=27 12-20ms=52 20-33ms=22 33-50ms=0 >=50ms=0 max=23.8ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=1 64-127=14 >=127=139 max=563.2 | turn: 0-2=37 2-5=39 5-10=32 10-20=14 20-35=4 35-60=1 60-90=1 >=90=1 max=91.2
+  dropped movement: events=211 absDx=24940 absDy=44521
+📈 Movement diagnostics
+  experiment: udpMode=boundedFifo250Hz pointerDt=clamped90Hz
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 >=32=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 50-100ms=0 >=100ms=0 max=0ms
+  probe pointer: dtMinClamp=0 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=5 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=58 34-50ms=0 >=50ms=5 max=56.4ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=250 4-8ms=250 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  experiment: udpMode=boundedFifo250Hz pointerDt=clamped90Hz
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 >=32=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 50-100ms=0 >=100ms=0 max=0ms
+  probe pointer: dtMinClamp=0 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=9 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=51 34-50ms=0 >=50ms=9 max=56.1ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=501 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=270 4-8ms=231 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  experiment: udpMode=boundedFifo250Hz pointerDt=clamped90Hz
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 >=32=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 50-100ms=0 >=100ms=0 max=0ms
+  probe pointer: dtMinClamp=0 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=8 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=50 34-50ms=1 >=50ms=8 max=61.1ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=501 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=267 4-8ms=234 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=0 absDx=0 absDy=0
+
+22:54:48.270 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.5ms
+22:54:48.270 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=1001/s
+22:54:48.270 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:54:48.270 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:54:49.253 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:54:49.253 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=1001/s
+22:54:49.253 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:54:49.253 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:54:50.272 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.5ms
+22:54:50.272 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=1001/s
+22:54:50.272 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:54:50.272 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:54:51.257 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.5ms
+22:54:51.257 ->   net: wifi=connected ip=192.168.18.125 rssi=-35 mounted=yes | udpRx iters=1001/s
+22:54:51.257 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:54:51.257 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:54:52.276 -> 📈 ESP smooth | UDP rawPkts=5/s datagrams=5/s subframes=5/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=5/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:54:52.276 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=1001/s
+22:54:52.276 ->   HID interval ms <2=0 2-4=2 4-8=0 8-16=0 >=16=3
+22:54:52.276 ->   emit delta:    0=0 1=1 2-4=1 4-8=1 8-16=1 16-32=1 32-64=0 64-127=0
+22:54:53.261 -> 📈 ESP smooth | UDP rawPkts=30/s datagrams=30/s subframes=30/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=28/s reportFails=0 staleDrops=0 lateMax=0.5ms
+22:54:53.261 ->   net: wifi=connected ip=192.168.18.125 rssi=-35 mounted=yes | udpRx iters=997/s
+22:54:53.261 ->   HID interval ms <2=5 2-4=13 4-8=4 8-16=0 >=16=6
+22:54:53.261 ->   emit delta:    0=0 1=8 2-4=4 4-8=7 8-16=7 16-32=2 32-64=0 64-127=0
+22:54:54.280 -> 📈 ESP smooth | UDP rawPkts=21/s datagrams=21/s subframes=21/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=21/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:54:54.280 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=997/s
+22:54:54.280 ->   HID interval ms <2=5 2-4=10 4-8=2 8-16=0 >=16=4
+22:54:54.280 ->   emit delta:    0=0 1=1 2-4=0 4-8=4 8-16=6 16-32=10 32-64=0 64-127=0
+22:54:55.269 -> 📈 ESP smooth | UDP rawPkts=48/s datagrams=48/s subframes=48/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=46/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:54:55.269 ->   net: wifi=connected ip=192.168.18.125 rssi=-37 mounted=yes | udpRx iters=993/s
+22:54:55.269 ->   HID interval ms <2=6 2-4=25 4-8=3 8-16=2 >=16=10
+22:54:55.269 ->   emit delta:    0=0 1=15 2-4=8 4-8=9 8-16=12 16-32=2 32-64=0 64-127=0
+22:54:56.285 -> 📈 ESP smooth | UDP rawPkts=42/s datagrams=42/s subframes=42/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=36/s reportFails=0 staleDrops=1 lateMax=0.5ms
+22:54:56.285 ->   net: wifi=connected ip=192.168.18.125 rssi=-35 mounted=yes | udpRx iters=998/s
+22:54:56.285 ->   HID interval ms <2=6 2-4=9 4-8=6 8-16=3 >=16=12
+22:54:56.285 ->   emit delta:    0=0 1=11 2-4=2 4-8=5 8-16=8 16-32=10 32-64=0 64-127=0
+22:54:57.265 -> 📈 ESP smooth | UDP rawPkts=38/s datagrams=38/s subframes=38/s malformed=0 queueMax=4 overflow=0 | HID ticks=500/s reports=35/s reportFails=0 staleDrops=0 lateMax=0.5ms
+22:54:57.298 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=999/s
+22:54:57.298 ->   HID interval ms <2=3 2-4=13 4-8=11 8-16=0 >=16=8
+22:54:57.298 ->   emit delta:    0=0 1=7 2-4=4 4-8=6 8-16=7 16-32=11 32-64=0 64-127=0
+22:54:58.288 -> 📈 ESP smooth | UDP rawPkts=44/s datagrams=44/s subframes=44/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=41/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:54:58.288 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=993/s
+22:54:58.288 ->   HID interval ms <2=8 2-4=17 4-8=5 8-16=2 >=16=9
+22:54:58.288 ->   emit delta:    0=0 1=8 2-4=4 4-8=7 8-16=10 16-32=12 32-64=0 64-127=0
+22:54:59.270 -> 📈 ESP smooth | UDP rawPkts=99/s datagrams=99/s subframes=99/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=99/s reportFails=0 staleDrops=0 lateMax=0.5ms
+22:54:59.304 ->   net: wifi=connected ip=192.168.18.125 rssi=-35 mounted=yes | udpRx iters=991/s
+22:54:59.304 ->   HID interval ms <2=16 2-4=42 4-8=20 8-16=1 >=16=20
+22:54:59.304 ->   emit delta:    0=0 1=0 2-4=0 4-8=21 8-16=75 16-32=3 32-64=0 64-127=0
+22:55:00.290 -> 📈 ESP smooth | UDP rawPkts=103/s datagrams=103/s subframes=103/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=103/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:55:00.290 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=991/s
+22:55:00.290 ->   HID interval ms <2=14 2-4=39 4-8=27 8-16=7 >=16=16
+22:55:00.290 ->   emit delta:    0=0 1=0 2-4=0 4-8=25 8-16=78 16-32=0 32-64=0 64-127=0
+22:55:01.306 -> 📈 ESP smooth | UDP rawPkts=37/s datagrams=37/s subframes=37/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=37/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:55:01.306 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=996/s
+22:55:01.306 ->   HID interval ms <2=7 2-4=13 4-8=10 8-16=1 >=16=6
+22:55:01.306 ->   emit delta:    0=0 1=6 2-4=6 4-8=2 8-16=20 16-32=3 32-64=0 64-127=0
+22:55:02.294 -> 📈 ESP smooth | UDP rawPkts=99/s datagrams=99/s subframes=99/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=99/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:55:02.294 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=985/s
+22:55:02.294 ->   HID interval ms <2=19 2-4=45 4-8=16 8-16=2 >=16=17
+22:55:02.294 ->   emit delta:    0=0 1=0 2-4=0 4-8=12 8-16=60 16-32=27 32-64=0 64-127=0
+22:55:03.310 -> 📈 ESP smooth | UDP rawPkts=66/s datagrams=66/s subframes=66/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=66/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:55:03.310 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=999/s
+22:55:03.310 ->   HID interval ms <2=4 2-4=15 4-8=33 8-16=3 >=16=11
+22:55:03.310 ->   emit delta:    0=0 1=1 2-4=5 4-8=11 8-16=23 16-32=26 32-64=0 64-127=0
+22:55:04.296 -> 📈 ESP smooth | UDP rawPkts=95/s datagrams=95/s subframes=95/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=95/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:55:04.296 ->   net: wifi=connected ip=192.168.18.125 rssi=-35 mounted=yes | udpRx iters=991/s
+22:55:04.296 ->   HID interval ms <2=20 2-4=34 4-8=20 8-16=2 >=16=19
+22:55:04.296 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=9 16-32=53 32-64=33 64-127=0
+22:55:05.313 -> 📈 ESP smooth | UDP rawPkts=72/s datagrams=72/s subframes=72/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=72/s reportFails=0 staleDrops=0 lateMax=0.1ms
+22:55:05.313 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=994/s
+22:55:05.313 ->   HID interval ms <2=8 2-4=21 4-8=30 8-16=0 >=16=13
+22:55:05.313 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=8 16-32=50 32-64=14 64-127=0
+22:55:06.300 -> 📈 ESP smooth | UDP rawPkts=67/s datagrams=67/s subframes=67/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=67/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:55:06.300 ->   net: wifi=connected ip=192.168.18.125 rssi=-35 mounted=yes | udpRx iters=993/s
+22:55:06.300 ->   HID interval ms <2=18 2-4=25 4-8=11 8-16=0 >=16=13
+22:55:06.300 ->   emit delta:    0=0 1=0 2-4=0 4-8=1 8-16=23 16-32=34 32-64=9 64-127=0
+22:55:07.317 -> 📈 ESP smooth | UDP rawPkts=94/s datagrams=94/s subframes=94/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=94/s reportFails=0 staleDrops=0 lateMax=0.5ms
+22:55:07.317 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=993/s
+22:55:07.317 ->   HID interval ms <2=12 2-4=26 4-8=39 8-16=4 >=16=13
+22:55:07.317 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=14 16-32=38 32-64=36 64-127=6
+22:55:08.298 -> 📈 ESP smooth | UDP rawPkts=56/s datagrams=56/s subframes=56/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=56/s reportFails=0 staleDrops=0 lateMax=0.5ms
+22:55:08.298 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=993/s
+22:55:08.298 ->   HID interval ms <2=13 2-4=26 4-8=7 8-16=1 >=16=9
+22:55:08.298 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=5 16-32=35 32-64=16 64-127=0
+22:55:09.317 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.5ms
+22:55:09.317 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=1001/s
+22:55:09.317 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:55:09.317 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+
+log 4
+📈 Movement diagnostics
+  experiment: udpMode=latestWins250Hz pointerDt=clamped90Hz
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 >=32=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 50-100ms=0 >=100ms=0 max=0ms
+  probe pointer: dtMinClamp=0 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=1 17-25ms=0 25-34ms=6 34-50ms=2 >=50ms=1 max=601.8ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=177 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=84 4-8ms=87 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=6 max=444.2ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  experiment: udpMode=latestWins250Hz pointerDt=clamped90Hz
+  touch: callbacks=9 coalescedSamples=87 motionEvents=86
+  touch dt: 0-4ms=0 4-8ms=84 8-12ms=0 12-20ms=1 20-33ms=0 33-50ms=1 >=50ms=0 max=43.5ms
+  coalesced dt: 0-4ms=0 4-8ms=84 8-12ms=0 12-20ms=1 20-33ms=0 33-50ms=1 >=50ms=0 max=43.5ms
+  pointer: events=86 emitted=86
+  speed: 0-50=2 50-150=14 150-300=47 300-600=23 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=402.4
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=7 2.5-3=53 3-3.5=26 >=3.5=0 max=3.4
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=1 8-16=1 16-32=6 32-64=43 64-127=34 >=127=9 max=1035.7
+  probe raw: delta: 0-0.2=0 0.2-0.5=1 0.5-1=1 1-2=14 2-4=55 4-8=15 8-16=0 16-32=0 >=32=0 max=4.7 | turn: 0-2=65 2-5=5 5-10=14 10-20=0 20-35=0 35-60=0 60-90=0 >=90=1 max=90 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=4 33-50ms=16 50-100ms=64 >=100ms=2 max=103.7ms
+  probe pointer: dtMinClamp=84 dtMaxClamp=1 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=84 12-17ms=1 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=65 2-5=5 5-10=14 10-20=0 20-35=0 35-60=0 60-90=0 >=90=1 max=90
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=7 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=40 34-50ms=0 >=50ms=14 max=64.1ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=8 subframes=8 capped=1 staleDrops=0 maxBatch=1 maxPending=1516
+  UDP sender: ticks=500 emitted=8 emptyWhileActive=41
+  UDP timer dt: 0-4ms=256 4-8ms=244 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=1 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=27.7ms
+  probe UDP: queueAge: 0-4ms=8 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=3.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=8 max=1035.7 | turn: 0-2=0 2-5=0 5-10=2 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=8.7
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  experiment: udpMode=latestWins250Hz pointerDt=clamped90Hz
+  touch: callbacks=16 coalescedSamples=126 motionEvents=124
+  touch dt: 0-4ms=0 4-8ms=113 8-12ms=4 12-20ms=3 20-33ms=0 33-50ms=3 >=50ms=1 max=195.8ms
+  coalesced dt: 0-4ms=0 4-8ms=113 8-12ms=4 12-20ms=3 20-33ms=0 33-50ms=3 >=50ms=1 max=195.8ms
+  pointer: events=124 emitted=124
+  speed: 0-50=13 50-150=26 150-300=65 300-600=20 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=591.2
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=30 2.5-3=68 3-3.5=14 >=3.5=12 max=4.0
+  emit delta: 0-1=2 1-2=0 2-4=0 4-8=14 8-16=5 16-32=18 32-64=52 64-127=21 >=127=23 max=1026.5
+  probe raw: delta: 0-0.2=2 0.2-0.5=13 0.5-1=5 1-2=31 2-4=57 4-8=13 8-16=3 16-32=0 >=32=0 max=13.3 | turn: 0-2=72 2-5=15 5-10=15 10-20=14 20-35=0 35-60=0 60-90=0 >=90=3 max=90 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=3 20-33ms=3 33-50ms=14 50-100ms=95 >=100ms=9 max=109.5ms
+  probe pointer: dtMinClamp=117 dtMaxClamp=3 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=117 12-17ms=3 17-25ms=0 25-34ms=4 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=72 2-5=15 5-10=15 10-20=14 20-35=0 35-60=0 60-90=0 >=90=4 max=180
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=2 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=32 34-50ms=0 >=50ms=16 max=109.4ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=11 subframes=11 capped=2 staleDrops=2 maxBatch=1 maxPending=2288
+  UDP sender: ticks=500 emitted=11 emptyWhileActive=84
+  UDP timer dt: 0-4ms=266 4-8ms=234 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=11 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=3.7ms | delta: 0-1=0 1-2=0 2-4=0 4-8=1 8-16=0 16-32=0 32-64=0 64-127=1 >=127=9 max=1026.5 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=2 absDx=6 absDy=6
+📈 Movement diagnostics
+  experiment: udpMode=latestWins250Hz pointerDt=clamped90Hz
+  touch: callbacks=26 coalescedSamples=242 motionEvents=238
+  touch dt: 0-4ms=0 4-8ms=222 8-12ms=12 12-20ms=1 20-33ms=0 33-50ms=0 >=50ms=3 max=68.8ms
+  coalesced dt: 0-4ms=0 4-8ms=223 8-12ms=12 12-20ms=2 20-33ms=0 33-50ms=0 >=50ms=3 max=68.8ms
+  pointer: events=238 emitted=238
+  speed: 0-50=50 50-150=61 150-300=107 300-600=20 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=369.4
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=90 2.5-3=111 3-3.5=37 >=3.5=0 max=3.3
+  emit delta: 0-1=1 1-2=0 2-4=0 4-8=43 8-16=17 16-32=46 32-64=90 64-127=46 >=127=19 max=1029.3
+  probe raw: delta: 0-0.2=1 0.2-0.5=49 0.5-1=11 1-2=76 2-4=91 4-8=10 8-16=0 16-32=0 >=32=0 max=6.1 | turn: 0-2=145 2-5=8 5-10=27 10-20=30 20-35=5 35-60=10 60-90=1 >=90=8 max=101.3 | age: 0-4ms=0 4-8ms=0 8-12ms=1 12-20ms=3 20-33ms=9 33-50ms=29 50-100ms=175 >=100ms=21 max=124.2ms
+  probe pointer: dtMinClamp=234 dtMaxClamp=3 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=234 12-17ms=1 17-25ms=0 25-34ms=3 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=146 2-5=8 5-10=27 10-20=30 20-35=5 35-60=10 60-90=1 >=90=8 max=101.3
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=19 34-50ms=0 >=50ms=19 max=119.1ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=24 subframes=24 capped=2 staleDrops=2 maxBatch=1 maxPending=1210
+  UDP sender: ticks=501 emitted=24 emptyWhileActive=153
+  UDP timer dt: 0-4ms=267 4-8ms=234 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=2 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=2 34-50ms=0 >=50ms=0 max=32.1ms
+  probe UDP: queueAge: 0-4ms=23 4-8ms=1 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=5.0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=1 32-64=1 64-127=4 >=127=18 max=1029.3 | turn: 0-2=2 2-5=0 5-10=1 10-20=0 20-35=0 35-60=1 60-90=0 >=90=0 max=40.5
+  dropped movement: events=2 absDx=41 absDy=12
+📈 Movement diagnostics
+  experiment: udpMode=latestWins250Hz pointerDt=clamped90Hz
+  touch: callbacks=22 coalescedSamples=222 motionEvents=214
+  touch dt: 0-4ms=0 4-8ms=198 8-12ms=12 12-20ms=2 20-33ms=0 33-50ms=1 >=50ms=1 max=67.7ms
+  coalesced dt: 0-4ms=0 4-8ms=199 8-12ms=12 12-20ms=3 20-33ms=0 33-50ms=1 >=50ms=1 max=67.7ms
+  pointer: events=214 emitted=214
+  speed: 0-50=63 50-150=56 150-300=71 300-600=24 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=374.2
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=95 2.5-3=86 3-3.5=33 >=3.5=0 max=3.3
+  emit delta: 0-1=1 1-2=0 2-4=0 4-8=41 8-16=43 16-32=24 32-64=68 64-127=42 >=127=12 max=1036.7
+  probe raw: delta: 0-0.2=1 0.2-0.5=66 0.5-1=19 1-2=51 2-4=63 4-8=14 8-16=0 16-32=0 >=32=0 max=4.7 | turn: 0-2=94 2-5=18 5-10=31 10-20=30 20-35=9 35-60=16 60-90=4 >=90=9 max=90 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=1 20-33ms=1 33-50ms=20 50-100ms=176 >=100ms=16 max=108.9ms
+  probe pointer: dtMinClamp=210 dtMaxClamp=2 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=210 12-17ms=2 17-25ms=0 25-34ms=2 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=94 2-5=18 5-10=31 10-20=30 20-35=9 35-60=16 60-90=4 >=90=9 max=90
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=2 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=20 34-50ms=0 >=50ms=22 max=109.3ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=17 subframes=17 capped=2 staleDrops=2 maxBatch=1 maxPending=1456
+  UDP sender: ticks=501 emitted=17 emptyWhileActive=119
+  UDP timer dt: 0-4ms=256 4-8ms=245 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=16 4-8ms=1 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=2 64-127=3 >=127=12 max=1036.7 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=2 absDx=24 absDy=58
+📈 Movement diagnostics
+  experiment: udpMode=latestWins250Hz pointerDt=clamped90Hz
+  touch: callbacks=28 coalescedSamples=394 motionEvents=398
+  touch dt: 0-4ms=0 4-8ms=392 8-12ms=6 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=8.4ms
+  coalesced dt: 0-4ms=0 4-8ms=392 8-12ms=6 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=8.4ms
+  pointer: events=398 emitted=398
+  speed: 0-50=19 50-150=53 150-300=308 300-600=18 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=395.8
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=41 2.5-3=322 3-3.5=35 >=3.5=0 max=3.4
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=17 8-16=10 16-32=37 32-64=271 64-127=62 >=127=29 max=1112.2
+  probe raw: delta: 0-0.2=0 0.2-0.5=21 0.5-1=8 1-2=100 2-4=257 4-8=12 8-16=0 16-32=0 >=32=0 max=5.0 | turn: 0-2=159 2-5=66 5-10=96 10-20=61 20-35=12 35-60=3 60-90=1 >=90=0 max=71.6 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=32 50-100ms=332 >=100ms=34 max=109.8ms
+  probe pointer: dtMinClamp=398 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=398 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.1ms | turn: 0-2=159 2-5=66 5-10=96 10-20=61 20-35=12 35-60=3 60-90=1 >=90=0 max=71.6
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=6 34-50ms=0 >=50ms=30 max=108.9ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=28 subframes=28 capped=2 staleDrops=1 maxBatch=1 maxPending=1324
+  UDP sender: ticks=500 emitted=28 emptyWhileActive=196
+  UDP timer dt: 0-4ms=258 4-8ms=242 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=28 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=3.3ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=1 64-127=0 >=127=27 max=1112.2 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=1 absDx=0 absDy=0
+📈 Movement diagnostics
+  experiment: udpMode=latestWins250Hz pointerDt=clamped90Hz
+  touch: callbacks=30 coalescedSamples=367 motionEvents=364
+  touch dt: 0-4ms=0 4-8ms=356 8-12ms=3 12-20ms=2 20-33ms=1 33-50ms=2 >=50ms=0 max=37.5ms
+  coalesced dt: 0-4ms=0 4-8ms=356 8-12ms=4 12-20ms=3 20-33ms=1 33-50ms=2 >=50ms=0 max=37.5ms
+  pointer: events=364 emitted=364
+  speed: 0-50=24 50-150=107 150-300=233 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=272.3
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=89 2.5-3=273 3-3.5=2 >=3.5=0 max=3.0
+  emit delta: 0-1=1 1-2=0 2-4=0 4-8=20 8-16=32 16-32=64 32-64=227 64-127=27 >=127=22 max=958.1
+  probe raw: delta: 0-0.2=1 0.2-0.5=25 0.5-1=33 1-2=133 2-4=172 4-8=0 8-16=0 16-32=0 >=32=0 max=3.7 | turn: 0-2=131 2-5=36 5-10=90 10-20=69 20-35=19 35-60=7 60-90=1 >=90=9 max=180 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=36 50-100ms=303 >=100ms=25 max=109.8ms
+  probe pointer: dtMinClamp=359 dtMaxClamp=2 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=359 12-17ms=2 17-25ms=1 25-34ms=2 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=131 2-5=36 5-10=90 10-20=69 20-35=19 35-60=7 60-90=1 >=90=9 max=180
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=8 34-50ms=0 >=50ms=29 max=108.9ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=29 subframes=29 capped=0 staleDrops=1 maxBatch=1 maxPending=813
+  UDP sender: ticks=501 emitted=29 emptyWhileActive=189
+  UDP timer dt: 0-4ms=261 4-8ms=240 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=2 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=4.1ms
+  probe UDP: queueAge: 0-4ms=26 4-8ms=3 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.1ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=1 16-32=0 32-64=2 64-127=4 >=127=22 max=958.1 | turn: 0-2=0 2-5=0 5-10=1 10-20=1 20-35=0 35-60=0 60-90=0 >=90=0 max=13.2
+  dropped movement: events=1 absDx=6 absDy=18
+left clicked and sent
+📈 Movement diagnostics
+  experiment: udpMode=latestWins250Hz pointerDt=clamped90Hz
+  touch: callbacks=28 coalescedSamples=327 motionEvents=325
+  touch dt: 0-4ms=0 4-8ms=322 8-12ms=0 12-20ms=2 20-33ms=1 33-50ms=0 >=50ms=0 max=20.8ms
+  coalesced dt: 0-4ms=0 4-8ms=322 8-12ms=0 12-20ms=2 20-33ms=1 33-50ms=0 >=50ms=0 max=20.8ms
+  pointer: events=325 emitted=325
+  speed: 0-50=1 50-150=5 150-300=73 300-600=240 600-1000=6 1000-1600=0 1600-2400=0 >=2400=0 max=659.2
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=2 2.5-3=50 3-3.5=215 >=3.5=58 max=4.2
+  emit delta: 0-1=1 1-2=0 2-4=0 4-8=0 8-16=1 16-32=5 32-64=32 64-127=203 >=127=113 max=1448.2
+  probe raw: delta: 0-0.2=1 0.2-0.5=0 0.5-1=1 1-2=15 2-4=141 4-8=167 8-16=0 16-32=0 >=32=0 max=7.8 | turn: 0-2=84 2-5=77 5-10=82 10-20=67 20-35=12 35-60=0 60-90=0 >=90=0 max=33.7 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=2 20-33ms=8 33-50ms=45 50-100ms=252 >=100ms=18 max=109.4ms
+  probe pointer: dtMinClamp=322 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=322 12-17ms=2 17-25ms=1 25-34ms=0 34-50ms=0 >=50ms=0 max=20.8ms | turn: 0-2=84 2-5=77 5-10=82 10-20=67 20-35=12 35-60=0 60-90=0 >=90=0 max=33.7
+  BLE: attempts=8 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=2 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=10 34-50ms=0 >=50ms=25 max=114.4ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=30 subframes=30 capped=16 staleDrops=0 maxBatch=1 maxPending=1874
+  UDP sender: ticks=500 emitted=30 emptyWhileActive=175
+  UDP timer dt: 0-4ms=263 4-8ms=237 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=5 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=3 34-50ms=0 >=50ms=0 max=32.1ms
+  probe UDP: queueAge: 0-4ms=28 4-8ms=2 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.1ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=30 max=1448.2 | turn: 0-2=0 2-5=0 5-10=0 10-20=1 20-35=4 35-60=3 60-90=0 >=90=0 max=57.0
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  experiment: udpMode=latestWins250Hz pointerDt=clamped90Hz
+  touch: callbacks=34 coalescedSamples=480 motionEvents=480
+  touch dt: 0-4ms=0 4-8ms=480 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  coalesced dt: 0-4ms=0 4-8ms=480 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  pointer: events=480 emitted=480
+  speed: 0-50=0 50-150=2 150-300=57 300-600=371 600-1000=50 1000-1600=0 1600-2400=0 >=2400=0 max=697.1
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=27 3-3.5=226 >=3.5=227 max=4.3
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=5 32-64=15 64-127=212 >=127=289 max=1448.2
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=1 1-2=10 2-4=142 4-8=325 8-16=2 16-32=0 >=32=0 max=8.6 | turn: 0-2=148 2-5=133 5-10=121 10-20=62 20-35=13 35-60=3 60-90=0 >=90=0 max=45 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=47 50-100ms=396 >=100ms=37 max=110.3ms
+  probe pointer: dtMinClamp=480 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=480 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.1ms | turn: 0-2=148 2-5=133 5-10=121 10-20=62 20-35=13 35-60=3 60-90=0 >=90=0 max=45
+  BLE: attempts=34 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=34 max=60.5ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=41 subframes=41 capped=27 staleDrops=0 maxBatch=1 maxPending=3315
+  UDP sender: ticks=500 emitted=41 emptyWhileActive=235
+  UDP timer dt: 0-4ms=251 4-8ms=249 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=7 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=4.2ms
+  probe UDP: queueAge: 0-4ms=36 4-8ms=5 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.4ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=41 max=1448.2 | turn: 0-2=0 2-5=0 5-10=0 10-20=2 20-35=4 35-60=0 60-90=1 >=90=0 max=60.7
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  experiment: udpMode=latestWins250Hz pointerDt=clamped90Hz
+  touch: callbacks=18 coalescedSamples=252 motionEvents=252
+  touch dt: 0-4ms=0 4-8ms=248 8-12ms=4 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=8.3ms
+  coalesced dt: 0-4ms=0 4-8ms=248 8-12ms=4 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=8.3ms
+  pointer: events=252 emitted=252
+  speed: 0-50=3 50-150=21 150-300=65 300-600=149 600-1000=14 1000-1600=0 1600-2400=0 >=2400=0 max=726.2
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=17 2.5-3=59 3-3.5=79 >=3.5=97 max=4.4
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=7 8-16=7 16-32=10 32-64=43 64-127=79 >=127=123 max=1448.2
+  probe raw: delta: 0-0.2=0 0.2-0.5=8 0.5-1=7 1-2=23 2-4=71 4-8=138 8-16=5 16-32=0 >=32=0 max=9.0 | turn: 0-2=80 2-5=60 5-10=57 10-20=38 20-35=7 35-60=5 60-90=3 >=90=2 max=135.0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=23 50-100ms=209 >=100ms=20 max=110.4ms
+  probe pointer: dtMinClamp=252 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=252 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.1ms | turn: 0-2=80 2-5=60 5-10=57 10-20=38 20-35=7 35-60=5 60-90=3 >=90=2 max=135.0
+  BLE: attempts=47 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=3 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=22 34-50ms=0 >=50ms=22 max=109.8ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=17 subframes=17 capped=12 staleDrops=1 maxBatch=1 maxPending=2568
+  UDP sender: ticks=501 emitted=17 emptyWhileActive=123
+  UDP timer dt: 0-4ms=270 4-8ms=231 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=17 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=3.6ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=17 max=1448.2 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=1 absDx=846 absDy=13
+
+22:43:57.031 -> 📈 ESP smooth | UDP rawPkts=12/s datagrams=12/s subframes=12/s malformed=0 queueMax=6 overflow=0 | HID ticks=1650/s reports=12/s reportFails=0 staleDrops=0 lateMax=0.5ms
+22:43:57.031 ->   net: wifi=connected ip=192.168.18.125 rssi=-35 mounted=yes | udpRx iters=999/s
+22:43:57.031 ->   HID interval ms <2=3 2-4=4 4-8=0 8-16=0 >=16=4
+22:43:57.031 ->   emit delta:    0=0 1=1 2-4=0 4-8=0 8-16=0 16-32=3 32-64=1 64-127=7
+22:43:58.048 -> 📈 ESP smooth | UDP rawPkts=10/s datagrams=10/s subframes=10/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=10/s reportFails=0 staleDrops=0 lateMax=0.2ms
+22:43:58.048 ->   net: wifi=connected ip=192.168.18.125 rssi=-39 mounted=yes | udpRx iters=1001/s
+22:43:58.048 ->   HID interval ms <2=1 2-4=2 4-8=0 8-16=0 >=16=7
+22:43:58.048 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=1 16-32=1 32-64=4 64-127=4
+22:43:59.036 -> 📈 ESP smooth | UDP rawPkts=11/s datagrams=11/s subframes=11/s malformed=0 queueMax=3 overflow=0 | HID ticks=500/s reports=12/s reportFails=0 staleDrops=0 lateMax=0.2ms
+22:43:59.036 ->   net: wifi=connected ip=192.168.18.125 rssi=-36 mounted=yes | udpRx iters=999/s
+22:43:59.036 ->   HID interval ms <2=1 2-4=2 4-8=0 8-16=0 >=16=9
+22:43:59.036 ->   emit delta:    0=0 1=1 2-4=1 4-8=0 8-16=2 16-32=3 32-64=3 64-127=2
+22:44:00.054 -> 📈 ESP smooth | UDP rawPkts=12/s datagrams=12/s subframes=12/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=13/s reportFails=0 staleDrops=0 lateMax=0.2ms
+22:44:00.054 ->   net: wifi=connected ip=192.168.18.125 rssi=-36 mounted=yes | udpRx iters=1001/s
+22:44:00.054 ->   HID interval ms <2=2 2-4=0 4-8=0 8-16=0 >=16=11
+22:44:00.054 ->   emit delta:    0=0 1=1 2-4=0 4-8=3 8-16=1 16-32=2 32-64=1 64-127=5
+22:44:01.042 -> 📈 ESP smooth | UDP rawPkts=8/s datagrams=8/s subframes=8/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=8/s reportFails=0 staleDrops=1 lateMax=0.2ms
+22:44:01.042 ->   net: wifi=connected ip=192.168.18.125 rssi=-36 mounted=yes | udpRx iters=1001/s
+22:44:01.042 ->   HID interval ms <2=1 2-4=1 4-8=0 8-16=0 >=16=6
+22:44:01.042 ->   emit delta:    0=0 1=1 2-4=0 4-8=0 8-16=3 16-32=1 32-64=1 64-127=2
+22:44:02.060 -> 📈 ESP smooth | UDP rawPkts=9/s datagrams=9/s subframes=9/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=9/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:44:02.060 ->   net: wifi=connected ip=192.168.18.125 rssi=-36 mounted=yes | udpRx iters=1000/s
+22:44:02.060 ->   HID interval ms <2=0 2-4=1 4-8=0 8-16=0 >=16=8
+22:44:02.060 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=1 16-32=0 32-64=1 64-127=7
+22:44:03.044 -> 📈 ESP smooth | UDP rawPkts=17/s datagrams=17/s subframes=17/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=19/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:44:03.044 ->   net: wifi=connected ip=192.168.18.125 rssi=-36 mounted=yes | udpRx iters=1001/s
+22:44:03.044 ->   HID interval ms <2=3 2-4=0 4-8=0 8-16=1 >=16=15
+22:44:03.044 ->   emit delta:    0=0 1=2 2-4=0 4-8=0 8-16=0 16-32=0 32-64=2 64-127=15
+22:44:04.060 -> 📈 ESP smooth | UDP rawPkts=9/s datagrams=9/s subframes=9/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=9/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:44:04.060 ->   net: wifi=connected ip=192.168.18.125 rssi=-36 mounted=yes | udpRx iters=1001/s
+22:44:04.060 ->   HID interval ms <2=1 2-4=0 4-8=0 8-16=0 >=16=8
+22:44:04.060 ->   emit delta:    0=0 1=0 2-4=0 4-8=2 8-16=0 16-32=1 32-64=5 64-127=1
+22:44:05.039 -> 📈 ESP smooth | UDP rawPkts=17/s datagrams=17/s subframes=17/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=17/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:44:05.039 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=1001/s
+22:44:05.039 ->   HID interval ms <2=0 2-4=1 4-8=1 8-16=0 >=16=15
+22:44:05.039 ->   emit delta:    0=0 1=0 2-4=0 4-8=1 8-16=1 16-32=0 32-64=3 64-127=12
+22:44:06.056 -> 📈 ESP smooth | UDP rawPkts=10/s datagrams=10/s subframes=10/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=11/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:44:06.056 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=1001/s
+22:44:06.056 ->   HID interval ms <2=1 2-4=2 4-8=2 8-16=0 >=16=6
+22:44:06.056 ->   emit delta:    0=0 1=1 2-4=1 4-8=0 8-16=3 16-32=0 32-64=3 64-127=3
+22:44:07.042 -> 📈 ESP smooth | UDP rawPkts=22/s datagrams=22/s subframes=22/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=31/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:44:07.074 ->   net: wifi=connected ip=192.168.18.125 rssi=-36 mounted=yes | udpRx iters=1001/s
+22:44:07.074 ->   HID interval ms <2=7 2-4=8 4-8=0 8-16=1 >=16=15
+22:44:07.074 ->   emit delta:    0=0 1=9 2-4=0 4-8=0 8-16=0 16-32=1 32-64=3 64-127=18
+22:44:08.063 -> 📈 ESP smooth | UDP rawPkts=12/s datagrams=12/s subframes=12/s malformed=0 queueMax=1 overflow=0 | HID ticks=500/s reports=18/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:44:08.063 ->   net: wifi=connected ip=192.168.18.125 rssi=-36 mounted=yes | udpRx iters=1001/s
+22:44:08.063 ->   HID interval ms <2=2 2-4=4 4-8=0 8-16=0 >=16=12
+22:44:08.063 ->   emit delta:    0=0 1=6 2-4=0 4-8=0 8-16=0 16-32=0 32-64=1 64-127=11
+22:44:09.048 -> 📈 ESP smooth | UDP rawPkts=23/s datagrams=23/s subframes=23/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=31/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:44:09.048 ->   net: wifi=connected ip=192.168.18.125 rssi=-35 mounted=yes | udpRx iters=999/s
+22:44:09.048 ->   HID interval ms <2=5 2-4=9 4-8=1 8-16=0 >=16=16
+22:44:09.048 ->   emit delta:    0=0 1=8 2-4=0 4-8=0 8-16=0 16-32=1 32-64=4 64-127=18
+22:44:10.061 -> 📈 ESP smooth | UDP rawPkts=18/s datagrams=18/s subframes=18/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=28/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:44:10.061 ->   net: wifi=connected ip=192.168.18.125 rssi=-35 mounted=yes | udpRx iters=1001/s
+22:44:10.061 ->   HID interval ms <2=6 2-4=5 4-8=0 8-16=0 >=16=17
+22:44:10.061 ->   emit delta:    0=0 1=10 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=18
+22:44:11.076 -> 📈 ESP smooth | UDP rawPkts=9/s datagrams=9/s subframes=9/s malformed=0 queueMax=5 overflow=0 | HID ticks=500/s reports=12/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:44:11.076 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=999/s
+22:44:11.076 ->   HID interval ms <2=3 2-4=6 4-8=0 8-16=0 >=16=3
+22:44:11.076 ->   emit delta:    0=0 1=3 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=9
+22:44:12.059 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:44:12.059 ->   net: wifi=connected ip=192.168.18.125 rssi=-41 mounted=yes | udpRx iters=1001/s
+22:44:12.059 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:44:12.059 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:44:13.080 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:44:13.080 ->   net: wifi=connected ip=192.168.18.125 rssi=-41 mounted=yes | udpRx iters=1001/s
+22:44:13.080 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:44:13.080 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:44:14.067 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:44:14.067 ->   net: wifi=connected ip=192.168.18.125 rssi=-39 mounted=yes | udpRx iters=1001/s
+22:44:14.067 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:44:14.067 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+
+log 3
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 >=32=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 50-100ms=0 >=100ms=0 max=0ms
+  probe pointer: dtMinClamp=0 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=97 17-25ms=23 25-34ms=0 34-50ms=0 >=50ms=0 max=17.9ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=259 4-8ms=241 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 >=32=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 50-100ms=0 >=100ms=0 max=0ms
+  probe pointer: dtMinClamp=0 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=94 17-25ms=26 25-34ms=0 34-50ms=0 >=50ms=0 max=17.8ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=501 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=254 4-8ms=247 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=32 coalescedSamples=162 motionEvents=161
+  touch dt: 0-4ms=0 4-8ms=156 8-12ms=3 12-20ms=1 20-33ms=0 33-50ms=0 >=50ms=1 max=93.8ms
+  coalesced dt: 0-4ms=0 4-8ms=156 8-12ms=3 12-20ms=1 20-33ms=0 33-50ms=0 >=50ms=1 max=93.8ms
+  pointer: events=161 emitted=161
+  speed: 0-50=12 50-150=134 150-300=15 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=217.5
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=53 2.5-3=108 3-3.5=0 >=3.5=0 max=2.8
+  emit delta: 0-1=1 1-2=0 2-4=0 4-8=20 8-16=18 16-32=171 32-64=105 64-127=2 >=127=2 max=137.2
+  probe raw: delta: 0-0.2=1 0.2-0.5=10 0.5-1=11 1-2=132 2-4=5 4-8=2 8-16=0 16-32=0 >=32=0 max=6.0 | turn: 0-2=64 2-5=6 5-10=2 10-20=57 20-35=22 35-60=7 60-90=0 >=90=1 max=106.3 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=1 20-33ms=38 33-50ms=103 50-100ms=19 >=100ms=0 max=63.6ms
+  probe pointer: dtMinClamp=159 dtMaxClamp=1 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=159 12-17ms=1 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=64 2-5=6 5-10=2 10-20=57 20-35=22 35-60=7 60-90=0 >=90=1 max=106.3
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=52 17-25ms=14 25-34ms=14 34-50ms=12 >=50ms=0 max=43.5ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=158 subframes=158 capped=0 staleDrops=3 maxBatch=9 maxPending=338
+  UDP sender: ticks=500 emitted=158 emptyWhileActive=25
+  UDP timer dt: 0-4ms=249 4-8ms=251 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=151 8-12ms=2 12-17ms=3 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=28.0ms
+  probe UDP: queueAge: 0-4ms=17 4-8ms=24 8-12ms=26 12-20ms=49 20-33ms=42 33-50ms=0 >=50ms=0 max=31.6ms | delta: 0-1=0 1-2=0 2-4=0 4-8=10 8-16=9 16-32=85 32-64=52 64-127=1 >=127=1 max=136.8 | turn: 0-2=62 2-5=6 5-10=2 10-20=55 20-35=25 35-60=6 60-90=0 >=90=1 max=106.6
+  dropped movement: events=3 absDx=70 absDy=7
+📈 Movement diagnostics
+  touch: callbacks=33 coalescedSamples=170 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 >=32=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 50-100ms=0 >=100ms=0 max=0ms
+  probe pointer: dtMinClamp=0 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  BLE: attempts=1 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=53 17-25ms=13 25-34ms=15 34-50ms=10 >=50ms=1 max=54.6ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=501 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=242 4-8ms=259 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=26 coalescedSamples=145 motionEvents=144
+  touch dt: 0-4ms=0 4-8ms=143 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=1 >=50ms=0 max=37.5ms
+  coalesced dt: 0-4ms=0 4-8ms=143 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=1 >=50ms=0 max=37.5ms
+  pointer: events=144 emitted=144
+  speed: 0-50=1 50-150=49 150-300=94 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=288.1
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=6 2.5-3=124 3-3.5=14 >=3.5=0 max=3.1
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=1 8-16=2 16-32=54 32-64=164 64-127=53 >=127=2 max=171.5
+  probe raw: delta: 0-0.2=0 0.2-0.5=1 0.5-1=4 1-2=59 2-4=78 4-8=2 8-16=0 16-32=0 >=32=0 max=7.2 | turn: 0-2=76 2-5=15 5-10=33 10-20=16 20-35=1 35-60=2 60-90=0 >=90=0 max=59.0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=28 33-50ms=85 50-100ms=31 >=100ms=0 max=76.2ms
+  probe pointer: dtMinClamp=143 dtMaxClamp=1 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=143 12-17ms=0 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=76 2-5=15 5-10=33 10-20=16 20-35=1 35-60=2 60-90=0 >=90=0 max=59.0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=58 17-25ms=18 25-34ms=10 34-50ms=7 >=50ms=2 max=70.4ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=132 subframes=132 capped=0 staleDrops=5 maxBatch=10 maxPending=605
+  UDP sender: ticks=500 emitted=132 emptyWhileActive=14
+  UDP timer dt: 0-4ms=249 4-8ms=251 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=125 8-12ms=2 12-17ms=2 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=16.0ms
+  probe UDP: queueAge: 0-4ms=15 4-8ms=17 8-12ms=18 12-20ms=40 20-33ms=42 33-50ms=0 >=50ms=0 max=31.5ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=25 32-64=80 64-127=26 >=127=1 max=171.5 | turn: 0-2=69 2-5=13 5-10=26 10-20=19 20-35=0 35-60=1 60-90=1 >=90=0 max=61.2
+  dropped movement: events=5 absDx=363 absDy=29
+📈 Movement diagnostics
+  touch: callbacks=48 coalescedSamples=269 motionEvents=264
+  touch dt: 0-4ms=0 4-8ms=255 8-12ms=5 12-20ms=1 20-33ms=0 33-50ms=0 >=50ms=3 max=62.6ms
+  coalesced dt: 0-4ms=0 4-8ms=257 8-12ms=5 12-20ms=2 20-33ms=0 33-50ms=0 >=50ms=3 max=62.6ms
+  pointer: events=264 emitted=264
+  speed: 0-50=35 50-150=94 150-300=134 300-600=1 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=304.5
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=83 2.5-3=163 3-3.5=18 >=3.5=0 max=3.1
+  emit delta: 0-1=2 1-2=0 2-4=0 4-8=65 8-16=32 16-32=117 32-64=230 64-127=65 >=127=2 max=227.5
+  probe raw: delta: 0-0.2=2 0.2-0.5=37 0.5-1=13 1-2=92 2-4=117 4-8=2 8-16=1 16-32=0 >=32=0 max=11.3 | turn: 0-2=141 2-5=19 5-10=53 10-20=34 20-35=4 35-60=7 60-90=0 >=90=1 max=90 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=2 20-33ms=65 33-50ms=157 50-100ms=40 >=100ms=0 max=64.4ms
+  probe pointer: dtMinClamp=260 dtMaxClamp=3 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=260 12-17ms=1 17-25ms=0 25-34ms=3 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=141 2-5=19 5-10=53 10-20=34 20-35=4 35-60=7 60-90=0 >=90=2 max=180
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=28 17-25ms=9 25-34ms=23 34-50ms=11 >=50ms=4 max=69.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=249 subframes=249 capped=0 staleDrops=15 maxBatch=12 maxPending=693
+  UDP sender: ticks=500 emitted=249 emptyWhileActive=49
+  UDP timer dt: 0-4ms=237 4-8ms=263 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=233 8-12ms=4 12-17ms=4 17-25ms=5 25-34ms=0 34-50ms=0 >=50ms=0 max=24.5ms
+  probe UDP: queueAge: 0-4ms=25 4-8ms=35 8-12ms=38 12-20ms=74 20-33ms=77 33-50ms=0 >=50ms=0 max=31.7ms | delta: 0-1=0 1-2=0 2-4=0 4-8=33 8-16=15 16-32=57 32-64=111 64-127=32 >=127=1 max=227 | turn: 0-2=134 2-5=24 5-10=46 10-20=28 20-35=6 35-60=7 60-90=0 >=90=1 max=90
+  dropped movement: events=15 absDx=558 absDy=64
+📈 Movement diagnostics
+  touch: callbacks=39 coalescedSamples=219 motionEvents=218
+  touch dt: 0-4ms=0 4-8ms=215 8-12ms=2 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=1 max=70.8ms
+  coalesced dt: 0-4ms=0 4-8ms=215 8-12ms=2 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=1 max=70.8ms
+  pointer: events=218 emitted=218
+  speed: 0-50=9 50-150=75 150-300=134 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=293.4
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=74 2.5-3=122 3-3.5=22 >=3.5=0 max=3.1
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=18 8-16=34 16-32=108 32-64=198 64-127=72 >=127=2 max=185
+  probe raw: delta: 0-0.2=0 0.2-0.5=9 0.5-1=20 1-2=60 2-4=127 4-8=2 8-16=0 16-32=0 >=32=0 max=7.7 | turn: 0-2=107 2-5=13 5-10=44 10-20=41 20-35=8 35-60=0 60-90=1 >=90=3 max=162.9 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=1 20-33ms=52 33-50ms=133 50-100ms=32 >=100ms=0 max=60.4ms
+  probe pointer: dtMinClamp=217 dtMaxClamp=1 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=217 12-17ms=0 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=107 2-5=13 5-10=44 10-20=41 20-35=8 35-60=0 60-90=1 >=90=3 max=162.9
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=47 17-25ms=11 25-34ms=20 34-50ms=11 >=50ms=0 max=44.0ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=214 subframes=214 capped=0 staleDrops=5 maxBatch=9 maxPending=618
+  UDP sender: ticks=501 emitted=214 emptyWhileActive=24
+  UDP timer dt: 0-4ms=243 4-8ms=257 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=205 8-12ms=3 12-17ms=4 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=28.2ms
+  probe UDP: queueAge: 0-4ms=17 4-8ms=33 8-12ms=36 12-20ms=65 20-33ms=63 33-50ms=0 >=50ms=0 max=31.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=9 8-16=17 16-32=53 32-64=98 64-127=36 >=127=1 max=185 | turn: 0-2=104 2-5=15 5-10=46 10-20=24 20-35=20 35-60=0 60-90=0 >=90=4 max=161.6
+  dropped movement: events=5 absDx=6 absDy=171
+📈 Movement diagnostics
+  touch: callbacks=34 coalescedSamples=190 motionEvents=189
+  touch dt: 0-4ms=0 4-8ms=183 8-12ms=5 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=1 max=54.2ms
+  coalesced dt: 0-4ms=0 4-8ms=183 8-12ms=5 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=1 max=54.2ms
+  pointer: events=189 emitted=189
+  speed: 0-50=15 50-150=42 150-300=132 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=266.9
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=51 2.5-3=138 3-3.5=0 >=3.5=0 max=3.0
+  emit delta: 0-1=1 1-2=0 2-4=0 4-8=30 8-16=42 16-32=44 32-64=226 64-127=26 >=127=2 max=155.9
+  probe raw: delta: 0-0.2=1 0.2-0.5=16 0.5-1=22 1-2=21 2-4=128 4-8=1 8-16=0 16-32=0 >=32=0 max=6.7 | turn: 0-2=81 2-5=12 5-10=53 10-20=22 20-35=17 35-60=2 60-90=0 >=90=0 max=54.5 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=1 20-33ms=37 33-50ms=114 50-100ms=37 >=100ms=0 max=65.3ms
+  probe pointer: dtMinClamp=188 dtMaxClamp=1 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=188 12-17ms=0 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=81 2-5=12 5-10=53 10-20=22 20-35=17 35-60=2 60-90=0 >=90=0 max=54.5
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=54 17-25ms=9 25-34ms=16 34-50ms=6 >=50ms=3 max=73.5ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=182 subframes=182 capped=0 staleDrops=7 maxBatch=10 maxPending=548
+  UDP sender: ticks=500 emitted=182 emptyWhileActive=30
+  UDP timer dt: 0-4ms=242 4-8ms=259 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=175 8-12ms=1 12-17ms=3 17-25ms=1 25-34ms=1 34-50ms=0 >=50ms=0 max=31.8ms
+  probe UDP: queueAge: 0-4ms=22 4-8ms=26 8-12ms=29 12-20ms=52 20-33ms=53 33-50ms=0 >=50ms=0 max=31.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=15 8-16=21 16-32=22 32-64=110 64-127=13 >=127=1 max=155.6 | turn: 0-2=80 2-5=11 5-10=49 10-20=19 20-35=20 35-60=2 60-90=0 >=90=0 max=54.9
+  dropped movement: events=7 absDx=30 absDy=323
+📈 Movement diagnostics
+  touch: callbacks=45 coalescedSamples=210 motionEvents=207
+  touch dt: 0-4ms=0 4-8ms=195 8-12ms=7 12-20ms=2 20-33ms=1 33-50ms=1 >=50ms=1 max=66.7ms
+  coalesced dt: 0-4ms=0 4-8ms=195 8-12ms=7 12-20ms=3 20-33ms=1 33-50ms=1 >=50ms=1 max=66.7ms
+  pointer: events=207 emitted=207
+  speed: 0-50=32 50-150=29 150-300=124 300-600=22 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=360.1
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=52 2.5-3=121 3-3.5=34 >=3.5=0 max=3.3
+  emit delta: 0-1=2 1-2=0 2-4=0 4-8=51 8-16=34 16-32=27 32-64=198 64-127=89 >=127=4 max=195.3
+  probe raw: delta: 0-0.2=2 0.2-0.5=27 0.5-1=18 1-2=25 2-4=126 4-8=8 8-16=1 16-32=0 >=32=0 max=8 | turn: 0-2=147 2-5=10 5-10=29 10-20=11 20-35=2 35-60=0 60-90=0 >=90=3 max=90 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=1 20-33ms=58 33-50ms=126 50-100ms=22 >=100ms=0 max=57.6ms
+  probe pointer: dtMinClamp=202 dtMaxClamp=2 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=202 12-17ms=2 17-25ms=1 25-34ms=2 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=147 2-5=10 5-10=29 10-20=11 20-35=2 35-60=0 60-90=0 >=90=4 max=180
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=48 17-25ms=9 25-34ms=18 34-50ms=9 >=50ms=3 max=55.1ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=198 subframes=198 capped=0 staleDrops=3 maxBatch=8 maxPending=800
+  UDP sender: ticks=500 emitted=198 emptyWhileActive=47
+  UDP timer dt: 0-4ms=239 4-8ms=261 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=184 8-12ms=5 12-17ms=1 17-25ms=3 25-34ms=2 34-50ms=0 >=50ms=0 max=28.0ms
+  probe UDP: queueAge: 0-4ms=22 4-8ms=38 8-12ms=35 12-20ms=58 20-33ms=45 33-50ms=0 >=50ms=0 max=31.4ms | delta: 0-1=0 1-2=0 2-4=0 4-8=24 8-16=16 16-32=13 32-64=99 64-127=44 >=127=2 max=195 | turn: 0-2=140 2-5=8 5-10=30 10-20=12 20-35=2 35-60=0 60-90=0 >=90=3 max=90
+  dropped movement: events=3 absDx=133 absDy=41
+📈 Movement diagnostics
+  touch: callbacks=64 coalescedSamples=376 motionEvents=375
+  touch dt: 0-4ms=0 4-8ms=374 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=1 >=50ms=0 max=37.5ms
+  coalesced dt: 0-4ms=0 4-8ms=374 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=1 >=50ms=0 max=37.5ms
+  pointer: events=375 emitted=375
+  speed: 0-50=0 50-150=12 150-300=342 300-600=21 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=472.9
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=1 2.5-3=321 3-3.5=51 >=3.5=2 max=3.6
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=2 16-32=12 32-64=518 64-127=203 >=127=4 max=387.5
+  probe raw: delta: 0-0.2=0 0.2-0.5=1 0.5-1=0 1-2=57 2-4=312 4-8=4 8-16=1 16-32=0 >=32=0 max=13.3 | turn: 0-2=125 2-5=68 5-10=129 10-20=47 20-35=3 35-60=0 60-90=0 >=90=2 max=94.4 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=93 33-50ms=232 50-100ms=50 >=100ms=0 max=60.2ms
+  probe pointer: dtMinClamp=374 dtMaxClamp=1 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=374 12-17ms=0 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=125 2-5=68 5-10=129 10-20=47 20-35=3 35-60=0 60-90=0 >=90=2 max=94.4
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=20 17-25ms=7 25-34ms=31 34-50ms=15 >=50ms=0 max=43.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=364 subframes=364 capped=0 staleDrops=5 maxBatch=9 maxPending=695
+  UDP sender: ticks=500 emitted=364 emptyWhileActive=27
+  UDP timer dt: 0-4ms=249 4-8ms=251 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=350 8-12ms=5 12-17ms=7 17-25ms=1 25-34ms=0 34-50ms=0 >=50ms=0 max=19.2ms
+  probe UDP: queueAge: 0-4ms=33 4-8ms=55 8-12ms=60 12-20ms=113 20-33ms=103 33-50ms=0 >=50ms=0 max=31.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=1 16-32=6 32-64=253 64-127=102 >=127=2 max=387.5 | turn: 0-2=120 2-5=66 5-10=122 10-20=50 20-35=3 35-60=0 60-90=0 >=90=2 max=94.2
+  dropped movement: events=5 absDx=156 absDy=150
+📈 Movement diagnostics
+  touch: callbacks=75 coalescedSamples=459 motionEvents=458
+  touch dt: 0-4ms=0 4-8ms=456 8-12ms=1 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=1 max=66.7ms
+  coalesced dt: 0-4ms=0 4-8ms=456 8-12ms=2 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=1 max=66.7ms
+  pointer: events=458 emitted=458
+  speed: 0-50=13 50-150=97 150-300=348 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=281.8
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=25 2.5-3=425 3-3.5=8 >=3.5=0 max=3.0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=22 8-16=18 16-32=114 32-64=686 64-127=72 >=127=0 max=81.2
+  probe raw: delta: 0-0.2=0 0.2-0.5=14 0.5-1=7 1-2=203 2-4=234 4-8=0 8-16=0 16-32=0 >=32=0 max=3.3 | turn: 0-2=157 2-5=77 5-10=117 10-20=90 20-35=6 35-60=6 60-90=0 >=90=4 max=135.0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=3 20-33ms=108 33-50ms=268 50-100ms=79 >=100ms=0 max=62.9ms
+  probe pointer: dtMinClamp=457 dtMaxClamp=1 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=457 12-17ms=0 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=157 2-5=77 5-10=117 10-20=90 20-35=6 35-60=7 60-90=0 >=90=4 max=135.0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=2 17-25ms=0 25-34ms=39 34-50ms=18 >=50ms=0 max=45.8ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=454 subframes=454 capped=0 staleDrops=10 maxBatch=10 maxPending=570
+  UDP sender: ticks=501 emitted=454 emptyWhileActive=36
+  UDP timer dt: 0-4ms=253 4-8ms=248 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=439 8-12ms=5 12-17ms=8 17-25ms=1 25-34ms=0 34-50ms=0 >=50ms=0 max=24.2ms
+  probe UDP: queueAge: 0-4ms=42 4-8ms=65 8-12ms=70 12-20ms=139 20-33ms=138 33-50ms=0 >=50ms=0 max=31.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=11 8-16=9 16-32=56 32-64=341 64-127=37 >=127=0 max=81 | turn: 0-2=154 2-5=69 5-10=122 10-20=92 20-35=6 35-60=6 60-90=0 >=90=4 max=135
+  dropped movement: events=10 absDx=272 absDy=263
+📈 Movement diagnostics
+  touch: callbacks=42 coalescedSamples=249 motionEvents=248
+  touch dt: 0-4ms=0 4-8ms=240 8-12ms=5 12-20ms=2 20-33ms=0 33-50ms=1 >=50ms=0 max=35.4ms
+  coalesced dt: 0-4ms=0 4-8ms=240 8-12ms=5 12-20ms=2 20-33ms=0 33-50ms=1 >=50ms=0 max=35.4ms
+  pointer: events=248 emitted=248
+  speed: 0-50=31 50-150=2 150-300=43 300-600=165 600-1000=7 1000-1600=0 1600-2400=0 >=2400=0 max=647.6
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=33 2.5-3=25 3-3.5=100 >=3.5=90 max=4.1
+  emit delta: 0-1=2 1-2=0 2-4=0 4-8=43 8-16=16 16-32=2 32-64=30 64-127=190 >=127=194 max=253.5
+  probe raw: delta: 0-0.2=2 0.2-0.5=22 0.5-1=8 1-2=3 2-4=88 4-8=124 8-16=1 16-32=0 >=32=0 max=10.7 | turn: 0-2=105 2-5=59 5-10=61 10-20=20 20-35=0 35-60=0 60-90=0 >=90=0 max=19.7 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=51 33-50ms=140 50-100ms=57 >=100ms=0 max=64.6ms
+  probe pointer: dtMinClamp=245 dtMaxClamp=1 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=245 12-17ms=2 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=33.3ms | turn: 0-2=105 2-5=59 5-10=61 10-20=20 20-35=0 35-60=0 60-90=0 >=90=0 max=19.7
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=39 17-25ms=12 25-34ms=18 34-50ms=7 >=50ms=5 max=72.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=230 subframes=229 capped=0 staleDrops=12 maxBatch=10 maxPending=1949
+  UDP sender: ticks=501 emitted=230 emptyWhileActive=43
+  UDP timer dt: 0-4ms=249 4-8ms=251 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=217 8-12ms=2 12-17ms=6 17-25ms=3 25-34ms=1 34-50ms=0 >=50ms=0 max=28.0ms
+  probe UDP: queueAge: 0-4ms=23 4-8ms=34 8-12ms=30 12-20ms=64 20-33ms=78 33-50ms=0 >=50ms=0 max=31.8ms | delta: 0-1=0 1-2=0 2-4=0 4-8=21 8-16=8 16-32=1 32-64=15 64-127=92 >=127=92 max=252.7 | turn: 0-2=103 2-5=53 5-10=52 10-20=20 20-35=0 35-60=0 60-90=0 >=90=0 max=20.0
+  dropped movement: events=12 absDx=483 absDy=999
+📈 Movement diagnostics
+  touch: callbacks=78 coalescedSamples=480 motionEvents=480
+  touch dt: 0-4ms=0 4-8ms=480 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  coalesced dt: 0-4ms=0 4-8ms=480 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  pointer: events=480 emitted=480
+  speed: 0-50=0 50-150=0 150-300=0 300-600=385 600-1000=95 1000-1600=0 1600-2400=0 >=2400=0 max=750.0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=1 >=3.5=479 max=4.4
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=2 >=127=944 max=314.5
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=463 8-16=17 16-32=0 >=32=0 max=8.9 | turn: 0-2=116 2-5=151 5-10=153 10-20=60 20-35=0 35-60=0 60-90=0 >=90=0 max=19.8 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=126 33-50ms=281 50-100ms=73 >=100ms=0 max=62.6ms
+  probe pointer: dtMinClamp=480 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=480 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.1ms | turn: 0-2=116 2-5=151 5-10=153 10-20=60 20-35=0 35-60=0 60-90=0 >=90=0 max=19.8
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=38 34-50ms=20 >=50ms=0 max=44.8ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=465 subframes=466 capped=0 staleDrops=15 maxBatch=10 maxPending=1972
+  UDP sender: ticks=500 emitted=465 emptyWhileActive=35
+  UDP timer dt: 0-4ms=246 4-8ms=255 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=452 8-12ms=5 12-17ms=8 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=16.1ms
+  probe UDP: queueAge: 0-4ms=39 4-8ms=69 8-12ms=69 12-20ms=140 20-33ms=149 33-50ms=0 >=50ms=0 max=31.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=1 >=127=465 max=314.5 | turn: 0-2=110 2-5=141 5-10=151 10-20=63 20-35=1 35-60=0 60-90=0 >=90=0 max=20.0
+  dropped movement: events=15 absDx=1832 absDy=1877
+📈 Movement diagnostics
+  touch: callbacks=55 coalescedSamples=330 motionEvents=330
+  touch dt: 0-4ms=0 4-8ms=330 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  coalesced dt: 0-4ms=0 4-8ms=330 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  pointer: events=330 emitted=330
+  speed: 0-50=0 50-150=0 150-300=3 300-600=234 600-1000=93 1000-1600=0 1600-2400=0 >=2400=0 max=774.3
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=35 >=3.5=295 max=4.5
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=2 64-127=62 >=127=592 max=322.9
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=14 4-8=294 8-16=22 16-32=0 >=32=0 max=9.0 | turn: 0-2=90 2-5=103 5-10=93 10-20=41 20-35=3 35-60=0 60-90=0 >=90=0 max=26.6 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=78 33-50ms=204 50-100ms=48 >=100ms=0 max=65.1ms
+  probe pointer: dtMinClamp=330 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=330 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.1ms | turn: 0-2=90 2-5=103 5-10=93 10-20=41 20-35=3 35-60=0 60-90=0 >=90=0 max=26.6
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=26 17-25ms=2 25-34ms=23 34-50ms=18 >=50ms=1 max=57.9ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=326 subframes=326 capped=0 staleDrops=4 maxBatch=10 maxPending=1918
+  UDP sender: ticks=500 emitted=326 emptyWhileActive=16
+  UDP timer dt: 0-4ms=240 4-8ms=260 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=320 8-12ms=5 12-17ms=0 17-25ms=1 25-34ms=0 34-50ms=0 >=50ms=0 max=20.3ms
+  probe UDP: queueAge: 0-4ms=29 4-8ms=48 8-12ms=51 12-20ms=104 20-33ms=94 33-50ms=0 >=50ms=0 max=31.9ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=29 >=127=297 max=322.9 | turn: 0-2=93 2-5=98 5-10=91 10-20=41 20-35=3 35-60=0 60-90=0 >=90=0 max=26.6
+  dropped movement: events=4 absDx=433 absDy=721
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 >=32=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 50-100ms=0 >=100ms=0 max=0ms
+  probe pointer: dtMinClamp=0 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=98 17-25ms=22 25-34ms=0 34-50ms=0 >=50ms=0 max=17.6ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=249 4-8ms=251 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 >=32=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 50-100ms=0 >=100ms=0 max=0ms
+  probe pointer: dtMinClamp=0 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=105 17-25ms=15 25-34ms=0 34-50ms=0 >=50ms=0 max=19.3ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=501 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=253 4-8ms=248 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 >=32=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 50-100ms=0 >=100ms=0 max=0ms
+  probe pointer: dtMinClamp=0 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=100 17-25ms=18 25-34ms=0 34-50ms=1 >=50ms=0 max=34.2ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=501 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=238 4-8ms=263 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  probe raw: delta: 0-0.2=0 0.2-0.5=0 0.5-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 >=32=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0 | age: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 50-100ms=0 >=100ms=0 max=0ms
+  probe pointer: dtMinClamp=0 dtMaxClamp=0 | safeDt: 0-4ms=0 4-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=99 17-25ms=17 25-34ms=2 34-50ms=0 >=50ms=0 max=31.3ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=239 4-8ms=261 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  probe UDP: queueAge: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms | delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0 | turn: 0-2=0 2-5=0 5-10=0 10-20=0 20-35=0 35-60=0 60-90=0 >=90=0 max=0
+  dropped movement: events=0 absDx=0 absDy=0
+
+22:22:30.366 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:30.366 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=1001/s
+22:22:30.366 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:22:30.366 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:22:31.363 -> 📈 ESP smooth | UDP rawPkts=42/s datagrams=42/s subframes=42/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=42/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:31.363 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=992/s
+22:22:31.363 ->   HID interval ms <2=11 2-4=18 4-8=7 8-16=2 >=16=4
+22:22:31.363 ->   emit delta:    0=0 1=0 2-4=14 4-8=26 8-16=1 16-32=1 32-64=0 64-127=0
+22:22:32.348 -> 📈 ESP smooth | UDP rawPkts=76/s datagrams=76/s subframes=76/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=74/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:32.348 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=990/s
+22:22:32.348 ->   HID interval ms <2=21 2-4=34 4-8=11 8-16=1 >=16=7
+22:22:32.348 ->   emit delta:    0=0 1=11 2-4=42 4-8=21 8-16=0 16-32=0 32-64=0 64-127=0
+22:22:33.368 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.2ms
+22:22:33.368 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=1001/s
+22:22:33.368 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:22:33.368 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:22:34.381 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.2ms
+22:22:34.381 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=1001/s
+22:22:34.381 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:22:34.381 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:22:35.368 -> 📈 ESP smooth | UDP rawPkts=100/s datagrams=100/s subframes=100/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=100/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:35.368 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=983/s
+22:22:35.368 ->   HID interval ms <2=28 2-4=46 4-8=14 8-16=1 >=16=11
+22:22:35.368 ->   emit delta:    0=0 1=1 2-4=11 4-8=58 8-16=29 16-32=1 32-64=0 64-127=0
+22:22:36.384 -> 📈 ESP smooth | UDP rawPkts=16/s datagrams=16/s subframes=16/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=12/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:22:36.384 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=995/s
+22:22:36.384 ->   HID interval ms <2=5 2-4=3 4-8=0 8-16=1 >=16=3
+22:22:36.384 ->   emit delta:    0=0 1=0 2-4=1 4-8=10 8-16=1 16-32=0 32-64=0 64-127=0
+22:22:37.370 -> 📈 ESP smooth | UDP rawPkts=71/s datagrams=71/s subframes=71/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=68/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:37.370 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=989/s
+22:22:37.370 ->   HID interval ms <2=17 2-4=25 4-8=16 8-16=4 >=16=6
+22:22:37.370 ->   emit delta:    0=0 1=19 2-4=17 4-8=25 8-16=7 16-32=0 32-64=0 64-127=0
+22:22:38.390 -> 📈 ESP smooth | UDP rawPkts=102/s datagrams=102/s subframes=102/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=99/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:38.390 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=989/s
+22:22:38.390 ->   HID interval ms <2=21 2-4=38 4-8=26 8-16=4 >=16=10
+22:22:38.390 ->   emit delta:    0=0 1=10 2-4=31 4-8=35 8-16=22 16-32=1 32-64=0 64-127=0
+22:22:39.378 -> 📈 ESP smooth | UDP rawPkts=90/s datagrams=90/s subframes=90/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=90/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:39.379 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=988/s
+22:22:39.379 ->   HID interval ms <2=25 2-4=36 4-8=17 8-16=3 >=16=9
+22:22:39.379 ->   emit delta:    0=0 1=1 2-4=6 4-8=27 8-16=55 16-32=1 32-64=0 64-127=0
+22:22:40.391 -> 📈 ESP smooth | UDP rawPkts=76/s datagrams=76/s subframes=76/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=74/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:22:40.391 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=987/s
+22:22:40.391 ->   HID interval ms <2=18 2-4=36 4-8=13 8-16=1 >=16=6
+22:22:40.391 ->   emit delta:    0=0 1=7 2-4=35 4-8=25 8-16=7 16-32=0 32-64=0 64-127=0
+22:22:41.377 -> 📈 ESP smooth | UDP rawPkts=141/s datagrams=141/s subframes=141/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=138/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:41.377 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=981/s
+22:22:41.377 ->   HID interval ms <2=34 2-4=51 4-8=37 8-16=5 >=16=11
+22:22:41.377 ->   emit delta:    0=0 1=22 2-4=25 4-8=56 8-16=34 16-32=1 32-64=0 64-127=0
+22:22:42.395 -> 📈 ESP smooth | UDP rawPkts=32/s datagrams=32/s subframes=32/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=28/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:42.395 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=998/s
+22:22:42.395 ->   HID interval ms <2=9 2-4=8 4-8=6 8-16=0 >=16=5
+22:22:42.395 ->   emit delta:    0=0 1=1 2-4=0 4-8=17 8-16=9 16-32=1 32-64=0 64-127=0
+22:22:43.381 -> 📈 ESP smooth | UDP rawPkts=84/s datagrams=84/s subframes=84/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=84/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:22:43.381 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=990/s
+22:22:43.381 ->   HID interval ms <2=23 2-4=32 4-8=17 8-16=2 >=16=10
+22:22:43.381 ->   emit delta:    0=0 1=9 2-4=7 4-8=51 8-16=16 16-32=1 32-64=0 64-127=0
+22:22:44.394 -> 📈 ESP smooth | UDP rawPkts=66/s datagrams=66/s subframes=66/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=62/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:22:44.394 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=993/s
+22:22:44.394 ->   HID interval ms <2=14 2-4=26 4-8=13 8-16=2 >=16=7
+22:22:44.394 ->   emit delta:    0=0 1=11 2-4=9 4-8=10 8-16=32 16-32=0 32-64=0 64-127=0
+22:22:45.377 -> 📈 ESP smooth | UDP rawPkts=160/s datagrams=160/s subframes=160/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=159/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:45.377 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=983/s
+22:22:45.377 ->   HID interval ms <2=40 2-4=57 4-8=46 8-16=6 >=16=10
+22:22:45.377 ->   emit delta:    0=0 1=0 2-4=2 4-8=101 8-16=54 16-32=1 32-64=1 64-127=0
+22:22:46.396 -> 📈 ESP smooth | UDP rawPkts=195/s datagrams=195/s subframes=195/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=193/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:22:46.396 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=976/s
+22:22:46.396 ->   HID interval ms <2=54 2-4=78 4-8=41 8-16=5 >=16=15
+22:22:46.396 ->   emit delta:    0=0 1=0 2-4=14 4-8=137 8-16=42 16-32=0 32-64=0 64-127=0
+22:22:47.378 -> 📈 ESP smooth | UDP rawPkts=196/s datagrams=195/s subframes=195/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=196/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:22:47.378 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=976/s
+22:22:47.378 ->   HID interval ms <2=56 2-4=67 4-8=58 8-16=5 >=16=10
+22:22:47.378 ->   emit delta:    0=0 1=0 2-4=12 4-8=162 8-16=22 16-32=0 32-64=0 64-127=0
+22:22:48.395 -> 📈 ESP smooth | UDP rawPkts=140/s datagrams=140/s subframes=140/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=133/s reportFails=0 staleDrops=0 lateMax=0.2ms
+22:22:48.395 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=982/s
+22:22:48.395 ->   HID interval ms <2=36 2-4=54 4-8=27 8-16=5 >=16=11
+22:22:48.395 ->   emit delta:    0=0 1=30 2-4=21 4-8=79 8-16=3 16-32=0 32-64=0 64-127=0
+22:22:49.381 -> 📈 ESP smooth | UDP rawPkts=39/s datagrams=39/s subframes=39/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=36/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:49.381 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=997/s
+22:22:49.381 ->   HID interval ms <2=12 2-4=14 4-8=5 8-16=0 >=16=5
+22:22:49.381 ->   emit delta:    0=0 1=0 2-4=1 4-8=21 8-16=13 16-32=1 32-64=0 64-127=0
+22:22:50.397 -> 📈 ESP smooth | UDP rawPkts=179/s datagrams=179/s subframes=179/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=182/s reportFails=0 staleDrops=0 lateMax=0.0ms
+22:22:50.397 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=975/s
+22:22:50.397 ->   HID interval ms <2=53 2-4=76 4-8=36 8-16=5 >=16=12
+22:22:50.397 ->   emit delta:    0=0 1=0 2-4=0 4-8=2 8-16=78 16-32=102 32-64=0 64-127=0
+22:22:51.417 -> 📈 ESP smooth | UDP rawPkts=200/s datagrams=200/s subframes=200/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=200/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:51.417 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=977/s
+22:22:51.417 ->   HID interval ms <2=62 2-4=74 4-8=43 8-16=8 >=16=13
+22:22:51.417 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=15 16-32=185 32-64=0 64-127=0
+22:22:52.400 -> 📈 ESP smooth | UDP rawPkts=205/s datagrams=205/s subframes=205/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=206/s reportFails=0 staleDrops=0 lateMax=0.0ms
+22:22:52.400 ->   net: wifi=connected ip=192.168.18.125 rssi=-34 mounted=yes | udpRx iters=972/s
+22:22:52.400 ->   HID interval ms <2=58 2-4=81 4-8=50 8-16=4 >=16=13
+22:22:52.400 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=5 16-32=196 32-64=5 64-127=0
+22:22:53.418 -> 📈 ESP smooth | UDP rawPkts=181/s datagrams=181/s subframes=181/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=181/s reportFails=0 staleDrops=0 lateMax=0.4ms
+22:22:53.418 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=978/s
+22:22:53.418 ->   HID interval ms <2=50 2-4=68 4-8=44 8-16=8 >=16=11
+22:22:53.418 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=32 16-32=148 32-64=1 64-127=0
+22:22:54.404 -> 📈 ESP smooth | UDP rawPkts=18/s datagrams=18/s subframes=18/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=18/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:54.404 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=999/s
+22:22:54.404 ->   HID interval ms <2=5 2-4=8 4-8=4 8-16=0 >=16=1
+22:22:54.404 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=3 16-32=13 32-64=2 64-127=0
+22:22:55.419 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:55.419 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=1001/s
+22:22:55.419 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:22:55.419 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:22:56.404 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:56.404 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:56.404 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=1001/s
+22:22:56.404 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:22:56.404 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:22:57.426 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:57.426 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=1001/s
+22:22:57.426 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:22:57.426 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:22:58.416 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:58.416 ->   net: wifi=connected ip=192.168.18.125 rssi=-33 mounted=yes | udpRx iters=1001/s
+22:22:58.416 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:22:58.416 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:22:59.432 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:22:59.432 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=1001/s
+22:22:59.432 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:22:59.432 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+
+log 2
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=24 17-25ms=0 25-34ms=0 34-50ms=1 >=50ms=1 max=406.4ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=175 emitted=0 emptyWhileActive=0 underruns=0
+  UDP timer dt: 0-4ms=87 4-8ms=82 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=6 max=439.8ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=5 coalescedSamples=19 motionEvents=18
+  touch dt: 0-4ms=0 4-8ms=17 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=1 max=54.2ms
+  coalesced dt: 0-4ms=0 4-8ms=17 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=1 max=54.2ms
+  pointer: events=18 emitted=18
+  speed: 0-50=1 50-150=6 150-300=8 300-600=3 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=376.6
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=18 2.5-3=0 3-3.5=0 >=3.5=0 max=2.2
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=2 16-32=6 32-64=6 64-127=5 >=127=0 max=97.6
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=113 17-25ms=1 25-34ms=3 34-50ms=0 >=50ms=0 max=27.6ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=1 subframes=1 capped=0 staleDrops=0 maxBatch=16 maxPending=658
+  UDP sender: ticks=501 emitted=1 emptyWhileActive=22 underruns=22
+  UDP timer dt: 0-4ms=217 4-8ms=284 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=1 24-32ms=0 32-50ms=0 >=50ms=0 max=20.0ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=71 coalescedSamples=403 motionEvents=402
+  touch dt: 0-4ms=0 4-8ms=401 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=1 >=50ms=0 max=37.5ms
+  coalesced dt: 0-4ms=0 4-8ms=401 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=1 >=50ms=0 max=37.5ms
+  pointer: events=402 emitted=402
+  speed: 0-50=1 50-150=0 150-300=45 300-600=321 600-1000=35 1000-1600=0 1600-2400=0 >=2400=0 max=851.7
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=402 2.5-3=0 3-3.5=0 >=3.5=0 max=2.2
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=61 64-127=326 >=127=17 max=1448.2
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=13 17-25ms=1 25-34ms=34 34-50ms=17 >=50ms=2 max=53.3ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=2 subframes=2 capped=1 staleDrops=0 maxBatch=34 maxPending=2700
+  UDP sender: ticks=500 emitted=2 emptyWhileActive=420 underruns=420
+  UDP timer dt: 0-4ms=248 4-8ms=252 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=2 >=50ms=0 max=49.6ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=38 coalescedSamples=179 motionEvents=175
+  touch dt: 0-4ms=0 4-8ms=170 8-12ms=1 12-20ms=1 20-33ms=1 33-50ms=1 >=50ms=1 max=62.5ms
+  coalesced dt: 0-4ms=0 4-8ms=170 8-12ms=2 12-20ms=1 20-33ms=1 33-50ms=1 >=50ms=1 max=62.5ms
+  pointer: events=175 emitted=175
+  speed: 0-50=2 50-150=23 150-300=32 300-600=110 600-1000=8 1000-1600=0 1600-2400=0 >=2400=0 max=672.8
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=175 2.5-3=0 3-3.5=0 >=3.5=0 max=2.2
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=2 8-16=6 16-32=16 32-64=41 64-127=109 >=127=7 max=1116.5
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=60 17-25ms=3 25-34ms=18 34-50ms=8 >=50ms=2 max=67.6ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=6 subframes=6 capped=1 staleDrops=0 maxBatch=33 maxPending=4695
+  UDP sender: ticks=501 emitted=6 emptyWhileActive=194 underruns=194
+  UDP timer dt: 0-4ms=231 4-8ms=270 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=4.9ms
+  UDP send dt: 0-8ms=2 8-12ms=0 12-17ms=1 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=12.0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=4 24-32ms=0 32-50ms=1 >=50ms=1 max=50.4ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=52 coalescedSamples=250 motionEvents=245
+  touch dt: 0-4ms=4 4-8ms=236 8-12ms=0 12-20ms=0 20-33ms=3 33-50ms=2 >=50ms=0 max=46.0ms
+  coalesced dt: 0-4ms=4 4-8ms=236 8-12ms=0 12-20ms=0 20-33ms=3 33-50ms=2 >=50ms=0 max=46.0ms
+  pointer: events=245 emitted=245
+  speed: 0-50=2 50-150=12 150-300=67 300-600=116 600-1000=42 1000-1600=6 1600-2400=0 >=2400=0 max=1079.8
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=245 2.5-3=0 3-3.5=0 >=3.5=0 max=2.2
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=1 8-16=1 16-32=17 32-64=65 64-127=125 >=127=41 max=220.9
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=34 17-25ms=4 25-34ms=27 34-50ms=7 >=50ms=5 max=65.1ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=5 subframes=5 capped=0 staleDrops=0 maxBatch=33 maxPending=0
+  UDP sender: ticks=501 emitted=5 emptyWhileActive=267 underruns=267
+  UDP timer dt: 0-4ms=259 4-8ms=242 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=3 >=50ms=2 max=58.2ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=42 coalescedSamples=219 motionEvents=216
+  touch dt: 0-4ms=0 4-8ms=213 8-12ms=0 12-20ms=0 20-33ms=2 33-50ms=1 >=50ms=0 max=45.8ms
+  coalesced dt: 0-4ms=0 4-8ms=213 8-12ms=0 12-20ms=0 20-33ms=2 33-50ms=1 >=50ms=0 max=45.8ms
+  pointer: events=216 emitted=216
+  speed: 0-50=3 50-150=14 150-300=25 300-600=112 600-1000=57 1000-1600=5 1600-2400=0 >=2400=0 max=1033.3
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=216 2.5-3=0 3-3.5=0 >=3.5=0 max=2.2
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=6 8-16=2 16-32=14 32-64=32 64-127=113 >=127=53 max=213.3
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=49 17-25ms=3 25-34ms=18 34-50ms=10 >=50ms=4 max=52.8ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=4 subframes=4 capped=0 staleDrops=0 maxBatch=34 maxPending=0
+  UDP sender: ticks=500 emitted=4 emptyWhileActive=231 underruns=231
+  UDP timer dt: 0-4ms=236 4-8ms=264 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=2 >=50ms=2 max=60.1ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=120 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=16.8ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=501 emitted=0 emptyWhileActive=0 underruns=0
+  UDP timer dt: 0-4ms=252 4-8ms=249 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+
+
+22:00:11.865 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:00:11.865 ->   net: wifi=connected ip=192.168.18.125 rssi=-27 mounted=yes | udpRx iters=1001/s
+22:00:11.865 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:00:11.865 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:00:12.848 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:00:12.848 ->   net: wifi=connected ip=192.168.18.125 rssi=-25 mounted=yes | udpRx iters=1001/s
+22:00:12.848 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:00:12.848 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:00:13.866 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:00:13.866 ->   net: wifi=connected ip=192.168.18.125 rssi=-25 mounted=yes | udpRx iters=1001/s
+22:00:13.866 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:00:13.866 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:00:14.852 -> 📈 ESP smooth | UDP rawPkts=2/s datagrams=2/s subframes=2/s malformed=0 queueMax=1 overflow=0 | HID ticks=500/s reports=3/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:00:14.886 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=1001/s
+22:00:14.886 ->   HID interval ms <2=0 2-4=1 4-8=0 8-16=0 >=16=2
+22:00:14.886 ->   emit delta:    0=0 1=2 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=1
+22:00:15.865 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:00:15.865 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=1001/s
+22:00:15.865 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+22:00:15.865 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+22:00:16.882 -> 📈 ESP smooth | UDP rawPkts=5/s datagrams=5/s subframes=5/s malformed=0 queueMax=2 overflow=0 | HID ticks=500/s reports=5/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:00:16.882 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=1001/s
+22:00:16.882 ->   HID interval ms <2=1 2-4=0 4-8=1 8-16=1 >=16=2
+22:00:16.882 ->   emit delta:    0=0 1=0 2-4=1 4-8=2 8-16=1 16-32=1 32-64=0 64-127=0
+22:00:17.862 -> 📈 ESP smooth | UDP rawPkts=2/s datagrams=2/s subframes=2/s malformed=0 queueMax=1 overflow=0 | HID ticks=500/s reports=3/s reportFails=0 staleDrops=0 lateMax=0.2ms
+22:00:17.862 ->   net: wifi=connected ip=192.168.18.125 rssi=-27 mounted=yes | udpRx iters=1001/s
+22:00:17.862 ->   HID interval ms <2=1 2-4=0 4-8=0 8-16=0 >=16=2
+22:00:17.862 ->   emit delta:    0=0 1=1 2-4=1 4-8=0 8-16=0 16-32=0 32-64=0 64-127=1
+22:00:18.879 -> 📈 ESP smooth | UDP rawPkts=2/s datagrams=2/s subframes=2/s malformed=0 queueMax=1 overflow=0 | HID ticks=500/s reports=2/s reportFails=0 staleDrops=0 lateMax=0.2ms
+22:00:18.879 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=1001/s
+22:00:18.879 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=2
+22:00:18.879 ->   emit delta:    0=0 1=0 2-4=0 4-8=1 8-16=1 16-32=0 32-64=0 64-127=0
+22:00:19.863 -> 📈 ESP smooth | UDP rawPkts=2/s datagrams=2/s subframes=2/s malformed=0 queueMax=1 overflow=0 | HID ticks=500/s reports=2/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:00:19.863 ->   net: wifi=connected ip=192.168.18.125 rssi=-27 mounted=yes | udpRx iters=1001/s
+22:00:19.863 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=2
+22:00:19.895 ->   emit delta:    0=0 1=0 2-4=1 4-8=1 8-16=0 16-32=0 32-64=0 64-127=0
+22:00:20.879 -> 📈 ESP smooth | UDP rawPkts=2/s datagrams=2/s subframes=2/s malformed=0 queueMax=1 overflow=0 | HID ticks=500/s reports=2/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:00:20.879 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=1001/s
+22:00:20.879 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=2
+22:00:20.879 ->   emit delta:    0=0 1=0 2-4=0 4-8=1 8-16=0 16-32=1 32-64=0 64-127=0
+22:00:21.896 -> 📈 ESP smooth | UDP rawPkts=3/s datagrams=3/s subframes=3/s malformed=0 queueMax=1 overflow=0 | HID ticks=500/s reports=3/s reportFails=0 staleDrops=0 lateMax=0.3ms
+22:00:21.896 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=1001/s
+22:00:21.896 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=3
+22:00:21.896 ->   emit delta:    0=0 1=0 2-4=2 4-8=1 8-16=0 16-32=0 32-64=0 64-127=0
+
+log1
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=14 17-25ms=5 25-34ms=1 34-50ms=0 >=50ms=1 max=871.9ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=148 emitted=0 emptyWhileActive=0 underruns=0
+  UDP timer dt: 0-4ms=70 4-8ms=72 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=6 max=537.5ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=88 17-25ms=32 25-34ms=0 34-50ms=0 >=50ms=0 max=17.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0 underruns=0
+  UDP timer dt: 0-4ms=240 4-8ms=260 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=88 17-25ms=32 25-34ms=0 34-50ms=0 >=50ms=0 max=17.9ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0 underruns=0
+  UDP timer dt: 0-4ms=251 4-8ms=249 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=64 coalescedSamples=369 motionEvents=368
+  touch dt: 0-4ms=0 4-8ms=367 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=1 >=50ms=0 max=45.8ms
+  coalesced dt: 0-4ms=0 4-8ms=367 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=1 >=50ms=0 max=45.8ms
+  pointer: events=368 emitted=368
+  speed: 0-50=1 50-150=28 150-300=69 300-600=217 600-1000=53 1000-1600=0 1600-2400=0 >=2400=0 max=727.0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=210 2-2.5=158 2.5-3=0 3-3.5=0 >=3.5=0 max=2.4
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=1 8-16=34 16-32=46 32-64=268 64-127=339 >=127=57 max=160.0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=20 17-25ms=7 25-34ms=20 34-50ms=17 >=50ms=3 max=73.2ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=377 subframes=377 capped=0 staleDrops=0 maxBatch=39 maxPending=1480
+  UDP sender: ticks=500 emitted=377 emptyWhileActive=13 underruns=13
+  UDP timer dt: 0-4ms=258 4-8ms=242 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=374 8-12ms=2 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.7ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=5 32-50ms=372 >=50ms=0 max=49.0ms
+  dropped movement: events=0 absDx=0 absDy=0
+left clicked and sent
+📈 Movement diagnostics
+  touch: callbacks=76 coalescedSamples=434 motionEvents=432
+  touch dt: 0-4ms=2 4-8ms=430 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=5.8ms
+  coalesced dt: 0-4ms=2 4-8ms=430 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=5.8ms
+  pointer: events=432 emitted=432
+  speed: 0-50=0 50-150=3 150-300=27 300-600=242 600-1000=160 1000-1600=0 1600-2400=0 >=2400=0 max=940.1
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=138 2-2.5=282 2.5-3=12 3-3.5=0 >=3.5=0 max=2.7
+  emit delta: 0-1=0 1-2=0 2-4=16 4-8=0 8-16=2 16-32=9 32-64=175 64-127=429 >=127=261 max=234.6
+  BLE: attempts=42 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=4 17-25ms=1 25-34ms=32 34-50ms=19 >=50ms=2 max=70.3ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=460 subframes=460 capped=0 staleDrops=0 maxBatch=40 maxPending=2654
+  UDP sender: ticks=500 emitted=460 emptyWhileActive=18 underruns=18
+  UDP timer dt: 0-4ms=252 4-8ms=248 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=458 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=105 >=50ms=355 max=68.6ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=76 coalescedSamples=476 motionEvents=475
+  touch dt: 0-4ms=0 4-8ms=472 8-12ms=2 12-20ms=0 20-33ms=1 33-50ms=0 >=50ms=0 max=20.8ms
+  coalesced dt: 0-4ms=0 4-8ms=472 8-12ms=2 12-20ms=1 20-33ms=1 33-50ms=0 >=50ms=0 max=20.8ms
+  pointer: events=475 emitted=475
+  speed: 0-50=7 50-150=30 150-300=27 300-600=248 600-1000=163 1000-1600=0 1600-2400=0 >=2400=0 max=868.0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=148 2-2.5=307 2.5-3=20 3-3.5=0 >=3.5=0 max=2.6
+  emit delta: 0-1=0 1-2=5 2-4=3 4-8=13 8-16=22 16-32=75 32-64=94 64-127=523 >=127=236 max=207.7
+  BLE: attempts=57 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=38 34-50ms=19 >=50ms=0 max=45.0ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=496 subframes=496 capped=0 staleDrops=0 maxBatch=39 maxPending=2452
+  UDP sender: ticks=500 emitted=496 emptyWhileActive=4 underruns=4
+  UDP timer dt: 0-4ms=256 4-8ms=244 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=495 8-12ms=1 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=8.2ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=0 >=50ms=501 max=68.6ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=51 coalescedSamples=301 motionEvents=298
+  touch dt: 0-4ms=2 4-8ms=294 8-12ms=1 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=1 max=112.5ms
+  coalesced dt: 0-4ms=2 4-8ms=294 8-12ms=1 12-20ms=1 20-33ms=0 33-50ms=0 >=50ms=1 max=112.5ms
+  pointer: events=298 emitted=298
+  speed: 0-50=4 50-150=7 150-300=16 300-600=192 600-1000=79 1000-1600=0 1600-2400=0 >=2400=0 max=837.1
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=87 2-2.5=207 2.5-3=4 3-3.5=0 >=3.5=0 max=2.5
+  emit delta: 0-1=0 1-2=1 2-4=2 4-8=9 8-16=9 16-32=12 32-64=89 64-127=384 >=127=118 max=199.9
+  BLE: attempts=69 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=22 17-25ms=8 25-34ms=25 34-50ms=11 >=50ms=3 max=71.9ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=326 subframes=326 capped=0 staleDrops=0 maxBatch=39 maxPending=2159
+  UDP sender: ticks=501 emitted=326 emptyWhileActive=16 underruns=16
+  UDP timer dt: 0-4ms=265 4-8ms=236 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=318 8-12ms=1 12-17ms=2 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=16.1ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=28 16-24ms=5 24-32ms=21 32-50ms=31 >=50ms=240 max=70.5ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=50 coalescedSamples=283 motionEvents=278
+  touch dt: 0-4ms=0 4-8ms=270 8-12ms=4 12-20ms=0 20-33ms=2 33-50ms=2 >=50ms=0 max=50.0ms
+  coalesced dt: 0-4ms=0 4-8ms=271 8-12ms=6 12-20ms=0 20-33ms=2 33-50ms=2 >=50ms=0 max=50.0ms
+  pointer: events=278 emitted=278
+  speed: 0-50=37 50-150=96 150-300=41 300-600=84 600-1000=20 1000-1600=0 1600-2400=0 >=2400=0 max=769.0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=229 2-2.5=49 2.5-3=0 3-3.5=0 >=3.5=0 max=2.4
+  emit delta: 0-1=0 1-2=9 2-4=10 4-8=84 8-16=155 16-32=56 32-64=78 64-127=161 >=127=24 max=173.4
+  BLE: attempts=74 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=29 17-25ms=9 25-34ms=23 34-50ms=12 >=50ms=1 max=58.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=299 subframes=299 capped=0 staleDrops=0 maxBatch=38 maxPending=1655
+  UDP sender: ticks=501 emitted=299 emptyWhileActive=46 underruns=46
+  UDP timer dt: 0-4ms=259 4-8ms=242 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=283 8-12ms=4 12-17ms=9 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=16.0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=24 32-50ms=68 >=50ms=226 max=65.5ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=36 coalescedSamples=198 motionEvents=194
+  touch dt: 0-4ms=0 4-8ms=189 8-12ms=1 12-20ms=1 20-33ms=2 33-50ms=1 >=50ms=0 max=45.8ms
+  coalesced dt: 0-4ms=0 4-8ms=189 8-12ms=2 12-20ms=1 20-33ms=2 33-50ms=1 >=50ms=0 max=45.8ms
+  pointer: events=194 emitted=194
+  speed: 0-50=9 50-150=25 150-300=33 300-600=100 600-1000=27 1000-1600=0 1600-2400=0 >=2400=0 max=877.6
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=109 2-2.5=77 2.5-3=8 3-3.5=0 >=3.5=0 max=2.6
+  emit delta: 0-1=0 1-2=6 2-4=4 4-8=24 8-16=28 16-32=40 32-64=81 64-127=173 >=127=45 max=208.0
+  BLE: attempts=67 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=26 17-25ms=5 25-34ms=19 34-50ms=9 >=50ms=8 max=74.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=207 subframes=207 capped=0 staleDrops=0 maxBatch=44 maxPending=1621
+  UDP sender: ticks=500 emitted=207 emptyWhileActive=30 underruns=30
+  UDP timer dt: 0-4ms=262 4-8ms=238 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=196 8-12ms=4 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=11.7ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=76 32-50ms=132 >=50ms=0 max=47.9ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=50 coalescedSamples=261 motionEvents=253
+  touch dt: 0-4ms=0 4-8ms=246 8-12ms=2 12-20ms=0 20-33ms=2 33-50ms=3 >=50ms=0 max=45.8ms
+  coalesced dt: 0-4ms=0 4-8ms=246 8-12ms=5 12-20ms=1 20-33ms=2 33-50ms=3 >=50ms=0 max=45.8ms
+  pointer: events=253 emitted=253
+  speed: 0-50=14 50-150=18 150-300=28 300-600=155 600-1000=38 1000-1600=0 1600-2400=0 >=2400=0 max=750.2
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=115 2-2.5=138 2.5-3=0 3-3.5=0 >=3.5=0 max=2.4
+  emit delta: 0-1=0 1-2=6 2-4=10 4-8=31 8-16=18 16-32=20 32-64=84 64-127=304 >=127=39 max=167.2
+  BLE: attempts=67 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=16 17-25ms=14 25-34ms=19 34-50ms=11 >=50ms=7 max=66.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=259 subframes=259 capped=0 staleDrops=0 maxBatch=42 maxPending=1325
+  UDP sender: ticks=501 emitted=259 emptyWhileActive=50 underruns=50
+  UDP timer dt: 0-4ms=246 4-8ms=255 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=244 8-12ms=6 12-17ms=2 17-25ms=1 25-34ms=0 34-50ms=0 >=50ms=0 max=24.0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=7 16-24ms=4 24-32ms=31 32-50ms=221 >=50ms=1 max=50.7ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=55 coalescedSamples=346 motionEvents=345
+  touch dt: 0-4ms=0 4-8ms=344 8-12ms=0 12-20ms=0 20-33ms=1 33-50ms=0 >=50ms=0 max=20.7ms
+  coalesced dt: 0-4ms=0 4-8ms=344 8-12ms=0 12-20ms=0 20-33ms=1 33-50ms=0 >=50ms=0 max=20.7ms
+  pointer: events=345 emitted=345
+  speed: 0-50=0 50-150=1 150-300=9 300-600=232 600-1000=103 1000-1600=0 1600-2400=0 >=2400=0 max=837.9
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=70 2-2.5=269 2.5-3=6 3-3.5=0 >=3.5=0 max=2.5
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=5 32-64=73 64-127=490 >=127=145 max=232.6
+  BLE: attempts=62 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=20 17-25ms=4 25-34ms=17 34-50ms=12 >=50ms=9 max=79.5ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=368 subframes=368 capped=0 staleDrops=0 maxBatch=39 maxPending=1378
+  UDP sender: ticks=501 emitted=368 emptyWhileActive=12 underruns=12
+  UDP timer dt: 0-4ms=251 4-8ms=250 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=363 8-12ms=1 12-17ms=1 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=12.5ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=367 >=50ms=1 max=50.3ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=116 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=88 17-25ms=25 25-34ms=0 34-50ms=1 >=50ms=1 max=68.9ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=501 emitted=0 emptyWhileActive=0 underruns=0
+  UDP timer dt: 0-4ms=252 4-8ms=249 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=118 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=96 17-25ms=21 25-34ms=0 34-50ms=1 >=50ms=0 max=34.4ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0 underruns=0
+  UDP timer dt: 0-4ms=251 4-8ms=249 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP sample age: 0-8ms=0 8-12ms=0 12-16ms=0 16-24ms=0 24-32ms=0 32-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+
+21:42:10.640 -> 
+21:42:10.640 -> 🔧 Initializing TinyUSB HID Mouse...
+21:42:11.429 -> .....
+21:42:12.459 -> ✅ UDP motion listening on 192.168.18.125:4210
+21:42:12.459 -> 🎯 ESP_Bridge_TinyUSB ready
+21:42:12.459 -> 🚦 udp-rx task running on core 0
+21:42:13.443 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=1399/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.5ms
+21:42:13.443 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=1002/s
+21:42:13.443 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+21:42:13.443 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+21:42:14.458 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.5ms
+21:42:14.458 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=1001/s
+21:42:14.458 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+21:42:14.458 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+21:42:15.446 -> 📈 ESP smooth | UDP rawPkts=148/s datagrams=148/s subframes=148/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=147/s reportFails=0 staleDrops=0 lateMax=0.5ms
+21:42:15.446 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=974/s
+21:42:15.446 ->   HID interval ms <2=34 2-4=76 4-8=21 8-16=3 >=16=12
+21:42:15.446 ->   emit delta:    0=0 1=6 2-4=17 4-8=86 8-16=38 16-32=0 32-64=0 64-127=0
+21:42:16.468 -> 📈 ESP smooth | UDP rawPkts=163/s datagrams=163/s subframes=163/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=163/s reportFails=0 staleDrops=0 lateMax=0.5ms
+21:42:16.468 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=969/s
+21:42:16.468 ->   HID interval ms <2=48 2-4=70 4-8=32 8-16=0 >=16=13
+21:42:16.468 ->   emit delta:    0=0 1=0 2-4=0 4-8=48 8-16=97 16-32=18 32-64=0 64-127=0
+21:42:17.456 -> 📈 ESP smooth | UDP rawPkts=163/s datagrams=163/s subframes=163/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=149/s reportFails=0 staleDrops=0 lateMax=0.0ms
+21:42:17.456 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=973/s
+21:42:17.456 ->   HID interval ms <2=42 2-4=70 4-8=19 8-16=6 >=16=12
+21:42:17.456 ->   emit delta:    0=0 1=5 2-4=4 4-8=46 8-16=79 16-32=15 32-64=0 64-127=0
+21:42:18.440 -> 📈 ESP smooth | UDP rawPkts=147/s datagrams=147/s subframes=147/s malformed=0 queueMax=9 overflow=0 | HID ticks=500/s reports=148/s reportFails=0 staleDrops=0 lateMax=0.4ms
+21:42:18.440 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=972/s
+21:42:18.440 ->   HID interval ms <2=40 2-4=69 4-8=27 8-16=2 >=16=10
+21:42:18.440 ->   emit delta:    0=0 1=0 2-4=1 4-8=16 8-16=93 16-32=38 32-64=0 64-127=0
+21:42:19.461 -> 📈 ESP smooth | UDP rawPkts=185/s datagrams=185/s subframes=185/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=175/s reportFails=0 staleDrops=0 lateMax=0.4ms
+21:42:19.461 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=972/s
+21:42:19.461 ->   HID interval ms <2=53 2-4=74 4-8=35 8-16=0 >=16=13
+21:42:19.461 ->   emit delta:    0=0 1=8 2-4=24 4-8=26 8-16=112 16-32=5 32-64=0 64-127=0
+21:42:20.455 -> 📈 ESP smooth | UDP rawPkts=184/s datagrams=184/s subframes=184/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=184/s reportFails=0 staleDrops=0 lateMax=0.4ms
+21:42:20.455 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=966/s
+21:42:20.455 ->   HID interval ms <2=59 2-4=82 4-8=27 8-16=2 >=16=14
+21:42:20.455 ->   emit delta:    0=0 1=0 2-4=0 4-8=18 8-16=131 16-32=35 32-64=0 64-127=0
+21:42:21.473 -> 📈 ESP smooth | UDP rawPkts=139/s datagrams=139/s subframes=139/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=139/s reportFails=0 staleDrops=0 lateMax=0.5ms
+21:42:21.473 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=982/s
+21:42:21.473 ->   HID interval ms <2=41 2-4=59 4-8=27 8-16=1 >=16=11
+21:42:21.473 ->   emit delta:    0=0 1=1 2-4=0 4-8=20 8-16=108 16-32=10 32-64=0 64-127=0
+21:42:22.460 -> 📈 ESP smooth | UDP rawPkts=67/s datagrams=67/s subframes=67/s malformed=0 queueMax=5 overflow=0 | HID ticks=500/s reports=65/s reportFails=0 staleDrops=0 lateMax=0.4ms
+21:42:22.460 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=991/s
+21:42:22.460 ->   HID interval ms <2=17 2-4=28 4-8=14 8-16=0 >=16=6
+21:42:22.460 ->   emit delta:    0=0 1=3 2-4=7 4-8=20 8-16=34 16-32=1 32-64=0 64-127=0
+21:42:23.479 -> 📈 ESP smooth | UDP rawPkts=166/s datagrams=167/s subframes=167/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=145/s reportFails=0 staleDrops=0 lateMax=0.1ms
+21:42:23.479 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=975/s
+21:42:23.479 ->   HID interval ms <2=38 2-4=60 4-8=28 8-16=4 >=16=15
+21:42:23.479 ->   emit delta:    0=0 1=57 2-4=30 4-8=16 8-16=35 16-32=7 32-64=0 64-127=0
+21:42:24.467 -> 📈 ESP smooth | UDP rawPkts=60/s datagrams=60/s subframes=60/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=56/s reportFails=0 staleDrops=0 lateMax=0.5ms
+21:42:24.467 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=991/s
+21:42:24.467 ->   HID interval ms <2=14 2-4=24 4-8=11 8-16=1 >=16=6
+21:42:24.467 ->   emit delta:    0=0 1=8 2-4=10 4-8=9 8-16=29 16-32=0 32-64=0 64-127=0
+21:42:25.486 -> 📈 ESP smooth | UDP rawPkts=107/s datagrams=107/s subframes=107/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=107/s reportFails=0 staleDrops=0 lateMax=0.5ms
+21:42:25.486 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=982/s
+21:42:25.486 ->   HID interval ms <2=27 2-4=51 4-8=14 8-16=4 >=16=11
+21:42:25.486 ->   emit delta:    0=0 1=5 2-4=18 4-8=35 8-16=37 16-32=12 32-64=0 64-127=0
+21:42:26.468 -> 📈 ESP smooth | UDP rawPkts=83/s datagrams=83/s subframes=83/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=81/s reportFails=0 staleDrops=0 lateMax=0.4ms
+21:42:26.468 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=986/s
+21:42:26.468 ->   HID interval ms <2=24 2-4=33 4-8=15 8-16=2 >=16=7
+21:42:26.468 ->   emit delta:    0=0 1=2 2-4=11 4-8=16 8-16=49 16-32=3 32-64=0 64-127=0
+21:42:27.487 -> 📈 ESP smooth | UDP rawPkts=88/s datagrams=89/s subframes=89/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=82/s reportFails=0 staleDrops=0 lateMax=0.1ms
+21:42:27.487 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=987/s
+21:42:27.487 ->   HID interval ms <2=19 2-4=36 4-8=17 8-16=1 >=16=9
+21:42:27.487 ->   emit delta:    0=0 1=6 2-4=3 4-8=9 8-16=56 16-32=8 32-64=0 64-127=0
+21:42:28.466 -> 📈 ESP smooth | UDP rawPkts=144/s datagrams=144/s subframes=144/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=135/s reportFails=0 staleDrops=0 lateMax=0.5ms
+21:42:28.466 ->   net: wifi=connected ip=192.168.18.125 rssi=-29 mounted=yes | udpRx iters=981/s
+21:42:28.466 ->   HID interval ms <2=41 2-4=56 4-8=24 8-16=4 >=16=10
+21:42:28.466 ->   emit delta:    0=0 1=12 2-4=1 4-8=23 8-16=79 16-32=20 32-64=0 64-127=0
+21:42:29.486 -> 📈 ESP smooth | UDP rawPkts=154/s datagrams=154/s subframes=154/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=154/s reportFails=0 staleDrops=0 lateMax=0.4ms
+21:42:29.486 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=977/s
+21:42:29.486 ->   HID interval ms <2=47 2-4=63 4-8=29 8-16=1 >=16=14
+21:42:29.486 ->   emit delta:    0=0 1=0 2-4=4 4-8=31 8-16=118 16-32=1 32-64=0 64-127=0
+21:42:30.476 -> 📈 ESP smooth | UDP rawPkts=36/s datagrams=36/s subframes=36/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=36/s reportFails=0 staleDrops=0 lateMax=0.5ms
+21:42:30.476 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=989/s
+21:42:30.476 ->   HID interval ms <2=8 2-4=22 4-8=2 8-16=0 >=16=4
+21:42:30.476 ->   emit delta:    0=0 1=0 2-4=0 4-8=8 8-16=22 16-32=6 32-64=0 64-127=0
+21:42:31.497 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.4ms
+21:42:31.497 ->   net: wifi=connected ip=192.168.18.125 rssi=-30 mounted=yes | udpRx iters=1001/s
+21:42:31.497 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+21:42:31.497 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+21:42:32.481 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.5ms
+21:42:32.481 ->   net: wifi=connected ip=192.168.18.125 rssi=-31 mounted=yes | udpRx iters=1001/s
+21:42:32.481 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+21:42:32.481 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+
+---
+
+Logs for production code
+
+log 1
+
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=94 17-25ms=26 25-34ms=0 34-50ms=0 >=50ms=0 max=18.4ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=248 4-8ms=252 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=47 coalescedSamples=276 motionEvents=274
+  touch dt: 0-4ms=0 4-8ms=270 8-12ms=1 12-20ms=0 20-33ms=1 33-50ms=1 >=50ms=1 max=145.8ms
+  coalesced dt: 0-4ms=0 4-8ms=270 8-12ms=1 12-20ms=0 20-33ms=1 33-50ms=1 >=50ms=1 max=145.8ms
+  pointer: events=274 emitted=274
+  speed: 0-50=7 50-150=44 150-300=138 300-600=85 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=410.6
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=26 2.5-3=139 3-3.5=109 >=3.5=0 max=3.4
+  emit delta: 0-1=1 1-2=0 2-4=0 4-8=8 8-16=12 16-32=53 32-64=211 64-127=237 >=127=8 max=137.3
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=31 17-25ms=11 25-34ms=20 34-50ms=8 >=50ms=4 max=80.5ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=256 subframes=256 capped=0 staleDrops=11 maxBatch=10 maxPending=985
+  UDP sender: ticks=501 emitted=256 emptyWhileActive=40
+  UDP timer dt: 0-4ms=252 4-8ms=249 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=242 8-12ms=3 12-17ms=2 17-25ms=6 25-34ms=0 34-50ms=0 >=50ms=0 max=20.6ms
+  dropped movement: events=11 absDx=533 absDy=515
+📈 Movement diagnostics
+  touch: callbacks=70 coalescedSamples=480 motionEvents=480
+  touch dt: 0-4ms=0 4-8ms=480 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  coalesced dt: 0-4ms=0 4-8ms=480 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=4.2ms
+  pointer: events=480 emitted=480
+  speed: 0-50=1 50-150=14 150-300=134 300-600=331 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=529.4
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=11 2.5-3=75 3-3.5=326 >=3.5=68 max=3.8
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=6 8-16=10 16-32=8 32-64=94 64-127=673 >=127=160 max=182.5
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=31 34-50ms=21 >=50ms=1 max=50.3ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=471 subframes=471 capped=0 staleDrops=8 maxBatch=11 maxPending=1313
+  UDP sender: ticks=501 emitted=471 emptyWhileActive=26
+  UDP timer dt: 0-4ms=242 4-8ms=259 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=455 8-12ms=5 12-17ms=7 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=16.0ms
+  dropped movement: events=8 absDx=422 absDy=588
+📈 Movement diagnostics
+  touch: callbacks=65 coalescedSamples=419 motionEvents=417
+  touch dt: 0-4ms=1 4-8ms=414 8-12ms=0 12-20ms=2 20-33ms=0 33-50ms=0 >=50ms=0 max=13.6ms
+  coalesced dt: 0-4ms=1 4-8ms=414 8-12ms=0 12-20ms=2 20-33ms=0 33-50ms=0 >=50ms=0 max=13.6ms
+  pointer: events=417 emitted=417
+  speed: 0-50=0 50-150=4 150-300=117 300-600=296 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=536.8
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=89 3-3.5=259 >=3.5=69 max=3.8
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=6 32-64=113 64-127=517 >=127=186 max=212.9
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=1 17-25ms=1 25-34ms=29 34-50ms=18 >=50ms=4 max=60.0ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=405 subframes=405 capped=0 staleDrops=8 maxBatch=10 maxPending=1424
+  UDP sender: ticks=500 emitted=405 emptyWhileActive=21
+  UDP timer dt: 0-4ms=261 4-8ms=239 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=388 8-12ms=6 12-17ms=1 17-25ms=0 25-34ms=1 34-50ms=0 >=50ms=0 max=28.2ms
+  dropped movement: events=8 absDx=668 absDy=1092
+📈 Movement diagnostics
+  touch: callbacks=41 coalescedSamples=187 motionEvents=184
+  touch dt: 0-4ms=0 4-8ms=176 8-12ms=2 12-20ms=1 20-33ms=0 33-50ms=3 >=50ms=2 max=62.5ms
+  coalesced dt: 0-4ms=0 4-8ms=176 8-12ms=2 12-20ms=1 20-33ms=0 33-50ms=3 >=50ms=2 max=62.5ms
+  pointer: events=184 emitted=184
+  speed: 0-50=14 50-150=23 150-300=40 300-600=107 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=530.1
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=30 2.5-3=41 3-3.5=53 >=3.5=60 max=3.8
+  emit delta: 0-1=2 1-2=0 2-4=0 4-8=20 8-16=21 16-32=23 32-64=43 64-127=105 >=127=136 max=187
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=33 17-25ms=6 25-34ms=16 34-50ms=9 >=50ms=7 max=64.5ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=166 subframes=166 capped=0 staleDrops=10 maxBatch=11 maxPending=1396
+  UDP sender: ticks=500 emitted=166 emptyWhileActive=60
+  UDP timer dt: 0-4ms=256 4-8ms=244 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=150 8-12ms=1 12-17ms=4 17-25ms=6 25-34ms=1 34-50ms=0 >=50ms=0 max=32.2ms
+  dropped movement: events=10 absDx=405 absDy=375
+📈 Movement diagnostics
+  touch: callbacks=41 coalescedSamples=193 motionEvents=189
+  touch dt: 0-4ms=0 4-8ms=183 8-12ms=3 12-20ms=0 20-33ms=0 33-50ms=3 >=50ms=0 max=45.8ms
+  coalesced dt: 0-4ms=0 4-8ms=184 8-12ms=3 12-20ms=0 20-33ms=0 33-50ms=3 >=50ms=0 max=45.8ms
+  pointer: events=189 emitted=189
+  speed: 0-50=17 50-150=24 150-300=39 300-600=99 600-1000=10 1000-1600=0 1600-2400=0 >=2400=0 max=620.5
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=35 2.5-3=37 3-3.5=50 >=3.5=67 max=4.1
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=20 8-16=24 16-32=32 32-64=52 64-127=94 >=127=149 max=333.5
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=33 17-25ms=13 25-34ms=14 34-50ms=9 >=50ms=5 max=90.9ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=182 subframes=182 capped=0 staleDrops=5 maxBatch=9 maxPending=1683
+  UDP sender: ticks=501 emitted=182 emptyWhileActive=38
+  UDP timer dt: 0-4ms=256 4-8ms=245 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=169 8-12ms=2 12-17ms=1 17-25ms=5 25-34ms=1 34-50ms=0 >=50ms=0 max=31.8ms
+  dropped movement: events=5 absDx=152 absDy=128
+📈 Movement diagnostics
+  touch: callbacks=48 coalescedSamples=246 motionEvents=241
+  touch dt: 0-4ms=0 4-8ms=236 8-12ms=0 12-20ms=1 20-33ms=1 33-50ms=3 >=50ms=0 max=45.8ms
+  coalesced dt: 0-4ms=0 4-8ms=236 8-12ms=1 12-20ms=2 20-33ms=1 33-50ms=3 >=50ms=0 max=45.8ms
+  pointer: events=241 emitted=241
+  speed: 0-50=14 50-150=31 150-300=45 300-600=130 600-1000=21 1000-1600=0 1600-2400=0 >=2400=0 max=686.3
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=41 2.5-3=39 3-3.5=55 >=3.5=106 max=4.2
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=23 8-16=31 16-32=32 32-64=40 64-127=125 >=127=218 max=271.1
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=23 17-25ms=10 25-34ms=24 34-50ms=11 >=50ms=3 max=73.3ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=228 subframes=228 capped=0 staleDrops=2 maxBatch=8 maxPending=2031
+  UDP sender: ticks=500 emitted=228 emptyWhileActive=47
+  UDP timer dt: 0-4ms=230 4-8ms=270 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=212 8-12ms=3 12-17ms=3 17-25ms=5 25-34ms=1 34-50ms=0 >=50ms=0 max=27.9ms
+  dropped movement: events=2 absDx=7 absDy=47
+📈 Movement diagnostics
+  touch: callbacks=42 coalescedSamples=210 motionEvents=206
+  touch dt: 0-4ms=0 4-8ms=194 8-12ms=6 12-20ms=1 20-33ms=3 33-50ms=2 >=50ms=0 max=45.8ms
+  coalesced dt: 0-4ms=0 4-8ms=194 8-12ms=7 12-20ms=1 20-33ms=3 33-50ms=2 >=50ms=0 max=45.8ms
+  pointer: events=206 emitted=206
+  speed: 0-50=23 50-150=24 150-300=46 300-600=108 600-1000=5 1000-1600=0 1600-2400=0 >=2400=0 max=613.2
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=40 2.5-3=40 3-3.5=54 >=3.5=72 max=4.0
+  emit delta: 0-1=5 1-2=0 2-4=0 4-8=31 8-16=16 16-32=28 32-64=41 64-127=120 >=127=149 max=224.6
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=22 17-25ms=8 25-34ms=24 34-50ms=10 >=50ms=5 max=64.3ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=184 subframes=184 capped=0 staleDrops=10 maxBatch=10 maxPending=1669
+  UDP sender: ticks=501 emitted=184 emptyWhileActive=63
+  UDP timer dt: 0-4ms=251 4-8ms=250 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=168 8-12ms=1 12-17ms=2 17-25ms=5 25-34ms=4 34-50ms=0 >=50ms=0 max=32.2ms
+  dropped movement: events=10 absDx=818 absDy=894
+📈 Movement diagnostics
+  touch: callbacks=30 coalescedSamples=136 motionEvents=133
+  touch dt: 0-4ms=0 4-8ms=130 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=2 >=50ms=1 max=54.2ms
+  coalesced dt: 0-4ms=0 4-8ms=130 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=2 >=50ms=1 max=54.2ms
+  pointer: events=133 emitted=133
+  speed: 0-50=2 50-150=11 150-300=21 300-600=99 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=562.1
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=7 2.5-3=21 3-3.5=48 >=3.5=57 max=3.9
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=1 8-16=4 16-32=5 32-64=28 64-127=85 >=127=130 max=419.8
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=47 17-25ms=10 25-34ms=16 34-50ms=9 >=50ms=2 max=62.2ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=120 subframes=120 capped=0 staleDrops=3 maxBatch=9 maxPending=1336
+  UDP sender: ticks=501 emitted=120 emptyWhileActive=25
+  UDP timer dt: 0-4ms=239 4-8ms=262 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=110 8-12ms=1 12-17ms=1 17-25ms=3 25-34ms=1 34-50ms=0 >=50ms=0 max=32.1ms
+  dropped movement: events=3 absDx=217 absDy=305
+📈 Movement diagnostics
+  touch: callbacks=28 coalescedSamples=143 motionEvents=140
+  touch dt: 0-4ms=0 4-8ms=135 8-12ms=2 12-20ms=0 20-33ms=1 33-50ms=2 >=50ms=0 max=37.5ms
+  coalesced dt: 0-4ms=0 4-8ms=135 8-12ms=2 12-20ms=1 20-33ms=1 33-50ms=2 >=50ms=0 max=37.5ms
+  pointer: events=140 emitted=140
+  speed: 0-50=4 50-150=20 150-300=30 300-600=86 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=575.0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=19 2.5-3=30 3-3.5=57 >=3.5=34 max=3.9
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=10 8-16=12 16-32=19 32-64=33 64-127=116 >=127=80 max=210
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=43 17-25ms=13 25-34ms=18 34-50ms=9 >=50ms=2 max=59.2ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=130 subframes=130 capped=0 staleDrops=5 maxBatch=9 maxPending=1722
+  UDP sender: ticks=500 emitted=130 emptyWhileActive=25
+  UDP timer dt: 0-4ms=241 4-8ms=258 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=122 8-12ms=2 12-17ms=2 17-25ms=1 25-34ms=1 34-50ms=0 >=50ms=0 max=31.3ms
+  dropped movement: events=5 absDx=33 absDy=275
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=99 17-25ms=21 25-34ms=0 34-50ms=0 >=50ms=0 max=18.0ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=239 4-8ms=261 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.2ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+
+
+12:25:06.517 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:06.517 ->   net: wifi=connected ip=192.168.18.125 rssi=-27 mounted=yes | udpRx iters=1001/s
+12:25:06.517 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:06.517 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:07.535 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:07.535 ->   net: wifi=connected ip=192.168.18.125 rssi=-25 mounted=yes | udpRx iters=1001/s
+12:25:07.535 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:07.535 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:08.520 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:08.520 ->   net: wifi=connected ip=192.168.18.125 rssi=-25 mounted=yes | udpRx iters=1001/s
+12:25:08.520 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:08.520 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:09.535 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:09.535 ->   net: wifi=connected ip=192.168.18.125 rssi=-27 mounted=yes | udpRx iters=1001/s
+12:25:09.535 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:09.535 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:10.553 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:10.553 ->   net: wifi=connected ip=192.168.18.125 rssi=-25 mounted=yes | udpRx iters=1001/s
+12:25:10.553 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:10.553 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:11.544 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:11.544 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=1001/s
+12:25:11.544 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:11.544 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:12.528 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:12.528 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=1001/s
+12:25:12.528 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:12.528 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:13.544 -> 📈 ESP smooth | UDP rawPkts=66/s datagrams=66/s subframes=66/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=66/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:13.544 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=989/s
+12:25:13.544 ->   HID interval ms <2=21 2-4=33 4-8=3 8-16=3 >=16=6
+12:25:13.544 ->   emit delta:    0=0 1=1 2-4=7 4-8=30 8-16=28 16-32=0 32-64=0 64-127=0
+12:25:14.530 -> 📈 ESP smooth | UDP rawPkts=162/s datagrams=162/s subframes=162/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=156/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:14.530 ->   net: wifi=connected ip=192.168.18.125 rssi=-25 mounted=yes | udpRx iters=970/s
+12:25:14.530 ->   HID interval ms <2=46 2-4=68 4-8=24 8-16=4 >=16=14
+12:25:14.530 ->   emit delta:    0=0 1=5 2-4=10 4-8=49 8-16=89 16-32=3 32-64=0 64-127=0
+12:25:15.554 -> 📈 ESP smooth | UDP rawPkts=174/s datagrams=174/s subframes=174/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=173/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:15.554 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=968/s
+12:25:15.554 ->   HID interval ms <2=51 2-4=79 4-8=29 8-16=0 >=16=14
+12:25:15.554 ->   emit delta:    0=0 1=0 2-4=0 4-8=3 8-16=135 16-32=35 32-64=0 64-127=0
+12:25:16.542 -> 📈 ESP smooth | UDP rawPkts=169/s datagrams=169/s subframes=169/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=172/s reportFails=0 staleDrops=0 lateMax=0.4ms
+12:25:16.542 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=975/s
+12:25:16.542 ->   HID interval ms <2=52 2-4=74 4-8=29 8-16=4 >=16=13
+12:25:16.542 ->   emit delta:    0=0 1=0 2-4=0 4-8=35 8-16=129 16-32=8 32-64=0 64-127=0
+12:25:17.563 -> 📈 ESP smooth | UDP rawPkts=172/s datagrams=172/s subframes=172/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=169/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:17.563 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=974/s
+12:25:17.563 ->   HID interval ms <2=54 2-4=65 4-8=31 8-16=3 >=16=16
+12:25:17.563 ->   emit delta:    0=0 1=0 2-4=0 4-8=3 8-16=123 16-32=43 32-64=0 64-127=0
+12:25:18.552 -> 📈 ESP smooth | UDP rawPkts=55/s datagrams=55/s subframes=55/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=56/s reportFails=0 staleDrops=0 lateMax=0.4ms
+12:25:18.552 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=991/s
+12:25:18.552 ->   HID interval ms <2=16 2-4=23 4-8=10 8-16=2 >=16=5
+12:25:18.552 ->   emit delta:    0=0 1=4 2-4=6 4-8=16 8-16=9 16-32=21 32-64=0 64-127=0
+12:25:19.570 -> 📈 ESP smooth | UDP rawPkts=97/s datagrams=97/s subframes=97/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=95/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:19.570 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=989/s
+12:25:19.570 ->   HID interval ms <2=13 2-4=39 4-8=31 8-16=1 >=16=11
+12:25:19.570 ->   emit delta:    0=0 1=5 2-4=6 4-8=11 8-16=37 16-32=36 32-64=0 64-127=0
+12:25:20.555 -> 📈 ESP smooth | UDP rawPkts=57/s datagrams=57/s subframes=57/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=57/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:20.555 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=995/s
+12:25:20.555 ->   HID interval ms <2=5 2-4=25 4-8=20 8-16=3 >=16=4
+12:25:20.555 ->   emit delta:    0=0 1=7 2-4=9 4-8=9 8-16=12 16-32=20 32-64=0 64-127=0
+12:25:21.574 -> 📈 ESP smooth | UDP rawPkts=92/s datagrams=92/s subframes=92/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=92/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:21.574 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=989/s
+12:25:21.574 ->   HID interval ms <2=17 2-4=33 4-8=33 8-16=2 >=16=7
+12:25:21.574 ->   emit delta:    0=0 1=0 2-4=2 4-8=14 8-16=36 16-32=39 32-64=1 64-127=0
+12:25:22.557 -> 📈 ESP smooth | UDP rawPkts=81/s datagrams=81/s subframes=81/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=81/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:22.557 ->   net: wifi=connected ip=192.168.18.125 rssi=-25 mounted=yes | udpRx iters=990/s
+12:25:22.557 ->   HID interval ms <2=14 2-4=32 4-8=25 8-16=4 >=16=6
+12:25:22.557 ->   emit delta:    0=0 1=12 2-4=3 4-8=16 8-16=30 16-32=20 32-64=0 64-127=0
+12:25:23.575 -> 📈 ESP smooth | UDP rawPkts=115/s datagrams=115/s subframes=115/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=112/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:23.575 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=987/s
+12:25:23.575 ->   HID interval ms <2=23 2-4=41 4-8=32 8-16=2 >=16=14
+12:25:23.575 ->   emit delta:    0=0 1=8 2-4=11 4-8=10 8-16=32 16-32=51 32-64=0 64-127=0
+12:25:24.558 -> 📈 ESP smooth | UDP rawPkts=80/s datagrams=80/s subframes=80/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=81/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:24.558 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=991/s
+12:25:24.558 ->   HID interval ms <2=23 2-4=32 4-8=14 8-16=2 >=16=10
+12:25:24.558 ->   emit delta:    0=0 1=3 2-4=6 4-8=14 8-16=25 16-32=30 32-64=3 64-127=0
+12:25:25.575 -> 📈 ESP smooth | UDP rawPkts=88/s datagrams=88/s subframes=88/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=85/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:25.575 ->   net: wifi=connected ip=192.168.18.125 rssi=-25 mounted=yes | udpRx iters=985/s
+12:25:25.575 ->   HID interval ms <2=17 2-4=36 4-8=15 8-16=1 >=16=16
+12:25:25.575 ->   emit delta:    0=0 1=8 2-4=0 4-8=7 8-16=29 16-32=41 32-64=0 64-127=0
+12:25:26.556 -> 📈 ESP smooth | UDP rawPkts=60/s datagrams=60/s subframes=60/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s reports=58/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:26.556 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=989/s
+12:25:26.556 ->   HID interval ms <2=15 2-4=32 4-8=3 8-16=2 >=16=6
+12:25:26.556 ->   emit delta:    0=0 1=0 2-4=1 4-8=6 8-16=21 16-32=30 32-64=0 64-127=0
+12:25:27.573 -> 📈 ESP smooth | UDP rawPkts=16/s datagrams=16/s subframes=16/s malformed=0 queueMax=3 overflow=0 | HID ticks=500/s reports=15/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:27.573 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=1001/s
+12:25:27.573 ->   HID interval ms <2=2 2-4=2 4-8=9 8-16=0 >=16=2
+12:25:27.573 ->   emit delta:    0=0 1=0 2-4=0 4-8=5 8-16=8 16-32=2 32-64=0 64-127=0
+12:25:28.590 -> 📈 ESP smooth | UDP rawPkts=96/s datagrams=96/s subframes=96/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=97/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:28.590 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=990/s
+12:25:28.590 ->   HID interval ms <2=21 2-4=41 4-8=23 8-16=6 >=16=6
+12:25:28.590 ->   emit delta:    0=0 1=1 2-4=4 4-8=10 8-16=53 16-32=29 32-64=0 64-127=0
+12:25:29.575 -> 📈 ESP smooth | UDP rawPkts=24/s datagrams=24/s subframes=24/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s reports=24/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:29.575 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=995/s
+12:25:29.575 ->   HID interval ms <2=4 2-4=12 4-8=3 8-16=0 >=16=5
+12:25:29.575 ->   emit delta:    0=0 1=0 2-4=0 4-8=3 8-16=5 16-32=16 32-64=0 64-127=0
+12:25:30.591 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:30.591 ->   net: wifi=connected ip=192.168.18.125 rssi=-28 mounted=yes | udpRx iters=1001/s
+12:25:30.591 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:30.591 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:31.574 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:31.574 ->   net: wifi=connected ip=192.168.18.125 rssi=-25 mounted=yes | udpRx iters=1001/s
+12:25:31.574 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:31.574 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:32.589 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:32.589 ->   net: wifi=connected ip=192.168.18.125 rssi=-24 mounted=yes | udpRx iters=1001/s
+12:25:32.589 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:32.589 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:33.600 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:33.600 ->   net: wifi=connected ip=192.168.18.125 rssi=-27 mounted=yes | udpRx iters=1001/s
+12:25:33.600 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:33.600 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:34.585 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:34.585 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=1001/s
+12:25:34.585 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:34.585 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:25:35.603 -> 📈 ESP smooth | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s reports=0/s reportFails=0 staleDrops=0 lateMax=0.3ms
+12:25:35.603 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=1001/s
+12:25:35.603 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:25:35.603 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+
+log 2
+
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=1 8-12ms=0 12-17ms=111 17-25ms=0 25-34ms=0 34-50ms=1 >=50ms=2 max=1053.3ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=236 4-8ms=264 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=120 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=16.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=501 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=249 4-8ms=252 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=120 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=16.8ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=243 4-8ms=257 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+📈 Movement diagnostics
+  touch: callbacks=42 coalescedSamples=218 motionEvents=211
+  touch dt: 0-4ms=0 4-8ms=205 8-12ms=0 12-20ms=2 20-33ms=2 33-50ms=2 >=50ms=0 max=43.9ms
+  coalesced dt: 0-4ms=0 4-8ms=206 8-12ms=0 12-20ms=2 20-33ms=2 33-50ms=2 >=50ms=0 max=43.9ms
+  pointer: events=211 emitted=211
+  speed: 0-50=3 50-150=53 150-300=66 300-600=85 600-1000=4 1000-1600=0 1600-2400=0 >=2400=0 max=632.2
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=44 2.5-3=59 3-3.5=57 >=3.5=51 max=4.1
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=42 16-32=66 32-64=70 64-127=123 >=127=109 max=356.4
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=4 8-12ms=0 12-17ms=43 17-25ms=4 25-34ms=20 34-50ms=10 >=50ms=3 max=68.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=199 subframes=199 capped=0 staleDrops=10 maxBatch=11 maxPending=1517
+  UDP sender: ticks=500 emitted=199 emptyWhileActive=40
+  UDP timer dt: 0-4ms=246 4-8ms=253 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=187 8-12ms=2 12-17ms=1 17-25ms=1 25-34ms=1 34-50ms=0 >=50ms=0 max=27.6ms
+  dropped movement: events=10 absDx=441 absDy=392
+📈 Movement diagnostics
+  touch: callbacks=53 coalescedSamples=293 motionEvents=292
+  touch dt: 0-4ms=0 4-8ms=289 8-12ms=0 12-20ms=0 20-33ms=2 33-50ms=1 >=50ms=0 max=35.3ms
+  coalesced dt: 0-4ms=0 4-8ms=289 8-12ms=0 12-20ms=0 20-33ms=2 33-50ms=1 >=50ms=0 max=35.3ms
+  pointer: events=292 emitted=292
+  speed: 0-50=4 50-150=26 150-300=61 300-600=137 600-1000=64 1000-1600=0 1600-2400=0 >=2400=0 max=841.0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=22 2.5-3=56 3-3.5=92 >=3.5=122 max=4.7
+  emit delta: 0-1=1 1-2=0 2-4=0 4-8=7 8-16=16 16-32=34 32-64=68 64-127=171 >=127=275 max=366.9
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=26 17-25ms=3 25-34ms=26 34-50ms=13 >=50ms=3 max=66.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=280 subframes=280 capped=0 staleDrops=5 maxBatch=9 maxPending=2574
+  UDP sender: ticks=500 emitted=280 emptyWhileActive=21
+  UDP timer dt: 0-4ms=260 4-8ms=241 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=269 8-12ms=7 12-17ms=1 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=12.3ms
+  dropped movement: events=5 absDx=238 absDy=373
+📈 Movement diagnostics
+  touch: callbacks=51 coalescedSamples=284 motionEvents=281
+  touch dt: 0-4ms=0 4-8ms=278 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=2 >=50ms=1 max=60.1ms
+  coalesced dt: 0-4ms=0 4-8ms=278 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=2 >=50ms=1 max=60.1ms
+  pointer: events=281 emitted=281
+  speed: 0-50=7 50-150=27 150-300=87 300-600=123 600-1000=37 1000-1600=0 1600-2400=0 >=2400=0 max=927.0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=27 2.5-3=83 3-3.5=90 >=3.5=81 max=4.9
+  emit delta: 0-1=1 1-2=0 2-4=0 4-8=9 8-16=22 16-32=30 32-64=138 64-127=177 >=127=172 max=445.0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=4 8-12ms=0 12-17ms=24 17-25ms=3 25-34ms=23 34-50ms=16 >=50ms=3 max=55.4ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=268 subframes=268 capped=0 staleDrops=10 maxBatch=10 maxPending=2875
+  UDP sender: ticks=500 emitted=268 emptyWhileActive=34
+  UDP timer dt: 0-4ms=262 4-8ms=238 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=254 8-12ms=4 12-17ms=5 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=16.1ms
+  dropped movement: events=10 absDx=688 absDy=188
+📈 Movement diagnostics
+  touch: callbacks=56 coalescedSamples=298 motionEvents=294
+  touch dt: 0-4ms=0 4-8ms=281 8-12ms=7 12-20ms=3 20-33ms=2 33-50ms=1 >=50ms=0 max=37.5ms
+  coalesced dt: 0-4ms=0 4-8ms=281 8-12ms=8 12-20ms=3 20-33ms=2 33-50ms=1 >=50ms=0 max=37.5ms
+  pointer: events=294 emitted=294
+  speed: 0-50=18 50-150=84 150-300=76 300-600=80 600-1000=32 1000-1600=4 1600-2400=0 >=2400=0 max=1049.7
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=90 2.5-3=65 3-3.5=67 >=3.5=72 max=5.3
+  emit delta: 0-1=3 1-2=0 2-4=0 4-8=40 8-16=74 16-32=81 32-64=90 64-127=136 >=127=151 max=546.0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=4 8-12ms=0 12-17ms=17 17-25ms=3 25-34ms=25 34-50ms=16 >=50ms=4 max=68.4ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=281 subframes=281 capped=0 staleDrops=14 maxBatch=10 maxPending=3084
+  UDP sender: ticks=501 emitted=281 emptyWhileActive=58
+  UDP timer dt: 0-4ms=239 4-8ms=262 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=265 8-12ms=2 12-17ms=4 17-25ms=3 25-34ms=0 34-50ms=0 >=50ms=0 max=20.1ms
+  dropped movement: events=14 absDx=466 absDy=650
+📈 Movement diagnostics
+  touch: callbacks=66 coalescedSamples=363 motionEvents=360
+  touch dt: 0-4ms=0 4-8ms=339 8-12ms=17 12-20ms=1 20-33ms=0 33-50ms=1 >=50ms=2 max=70.8ms
+  coalesced dt: 0-4ms=0 4-8ms=340 8-12ms=17 12-20ms=1 20-33ms=0 33-50ms=1 >=50ms=2 max=70.8ms
+  pointer: events=360 emitted=360
+  speed: 0-50=55 50-150=213 150-300=58 300-600=27 600-1000=7 1000-1600=0 1600-2400=0 >=2400=0 max=909.2
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=218 2.5-3=100 3-3.5=33 >=3.5=9 max=4.9
+  emit delta: 0-1=3 1-2=0 2-4=0 4-8=78 8-16=179 16-32=242 32-64=117 64-127=68 >=127=18 max=496.0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=18 17-25ms=2 25-34ms=35 34-50ms=13 >=50ms=1 max=56.3ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=345 subframes=345 capped=0 staleDrops=6 maxBatch=9 maxPending=1089
+  UDP sender: ticks=501 emitted=345 emptyWhileActive=67
+  UDP timer dt: 0-4ms=250 4-8ms=251 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=323 8-12ms=4 12-17ms=10 17-25ms=3 25-34ms=2 34-50ms=0 >=50ms=0 max=32.2ms
+  dropped movement: events=6 absDx=108 absDy=144
+📈 Movement diagnostics
+  touch: callbacks=65 coalescedSamples=353 motionEvents=347
+  touch dt: 0-4ms=0 4-8ms=332 8-12ms=11 12-20ms=2 20-33ms=1 33-50ms=0 >=50ms=1 max=54.2ms
+  coalesced dt: 0-4ms=0 4-8ms=333 8-12ms=12 12-20ms=4 20-33ms=1 33-50ms=0 >=50ms=1 max=54.2ms
+  pointer: events=347 emitted=347
+  speed: 0-50=58 50-150=176 150-300=55 300-600=58 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=512.1
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=206 2.5-3=66 3-3.5=59 >=3.5=16 max=3.7
+  emit delta: 0-1=3 1-2=0 2-4=0 4-8=96 8-16=155 16-32=198 32-64=70 64-127=118 >=127=46 max=252.7
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=11 17-25ms=2 25-34ms=27 34-50ms=20 >=50ms=2 max=56.2ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=339 subframes=339 capped=0 staleDrops=8 maxBatch=10 maxPending=911
+  UDP sender: ticks=500 emitted=339 emptyWhileActive=56
+  UDP timer dt: 0-4ms=242 4-8ms=258 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=319 8-12ms=4 12-17ms=10 17-25ms=4 25-34ms=0 34-50ms=0 >=50ms=0 max=24.0ms
+  dropped movement: events=8 absDx=157 absDy=70
+📈 Movement diagnostics
+  touch: callbacks=42 coalescedSamples=217 motionEvents=212
+  touch dt: 0-4ms=1 4-8ms=197 8-12ms=8 12-20ms=2 20-33ms=2 33-50ms=1 >=50ms=1 max=87.5ms
+  coalesced dt: 0-4ms=1 4-8ms=197 8-12ms=9 12-20ms=3 20-33ms=2 33-50ms=1 >=50ms=1 max=87.5ms
+  pointer: events=212 emitted=212
+  speed: 0-50=27 50-150=45 150-300=50 300-600=64 600-1000=26 1000-1600=0 1600-2400=0 >=2400=0 max=863.8
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=60 2.5-3=54 3-3.5=39 >=3.5=59 max=4.7
+  emit delta: 0-1=4 1-2=0 2-4=0 4-8=45 8-16=25 16-32=56 32-64=73 64-127=75 >=127=131 max=385.9
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=30 17-25ms=6 25-34ms=19 34-50ms=13 >=50ms=5 max=67.8ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=197 subframes=197 capped=0 staleDrops=6 maxBatch=9 maxPending=2029
+  UDP sender: ticks=500 emitted=197 emptyWhileActive=53
+  UDP timer dt: 0-4ms=239 4-8ms=261 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=181 8-12ms=4 12-17ms=5 17-25ms=2 25-34ms=1 34-50ms=0 >=50ms=0 max=31.8ms
+  dropped movement: events=6 absDx=486 absDy=779
+📈 Movement diagnostics
+  touch: callbacks=62 coalescedSamples=365 motionEvents=363
+  touch dt: 0-4ms=0 4-8ms=358 8-12ms=3 12-20ms=0 20-33ms=0 33-50ms=1 >=50ms=1 max=54.2ms
+  coalesced dt: 0-4ms=0 4-8ms=358 8-12ms=3 12-20ms=0 20-33ms=0 33-50ms=1 >=50ms=1 max=54.2ms
+  pointer: events=363 emitted=363
+  speed: 0-50=3 50-150=18 150-300=91 300-600=163 600-1000=84 1000-1600=4 1600-2400=0 >=2400=0 max=1065.4
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=17 2.5-3=75 3-3.5=102 >=3.5=169 max=5.3
+  emit delta: 0-1=1 1-2=0 2-4=0 4-8=7 8-16=7 16-32=23 32-64=121 64-127=203 >=127=341 max=568.2
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=14 17-25ms=5 25-34ms=23 34-50ms=9 >=50ms=9 max=73.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=340 subframes=340 capped=0 staleDrops=17 maxBatch=10 maxPending=3662
+  UDP sender: ticks=501 emitted=340 emptyWhileActive=48
+  UDP timer dt: 0-4ms=239 4-8ms=262 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=323 8-12ms=3 12-17ms=8 17-25ms=3 25-34ms=1 34-50ms=0 >=50ms=0 max=28.5ms
+  dropped movement: events=17 absDx=1617 absDy=1954
+📈 Movement diagnostics
+  touch: callbacks=20 coalescedSamples=104 motionEvents=102
+  touch dt: 0-4ms=0 4-8ms=100 8-12ms=0 12-20ms=0 20-33ms=1 33-50ms=1 >=50ms=0 max=45.8ms
+  coalesced dt: 0-4ms=0 4-8ms=100 8-12ms=0 12-20ms=0 20-33ms=1 33-50ms=1 >=50ms=0 max=45.8ms
+  pointer: events=102 emitted=102
+  speed: 0-50=1 50-150=17 150-300=32 300-600=24 600-1000=23 1000-1600=5 1600-2400=0 >=2400=0 max=1084.5
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=8 2.5-3=37 3-3.5=18 >=3.5=39 max=5.4
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=2 8-16=5 16-32=17 32-64=46 64-127=39 >=127=82 max=542.7
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=72 17-25ms=15 25-34ms=13 34-50ms=1 >=50ms=2 max=71.7ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=89 subframes=89 capped=0 staleDrops=4 maxBatch=10 maxPending=2484
+  UDP sender: ticks=501 emitted=89 emptyWhileActive=27
+  UDP timer dt: 0-4ms=251 4-8ms=250 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.0ms
+  UDP send dt: 0-8ms=81 8-12ms=0 12-17ms=1 17-25ms=4 25-34ms=1 34-50ms=0 >=50ms=0 max=28.0ms
+  dropped movement: events=4 absDx=277 absDy=165
+📈 Movement diagnostics
+  touch: callbacks=0 coalescedSamples=0 motionEvents=0
+  touch dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  coalesced dt: 0-4ms=0 4-8ms=0 8-12ms=0 12-20ms=0 20-33ms=0 33-50ms=0 >=50ms=0 max=0ms
+  pointer: events=0 emitted=0
+  speed: 0-50=0 50-150=0 150-300=0 300-600=0 600-1000=0 1000-1600=0 1600-2400=0 >=2400=0 max=0
+  gain: 0-1.1=0 1.1-1.5=0 1.5-2=0 2-2.5=0 2.5-3=0 3-3.5=0 >=3.5=0 max=0
+  emit delta: 0-1=0 1-2=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0 >=127=0 max=0
+  BLE: attempts=0 sent=0 blocked=0 readyCb=0 longestBlock=0.0ms
+  BLE tick dt: 0-8ms=0 8-12ms=0 12-17ms=103 17-25ms=17 25-34ms=0 34-50ms=0 >=50ms=0 max=17.6ms
+  BLE send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  UDP: datagrams=0 subframes=0 capped=0 staleDrops=0 maxBatch=0 maxPending=0
+  UDP sender: ticks=500 emitted=0 emptyWhileActive=0
+  UDP timer dt: 0-4ms=257 4-8ms=243 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=5.1ms
+  UDP send dt: 0-8ms=0 8-12ms=0 12-17ms=0 17-25ms=0 25-34ms=0 34-50ms=0 >=50ms=0 max=0ms
+  dropped movement: events=0 absDx=0 absDy=0
+
+
+12:02:35.924 -> .
+12:02:35.924 -> ✅ UDP motion listening on 192.168.18.125:4210
+12:02:35.924 -> 🎯 ESP_Bridge_Production ready
+12:02:35.924 -> 🚦 udp-rx task running on core 0
+12:02:36.941 -> 📈 ESP production | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=1652/s mouseReports=0/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:36.941 ->   net: wifi=connected ip=192.168.18.125 rssi=-27 mounted=yes | udpRx iters=1002/s
+12:02:36.941 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:02:36.941 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:02:37.928 -> 📈 ESP production | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s mouseReports=0/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.4ms
+12:02:37.928 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=1001/s
+12:02:37.928 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:02:37.928 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+12:02:38.948 -> 📈 ESP production | UDP rawPkts=61/s datagrams=61/s subframes=61/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s mouseReports=61/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.4ms
+12:02:38.948 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=987/s
+12:02:38.948 ->   HID interval ms <2=8 2-4=40 4-8=7 8-16=0 >=16=5
+12:02:38.948 ->   emit delta:    0=0 1=6 2-4=20 4-8=28 8-16=6 16-32=1 32-64=0 64-127=0
+12:02:39.932 -> 📈 ESP production | UDP rawPkts=54/s datagrams=54/s subframes=54/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s mouseReports=54/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.4ms
+12:02:39.932 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=990/s
+12:02:39.932 ->   HID interval ms <2=6 2-4=31 4-8=7 8-16=3 >=16=7
+12:02:39.932 ->   emit delta:    0=0 1=1 2-4=13 4-8=7 8-16=14 16-32=18 32-64=1 64-127=0
+12:02:40.950 -> 📈 ESP production | UDP rawPkts=72/s datagrams=72/s subframes=72/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s mouseReports=72/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:40.950 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=990/s
+12:02:40.950 ->   HID interval ms <2=4 2-4=45 4-8=12 8-16=1 >=16=10
+12:02:40.950 ->   emit delta:    0=0 1=0 2-4=2 4-8=7 8-16=26 16-32=29 32-64=8 64-127=0
+12:02:41.938 -> 📈 ESP production | UDP rawPkts=120/s datagrams=120/s subframes=120/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s mouseReports=120/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:41.938 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=985/s
+12:02:41.938 ->   HID interval ms <2=15 2-4=70 4-8=22 8-16=3 >=16=10
+12:02:41.938 ->   emit delta:    0=0 1=1 2-4=5 4-8=15 8-16=39 16-32=44 32-64=16 64-127=0
+12:02:42.925 -> 📈 ESP production | UDP rawPkts=189/s datagrams=189/s subframes=189/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s mouseReports=189/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:42.957 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=969/s
+12:02:42.957 ->   HID interval ms <2=19 2-4=123 4-8=27 8-16=6 >=16=14
+12:02:42.957 ->   emit delta:    0=0 1=0 2-4=4 4-8=59 8-16=89 16-32=34 32-64=3 64-127=0
+12:02:43.945 -> 📈 ESP production | UDP rawPkts=73/s datagrams=73/s subframes=73/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s mouseReports=73/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:43.945 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=991/s
+12:02:43.945 ->   HID interval ms <2=6 2-4=44 4-8=11 8-16=2 >=16=10
+12:02:43.945 ->   emit delta:    0=0 1=7 2-4=5 4-8=5 8-16=23 16-32=17 32-64=16 64-127=0
+12:02:44.929 -> 📈 ESP production | UDP rawPkts=88/s datagrams=88/s subframes=88/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s mouseReports=87/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:44.929 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=983/s
+12:02:44.929 ->   HID interval ms <2=7 2-4=54 4-8=13 8-16=2 >=16=11
+12:02:44.929 ->   emit delta:    0=0 1=12 2-4=14 4-8=16 8-16=19 16-32=25 32-64=1 64-127=0
+12:02:45.947 -> 📈 ESP production | UDP rawPkts=108/s datagrams=108/s subframes=108/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s mouseReports=108/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:45.947 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=989/s
+12:02:45.947 ->   HID interval ms <2=14 2-4=65 4-8=13 8-16=2 >=16=14
+12:02:45.947 ->   emit delta:    0=0 1=4 2-4=14 4-8=25 8-16=39 16-32=11 32-64=15 64-127=0
+12:02:46.934 -> 📈 ESP production | UDP rawPkts=137/s datagrams=137/s subframes=137/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s mouseReports=131/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:46.967 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=983/s
+12:02:46.967 ->   HID interval ms <2=12 2-4=79 4-8=22 8-16=4 >=16=14
+12:02:46.967 ->   emit delta:    0=0 1=19 2-4=37 4-8=47 8-16=20 16-32=3 32-64=5 64-127=0
+12:02:47.957 -> 📈 ESP production | UDP rawPkts=146/s datagrams=146/s subframes=146/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s mouseReports=139/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.4ms
+12:02:47.957 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=980/s
+12:02:47.957 ->   HID interval ms <2=11 2-4=82 4-8=27 8-16=5 >=16=14
+12:02:47.957 ->   emit delta:    0=0 1=41 2-4=58 4-8=24 8-16=15 16-32=1 32-64=0 64-127=0
+12:02:48.943 -> 📈 ESP production | UDP rawPkts=121/s datagrams=121/s subframes=121/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s mouseReports=107/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:48.943 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=983/s
+12:02:48.943 ->   HID interval ms <2=15 2-4=53 4-8=25 8-16=4 >=16=10
+12:02:48.943 ->   emit delta:    0=0 1=47 2-4=31 4-8=1 8-16=14 16-32=14 32-64=0 64-127=0
+12:02:49.964 -> 📈 ESP production | UDP rawPkts=150/s datagrams=150/s subframes=150/s malformed=0 queueMax=7 overflow=0 | HID ticks=500/s mouseReports=148/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:49.964 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=976/s
+12:02:49.964 ->   HID interval ms <2=19 2-4=90 4-8=24 8-16=3 >=16=12
+12:02:49.964 ->   emit delta:    0=0 1=17 2-4=63 4-8=34 8-16=31 16-32=3 32-64=0 64-127=0
+12:02:50.953 -> 📈 ESP production | UDP rawPkts=120/s datagrams=120/s subframes=120/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s mouseReports=113/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.4ms
+12:02:50.953 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=985/s
+12:02:50.953 ->   HID interval ms <2=16 2-4=56 4-8=25 8-16=4 >=16=12
+12:02:50.953 ->   emit delta:    0=0 1=20 2-4=23 4-8=30 8-16=23 16-32=17 32-64=0 64-127=0
+12:02:51.974 -> 📈 ESP production | UDP rawPkts=72/s datagrams=72/s subframes=72/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s mouseReports=69/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.4ms
+12:02:51.974 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=992/s
+12:02:51.974 ->   HID interval ms <2=10 2-4=34 4-8=12 8-16=3 >=16=10
+12:02:51.974 ->   emit delta:    0=0 1=1 2-4=11 4-8=11 8-16=19 16-32=23 32-64=4 64-127=0
+12:02:52.955 -> 📈 ESP production | UDP rawPkts=80/s datagrams=80/s subframes=80/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s mouseReports=82/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:52.955 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=988/s
+12:02:52.955 ->   HID interval ms <2=18 2-4=39 4-8=16 8-16=0 >=16=9
+12:02:52.955 ->   emit delta:    0=0 1=3 2-4=5 4-8=11 8-16=21 16-32=22 32-64=19 64-127=1
+12:02:53.949 -> 📈 ESP production | UDP rawPkts=176/s datagrams=176/s subframes=176/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s mouseReports=176/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:53.949 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=979/s
+12:02:53.949 ->   HID interval ms <2=33 2-4=91 4-8=36 8-16=2 >=16=14
+12:02:53.949 ->   emit delta:    0=0 1=0 2-4=1 4-8=20 8-16=61 16-32=78 32-64=16 64-127=0
+12:02:54.971 -> 📈 ESP production | UDP rawPkts=111/s datagrams=111/s subframes=111/s malformed=0 queueMax=6 overflow=0 | HID ticks=500/s mouseReports=110/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:54.971 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=987/s
+12:02:54.971 ->   HID interval ms <2=20 2-4=59 4-8=13 8-16=3 >=16=15
+12:02:54.971 ->   emit delta:    0=0 1=0 2-4=5 4-8=39 8-16=24 16-32=22 32-64=20 64-127=0
+12:02:55.956 -> 📈 ESP production | UDP rawPkts=0/s datagrams=0/s subframes=0/s malformed=0 queueMax=0 overflow=0 | HID ticks=500/s mouseReports=0/s keyboardReports=0/s reportFails=0 staleDrops=0 releaseAll=0 lateMax=0.5ms
+12:02:55.956 ->   net: wifi=connected ip=192.168.18.125 rssi=-26 mounted=yes | udpRx iters=1001/s
+12:02:55.956 ->   HID interval ms <2=0 2-4=0 4-8=0 8-16=0 >=16=0
+12:02:55.956 ->   emit delta:    0=0 1=0 2-4=0 4-8=0 8-16=0 16-32=0 32-64=0 64-127=0
+
+---
 
 These logs record experiments, failed attempts, intermediate hypotheses, and final POC evidence. Future development should not treat packet formats, constants, timings, or temporary debug fields in this file as implementation contracts.
 

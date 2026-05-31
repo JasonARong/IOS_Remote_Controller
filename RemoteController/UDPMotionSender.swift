@@ -2,13 +2,10 @@
 //  UDPMotionSender.swift
 //  RemoteController
 //
-//  UDP motion sender for the Wi-Fi motion POC.
+//  UDP motion sender for the Wi-Fi cursor path.
 //
-//  Each coalesced touch sample is quantized into its own Int16 MotionSubframe
-//  in `enqueueMotion`, then the timer drains the FIFO into UDP datagrams. The
-//  previous design summed all samples in a burst into one scalar, which
-//  destroyed the per-sample temporal granularity iOS gives us at 240 Hz and
-//  collapsed it down to ~25 reports/s on the host. See `Log 13` analysis.
+//  The sender keeps lab modes for balancing frame density against
+//  stale backlog replay.
 //
 
 import Foundation
@@ -17,15 +14,37 @@ import Network
 import QuartzCore
 
 final class UDPMotionSender {
+    enum SchedulingMode: String {
+        case accumulator125Hz
+        case fifo250Hz
+        case boundedFifo250Hz
+        case latestWins250Hz
+    }
+
     private let connection: NWConnection
     private let queue = DispatchQueue(label: "name.jason.RemoteController.udpMotion", qos: .userInteractive)
     private let packetMarker: UInt8
-    // 250 Hz drain rate. Matches coalesced-touch arrival cadence (240 Hz)
-    // closely enough that we ship subframes within one tick of arrival.
-    private let frameInterval: CFTimeInterval = 0.004
+    private let schedulingMode: SchedulingMode
+    // Active-only drain rate. Current baseline uses 125 Hz to reduce
+    // timer/network wakeups; lab comparison modes keep 250 Hz semantics.
+    private var frameInterval: CFTimeInterval {
+        switch schedulingMode {
+        case .accumulator125Hz:
+            return 0.008
+        case .fifo250Hz, .boundedFifo250Hz, .latestWins250Hz:
+            return 0.004
+        }
+    }
     // Subframes older than this at drain time are pruned from the head of the
     // queue (input went stale during a network blip).
     private let staleInterval: CFTimeInterval = 0.032
+    // Latest-wins mode should never replay old motion to "catch up". If the
+    // pending aggregate is older than this, it is dropped before emit.
+    private let latestWinsMaxPendingAge: CFTimeInterval = 0.012
+    // Hybrid FIFO mode keeps enough per-sample frames to avoid low-FPS motion,
+    // but drops older burst history before it becomes a delayed tail.
+    private let boundedFifoMaxQueuedSubframes = 6
+    private let boundedFifoMaxQueueAge: CFTimeInterval = 0.024
     // Per-subframe Int16 cap. Above this is structurally a "fast flick" and
     // the ESP HID pacer will clamp again to MAX_HID_DELTA_PER_REPORT (127),
     // so this is mostly to avoid pathological values.
@@ -56,23 +75,30 @@ final class UDPMotionSender {
     // coalesced touch sample (when the sample produced a non-zero Int16
     // delta after quantization).
     private var queuedSubframes: [MotionSubframe] = []
+    private var pendingDx: CGFloat = 0
+    private var pendingDy: CGFloat = 0
+    private var pendingFirstArrivalTimestamp: CFTimeInterval?
     private var lastInputReceiveTimestamp: CFTimeInterval?
     private var lastTimerFireTimestamp: CFTimeInterval?
     private var isCancelled = false
 
-    // Sets up UDP connection and starts the 250Hz timer
-    init(host: String, port: UInt16, packetMarker: UInt8) {
+    // Sets up UDP connection. The motion timer is active-only and starts on
+    // first movement, then stops after finger up or idle drain.
+    init(host: String, port: UInt16, packetMarker: UInt8, schedulingMode: SchedulingMode) {
         self.packetMarker = packetMarker
+        self.schedulingMode = schedulingMode
         let endpointHost = NWEndpoint.Host(host)
         let endpointPort = NWEndpoint.Port(rawValue: port)!
         connection = NWConnection(host: endpointHost, port: endpointPort, using: .udp)
+        MovementDiagnostics.shared.setExperimentLabels(udpSchedulerMode: schedulingMode.rawValue)
         connection.stateUpdateHandler = { state in
             #if DEBUG
-            print("UDP motion state: \(state)")
+            if RuntimeDiagnostics.transportStateLogs {
+                print("UDP motion state: \(state)")
+            }
             #endif
         }
         connection.start(queue: queue)
-        startTimer()
     }
 
     // Receives a single touch movement delta, accumulates sub-pixel remainders to avoid rounding to zero,
@@ -83,30 +109,18 @@ final class UDPMotionSender {
         queue.async { [weak self] in
             guard let self, !self.isCancelled else { return }
             let arrival = CACurrentMediaTime()
+            self.startTimerIfNeeded()
 
-            // Accumlate dx dy sub-pixels, prevent rounding gives sub-pixel 0 every time, so the cursor never moves.
-            self.fractionalDx += dx
-            self.fractionalDy += dy
-
-            let rawDx = self.fractionalDx.rounded()
-            let rawDy = self.fractionalDy.rounded()
-            let cappedDx = max(-self.maxDeltaPerFrame, min(self.maxDeltaPerFrame, rawDx))
-            let cappedDy = max(-self.maxDeltaPerFrame, min(self.maxDeltaPerFrame, rawDy))
-            let wasCapped = cappedDx != rawDx || cappedDy != rawDy
-
-            self.fractionalDx -= cappedDx
-            self.fractionalDy -= cappedDy
-
-            if wasCapped {
-                MovementDiagnostics.shared.recordUdpFrameCapped()
-            }
-
-            let intDx = Int16(cappedDx)
-            let intDy = Int16(cappedDy)
-            if intDx != 0 || intDy != 0 {
-                self.queuedSubframes.append(
-                    MotionSubframe(dx: intDx, dy: intDy, timestamp: arrival)
-                )
+            switch self.schedulingMode {
+            case .accumulator125Hz:
+                self.enqueueAccumulatedMotion(dx: dx, dy: dy, arrival: arrival)
+            case .fifo250Hz:
+                self.enqueueFifoMotion(dx: dx, dy: dy, arrival: arrival)
+            case .boundedFifo250Hz:
+                self.enqueueFifoMotion(dx: dx, dy: dy, arrival: arrival)
+                self.trimBoundedFifoQueue(recordDrop: true)
+            case .latestWins250Hz:
+                self.enqueueLatestWinsMotion(dx: dx, dy: dy, arrival: arrival)
             }
             self.lastInputReceiveTimestamp = arrival
             self.recordQueueState()
@@ -119,6 +133,7 @@ final class UDPMotionSender {
             guard let self, !self.isCancelled else { return }
             self.clearMotionState(recordDrop: true)
             self.lastInputReceiveTimestamp = nil
+            self.stopTimer()
         }
     }
 
@@ -127,16 +142,14 @@ final class UDPMotionSender {
         queue.async { [weak self] in
             guard let self, !self.isCancelled else { return }
             self.isCancelled = true
-            self.timer?.cancel()
-            self.timer = nil
+            self.stopTimer()
             self.connection.cancel()
         }
     }
 
-    // Creates and starts the DispatchSourceTimer that fires emitFrameIfNeeded every 4ms. Called once during init.
-    private func startTimer() {
+    private func startTimerIfNeeded() {
+        guard timer == nil else { return }
         let timer = DispatchSource.makeTimerSource(queue: queue)
-        // repeat every frameInterval (0.004s, 250Hz)
         timer.schedule(deadline: .now() + frameInterval, repeating: frameInterval, leeway: .milliseconds(1))
         timer.setEventHandler { [weak self] in
             self?.emitFrameIfNeeded()
@@ -145,7 +158,13 @@ final class UDPMotionSender {
         self.timer = timer
     }
 
-    // fires every 0.004s, steadily empties the queue
+    private func stopTimer() {
+        timer?.cancel()
+        timer = nil
+        lastTimerFireTimestamp = nil
+    }
+
+    // Fires only while motion is active, steadily emptying pending movement.
     private func emitFrameIfNeeded() {
         guard !isCancelled else { return }
 
@@ -155,7 +174,7 @@ final class UDPMotionSender {
         }
         lastTimerFireTimestamp = now
 
-        pruneStaleSubframes(now: now) // Remove anything too old
+        pruneStaleMotion(now: now) // Remove anything too old
 
         let hadInput: Bool
         if let lastInputReceiveTimestamp {
@@ -164,11 +183,18 @@ final class UDPMotionSender {
             hadInput = false
         }
 
-        let willEmit = !queuedSubframes.isEmpty
+        let willEmit = hasMotionReadyToEmit()
         MovementDiagnostics.shared.recordUdpSenderTick(emitted: willEmit, hadInput: hadInput)
 
-        if willEmit { // Send one subframe
-            flushBatch()
+        if willEmit {
+            switch schedulingMode {
+            case .accumulator125Hz:
+                flushAccumulatedFrame()
+            case .fifo250Hz, .boundedFifo250Hz:
+                flushFifoBatch()
+            case .latestWins250Hz:
+                flushLatestWinsFrame(now: now)
+            }
         }
 
         // Stream-end bookkeeping: if input has gone stale and the queue is
@@ -178,14 +204,62 @@ final class UDPMotionSender {
            now - lastInputReceiveTimestamp > staleInterval {
             self.lastInputReceiveTimestamp = nil
             MovementDiagnostics.shared.recordUdpStreamEnded()
+            stopTimer()
         }
 
         recordQueueState()
     }
 
-    // Walks the front of the queue and discards any subframe older than 32ms,
-    // preventing stale input from replaying after a network blip or pause.
-    private func pruneStaleSubframes(now: CFTimeInterval) {
+    private func enqueueAccumulatedMotion(dx: CGFloat, dy: CGFloat, arrival: CFTimeInterval) {
+        if pendingFirstArrivalTimestamp == nil {
+            pendingFirstArrivalTimestamp = arrival
+        }
+        pendingDx += dx
+        pendingDy += dy
+    }
+
+    private func enqueueFifoMotion(dx: CGFloat, dy: CGFloat, arrival: CFTimeInterval) {
+        // Accumulate dx/dy sub-pixels; otherwise repeated 0.x movement can
+        // round to zero forever and the cursor never moves.
+        fractionalDx += dx
+        fractionalDy += dy
+
+        let rawDx = fractionalDx.rounded()
+        let rawDy = fractionalDy.rounded()
+        let cappedDx = max(-maxDeltaPerFrame, min(maxDeltaPerFrame, rawDx))
+        let cappedDy = max(-maxDeltaPerFrame, min(maxDeltaPerFrame, rawDy))
+        let wasCapped = cappedDx != rawDx || cappedDy != rawDy
+
+        fractionalDx -= cappedDx
+        fractionalDy -= cappedDy
+
+        if wasCapped {
+            MovementDiagnostics.shared.recordUdpFrameCapped()
+        }
+
+        let intDx = Int16(cappedDx)
+        let intDy = Int16(cappedDy)
+        if intDx != 0 || intDy != 0 {
+            queuedSubframes.append(MotionSubframe(dx: intDx, dy: intDy, timestamp: arrival))
+        }
+    }
+
+    private func enqueueLatestWinsMotion(dx: CGFloat, dy: CGFloat, arrival: CFTimeInterval) {
+        if let first = pendingFirstArrivalTimestamp,
+           arrival - first > latestWinsMaxPendingAge {
+            clearPendingAggregate(recordDrop: true)
+        }
+
+        if pendingFirstArrivalTimestamp == nil {
+            pendingFirstArrivalTimestamp = arrival
+        }
+        pendingDx += dx
+        pendingDy += dy
+    }
+
+    // Walks the front of the FIFO and discards stale subframes. Bounded FIFO
+    // uses a tighter age cap. Aggregate modes drop their pending motion.
+    private func pruneStaleMotion(now: CFTimeInterval) {
         while let first = queuedSubframes.first,
               now - first.timestamp > staleInterval {
             queuedSubframes.removeFirst()
@@ -194,21 +268,116 @@ final class UDPMotionSender {
                 dy: CGFloat(first.dy)
             )
         }
+
+        if schedulingMode == .boundedFifo250Hz {
+            trimBoundedFifoQueue(now: now, recordDrop: true)
+        }
+
+        if let first = pendingFirstArrivalTimestamp,
+           now - first > staleInterval {
+            clearPendingAggregate(recordDrop: true)
+        }
     }
 
-    // Ships at most one chunk of `maxSubframesPerDatagram` subframes per
-    // tick, NOT the entire queue. This is the crucial throttle: with the
-    // queue-flush "while" loop a 5-sample iOS burst was mashed back into a
-    // single chunky packet, then the ESP pacer summed it into a single HID
-    // report (~30 Hz cursor). One chunk per tick + maxSubframesPerDatagram=1
-    // = 250 Hz packet rate during drags, which the ESP pacer can pump
-    // straight through to USB without re-coalescing.
-    private func flushBatch() {
+    private func trimBoundedFifoQueue(now: CFTimeInterval? = nil, recordDrop: Bool) {
+        while queuedSubframes.count > boundedFifoMaxQueuedSubframes {
+            dropOldestQueuedSubframe(recordDrop: recordDrop)
+        }
+
+        if let now {
+            while let first = queuedSubframes.first,
+                  now - first.timestamp > boundedFifoMaxQueueAge {
+                dropOldestQueuedSubframe(recordDrop: recordDrop)
+            }
+        }
+    }
+
+    private func dropOldestQueuedSubframe(recordDrop: Bool) {
+        guard !queuedSubframes.isEmpty else { return }
+        let dropped = queuedSubframes.removeFirst()
+        if recordDrop {
+            MovementDiagnostics.shared.recordUdpStaleDrop(
+                dx: CGFloat(dropped.dx),
+                dy: CGFloat(dropped.dy)
+            )
+        }
+    }
+
+    // Ships at most one motion frame per timer tick. FIFO lab modes
+    // preserve per-sample frames; the 125 Hz production-energy candidate
+    // accumulates samples between ticks to avoid backlog.
+    private func hasMotionReadyToEmit() -> Bool {
+        switch schedulingMode {
+        case .accumulator125Hz:
+            return pendingDx != 0 || pendingDy != 0 || abs(fractionalDx) >= 0.5 || abs(fractionalDy) >= 0.5
+        case .fifo250Hz, .boundedFifo250Hz:
+            return !queuedSubframes.isEmpty
+        case .latestWins250Hz:
+            return pendingDx != 0 || pendingDy != 0 || abs(fractionalDx) >= 0.5 || abs(fractionalDy) >= 0.5
+        }
+    }
+
+    private func flushFifoBatch() {
         guard !queuedSubframes.isEmpty else { return }
         let take = min(queuedSubframes.count, maxSubframesPerDatagram)
         let chunk = Array(queuedSubframes.prefix(take))
         queuedSubframes.removeFirst(take)
         send(subframes: chunk)
+    }
+
+    private func flushAccumulatedFrame() {
+        flushPendingAggregate(maxPendingAge: staleInterval, carryCappedOverflow: true)
+    }
+
+    private func flushLatestWinsFrame(now: CFTimeInterval) {
+        flushPendingAggregate(maxPendingAge: latestWinsMaxPendingAge, carryCappedOverflow: false, now: now)
+    }
+
+    private func flushPendingAggregate(
+        maxPendingAge: CFTimeInterval,
+        carryCappedOverflow: Bool,
+        now: CFTimeInterval = CACurrentMediaTime()
+    ) {
+        guard pendingDx != 0 || pendingDy != 0 || abs(fractionalDx) >= 0.5 || abs(fractionalDy) >= 0.5 else { return }
+
+        if let first = pendingFirstArrivalTimestamp,
+           now - first > maxPendingAge {
+            clearPendingAggregate(recordDrop: true)
+            return
+        }
+
+        let timestamp = pendingFirstArrivalTimestamp ?? now
+        let totalDx = pendingDx + fractionalDx
+        let totalDy = pendingDy + fractionalDy
+        let rawDx = totalDx.rounded()
+        let rawDy = totalDy.rounded()
+        let cappedDx = max(-maxDeltaPerFrame, min(maxDeltaPerFrame, rawDx))
+        let cappedDy = max(-maxDeltaPerFrame, min(maxDeltaPerFrame, rawDy))
+        let wasCapped = cappedDx != rawDx || cappedDy != rawDy
+
+        pendingDx = 0
+        pendingDy = 0
+        pendingFirstArrivalTimestamp = nil
+
+        if wasCapped {
+            MovementDiagnostics.shared.recordUdpFrameCapped()
+            if carryCappedOverflow {
+                fractionalDx = totalDx - cappedDx
+                fractionalDy = totalDy - cappedDy
+            } else {
+                // Latest-wins is intentionally lossy under extreme bursts.
+                fractionalDx = 0
+                fractionalDy = 0
+            }
+        } else {
+            fractionalDx = totalDx - cappedDx
+            fractionalDy = totalDy - cappedDy
+        }
+
+        let intDx = Int16(cappedDx)
+        let intDy = Int16(cappedDy)
+        guard intDx != 0 || intDy != 0 else { return }
+        send(subframes: [MotionSubframe(dx: intDx, dy: intDy, timestamp: timestamp)])
     }
 
     // Building and sending the UDP packet
@@ -232,26 +401,36 @@ final class UDPMotionSender {
         // Package sent via NWConnection over UDP (fast, no handshake, fire-and-forget)
         connection.send(content: packet, completion: .contentProcessed { error in
             #if DEBUG
-            if let error {
+            if RuntimeDiagnostics.transportStateLogs, let error {
                 print("UDP motion send error: \(error)")
             }
             #endif
         })
 
+        let sentAt = CACurrentMediaTime()
         MovementDiagnostics.shared.recordUdpDatagramSent(subframes: subframes.count)
         for subframe in subframes {
-            MovementDiagnostics.shared.recordUdpSubframeSent(dx: subframe.dx, dy: subframe.dy)
+            MovementDiagnostics.shared.recordUdpSubframeSent(
+                dx: subframe.dx,
+                dy: subframe.dy,
+                queueAge: sentAt - subframe.timestamp
+            )
         }
     }
 
     // Resets all motion state (fractional accumulators + subframe queue) to zero.
     // Optionally records the total discarded movement to diagnostics if any was lost.
     private func clearMotionState(recordDrop: Bool) {
-        let droppedDx = fractionalDx + queuedSubframes.reduce(CGFloat(0)) { $0 + CGFloat($1.dx) }
-        let droppedDy = fractionalDy + queuedSubframes.reduce(CGFloat(0)) { $0 + CGFloat($1.dy) }
+        let queuedDx = queuedSubframes.reduce(CGFloat(0)) { $0 + CGFloat($1.dx) }
+        let queuedDy = queuedSubframes.reduce(CGFloat(0)) { $0 + CGFloat($1.dy) }
+        let droppedDx = fractionalDx + queuedDx + pendingDx
+        let droppedDy = fractionalDy + queuedDy + pendingDy
         fractionalDx = 0
         fractionalDy = 0
         queuedSubframes.removeAll()
+        pendingDx = 0
+        pendingDy = 0
+        pendingFirstArrivalTimestamp = nil
 
         if recordDrop && (droppedDx != 0 || droppedDy != 0) {
             MovementDiagnostics.shared.recordUdpStaleDrop(dx: droppedDx, dy: droppedDy)
@@ -260,15 +439,30 @@ final class UDPMotionSender {
         recordQueueState()
     }
 
+    private func clearPendingAggregate(recordDrop: Bool) {
+        let droppedDx = pendingDx + fractionalDx
+        let droppedDy = pendingDy + fractionalDy
+        pendingDx = 0
+        pendingDy = 0
+        fractionalDx = 0
+        fractionalDy = 0
+        pendingFirstArrivalTimestamp = nil
+
+        if recordDrop && (droppedDx != 0 || droppedDy != 0) {
+            MovementDiagnostics.shared.recordUdpStaleDrop(dx: droppedDx, dy: droppedDy)
+        }
+    }
+
     // Snapshots the current queue length and total pending dx/dy (including fractional remainder)
     // and forwards it to MovementDiagnostics for Monitoring.
     private func recordQueueState() {
+        guard RuntimeDiagnostics.movementPipeline else { return }
         let queuedDx = queuedSubframes.reduce(CGFloat(0)) { $0 + CGFloat($1.dx) }
         let queuedDy = queuedSubframes.reduce(CGFloat(0)) { $0 + CGFloat($1.dy) }
         MovementDiagnostics.shared.recordUdpSchedulerState(
-            queuedFrames: queuedSubframes.count,
-            pendingDx: queuedDx + fractionalDx,
-            pendingDy: queuedDy + fractionalDy
+            queuedFrames: queuedSubframes.count + (pendingDx != 0 || pendingDy != 0 ? 1 : 0),
+            pendingDx: queuedDx + pendingDx + fractionalDx,
+            pendingDy: queuedDy + pendingDy + fractionalDy
         )
     }
 }

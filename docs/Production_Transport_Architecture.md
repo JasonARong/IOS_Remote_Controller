@@ -4,11 +4,11 @@ Status: High-level architecture context.
 
 Canonical implementation contract: `docs/Production_Transport_Spec.md`.
 Canonical execution plan: `docs/tasks.md`.
-POC evidence: `docs/UDP_Motion_Findings.md` and `docs/debug_logs.md`.
+Reference findings: `docs/reference/UDP_Motion_Findings.md`, `docs/reference/Performance_Findings.md`, and `docs/reference/debug_logs.md`.
 
 Use this document for product direction and architecture rationale. If this document conflicts with `Production_Transport_Spec.md`, the spec wins.
 
-This document records the production transport decisions after the UDP motion POC proved that **same-Wi-Fi UDP + TinyUSB** can produce smooth, mouse-like cursor movement. It should be read together with `docs/UDP_Motion_Findings.md`, which explains the motion-specific POC results and timing constraints.
+This document records the production transport decisions after the UDP motion POC proved that **same-Wi-Fi UDP + TinyUSB** can produce smooth, mouse-like cursor movement. Read `docs/reference/UDP_Motion_Findings.md` and `docs/reference/Performance_Findings.md` for lab findings, not protocol contracts.
 
 The goal here is to define the product architecture clearly enough to guide implementation without prematurely specifying every packet, timeout, storage key, or onboarding screen.
 
@@ -171,7 +171,29 @@ The touchpad, keyboard UI, and gesture code should not need to know the low-leve
 
 ---
 
-## 7. Wi-Fi Setup Model
+## 7. Performance Baseline
+
+Current baseline:
+
+- Wi-Fi/UDP + TinyUSB is the preferred smooth-motion path.
+- BLE remains a complete fallback with lower cursor smoothness.
+- Idle heat must stay low; the random matrix animation is disabled for now because its 60Hz loop caused idle heat.
+- UDP sender is active-only; release/feel tests should run with diagnostics off.
+- Further smoothness and active-heat tuning is deferred unless a minimum gate regresses.
+
+Minimum gates:
+
+- No idle heat buildup.
+- Cursor usable for sustained normal use.
+- No delayed glide after finger stop.
+- No stuck buttons or keys.
+- No obvious low-FPS cursor during normal use.
+
+Detailed findings: `docs/reference/Performance_Findings.md`.
+
+---
+
+## 8. Wi-Fi Setup Model
 
 ESP Wi-Fi setup is performed over BLE.
 
@@ -221,7 +243,7 @@ Unsupported networks such as captive portals, enterprise Wi-Fi, isolated guest n
 
 ---
 
-## 8. iOS Permissions
+## 9. iOS Permissions
 
 Wi-Fi Mode requires iOS Local Network permission.
 
@@ -237,7 +259,7 @@ Reading the iPhone's current SSID must not be a hard dependency. iOS restricts S
 
 ---
 
-## 9. Pairing And Session Ownership
+## 10. Pairing And Session Ownership
 
 The ESP should store a device/phone secret when paired through this app.
 

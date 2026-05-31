@@ -4,6 +4,7 @@ Status: Historical POC findings and motion reference.
 
 Canonical production contract: `docs/Production_Transport_Spec.md`.
 Canonical execution plan: `docs/tasks.md`.
+Performance baseline: `docs/reference/Performance_Findings.md`.
 
 Use this document to preserve the motion lessons that made Wi-Fi cursor movement smooth. Do not use its packet markers, ports, credentials, or lab setup as the production protocol contract.
 
@@ -121,7 +122,7 @@ Production differences:
 
 ## 6. Evidence summary (diagnostic logs)
 
-Captured in `debug_logs.md` under **Log 13–16** (project root).
+Captured in `docs/reference/debug_logs.md` under **Log 13–16**.
 
 | Log | What it showed |
 |-----|----------------|

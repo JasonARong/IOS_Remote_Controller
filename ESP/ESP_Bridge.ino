@@ -1,3 +1,9 @@
+// ESP_Bridge.ino
+//
+// Legacy full-feature reference. Keep for BLE/control behavior comparison,
+// but do not use this as the production smooth-motion base.
+// See ESP/README.md for current firmware file roles.
+
 #include <Arduino.h>
 #include <USB.h>
 #include <USBHID.h>

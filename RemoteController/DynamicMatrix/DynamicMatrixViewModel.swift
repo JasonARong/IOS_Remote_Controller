@@ -140,6 +140,7 @@ class DynamicMatrixViewModel: ObservableObject {
     private let matrixAnimationDuration: TimeInterval = 0.8
     
     // Internal Timers / Scheduling
+    private let enableRandomMatrixAnimation = AppRuntimeConfig.DynamicMatrix.enableRandomAnimation
     private var timer: Timer?
     private var modeCompletionWorkItem: DispatchWorkItem?
     
@@ -393,6 +394,10 @@ class DynamicMatrixViewModel: ObservableObject {
         guard mode == .random else { return }
         
         timer?.invalidate()
+        guard enableRandomMatrixAnimation else {
+            timer = nil
+            return
+        }
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
             self?.updateCirclePositions()
         }
@@ -491,5 +496,3 @@ class DynamicMatrixViewModel: ObservableObject {
         modeCompletionWorkItem?.cancel()
     }
 }
-
-

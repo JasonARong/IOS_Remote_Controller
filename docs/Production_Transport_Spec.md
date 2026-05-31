@@ -41,7 +41,7 @@ dy: Int16
 
 - Relative deltas only, not coordinates.
 - Units come from the pointer engine and may be transport-scaled.
-- Wi-Fi must preserve the UDP motion pipeline in `docs/UDP_Motion_Findings.md`.
+- Wi-Fi must preserve the UDP motion pipeline in `docs/reference/UDP_Motion_Findings.md`.
 - Stale motion may be dropped; never replay delayed motion.
 
 `ButtonState`

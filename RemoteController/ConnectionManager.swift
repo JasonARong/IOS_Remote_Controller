@@ -36,16 +36,15 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private var serviceUUID = CBUUID(string: "00001234-0000-1000-8000-00805f9b34fb")
     private var characteristicUUID = CBUUID(string: "0000abcd-0000-1000-8000-00805f9b34fb")
 
-    // MARK: UDP motion POC
-    private let useUdpMotionPOC = true
-    private let udpMotionHost = "192.168.18.125"
-    private let udpMotionPort: UInt16 = 4210
-    private let udpMotionPacketMarker: UInt8 = 0xB2
+    // MARK: Wi-Fi UDP motion
+    private let useWifiUdpMotion = AppRuntimeConfig.useWifiUdpMotion
+    let udpPointerDtMode: PointerMotionEngine.DtMode = AppRuntimeConfig.WifiMotion.pointerDtMode
     private var udpMotionSender: UDPMotionSender?
 
     // Smooth cursor and scroll
     private var displayLink: CADisplayLink? /// use displayLink to send packets at an constant rate
-    private let targetFPS: Int = 60 /// Sending packets' rate
+    private let pauseDisplayLinkWhenIdle = AppRuntimeConfig.DisplayLink.pauseWhenIdle
+    private let targetFPS: Int = AppRuntimeConfig.DisplayLink.targetFPS /// Sending packets' rate
     private var lastTickTimestamp: CFTimeInterval? = nil
     var onTick: ((CFTimeInterval) -> Void)? // Callback so ScrollMotionEngine can run per-frame logic.
     
@@ -113,11 +112,12 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         /// delegate: self ( this class will receive Bluetooth callbacks ) ( require self to be delegate type)
         /// queue: nil ( callbacks run on the main thread )
         centralManager = CBCentralManager(delegate: self, queue: nil)
-        if useUdpMotionPOC {
+        if useWifiUdpMotion {
             udpMotionSender = UDPMotionSender(
-                host: udpMotionHost,
-                port: udpMotionPort,
-                packetMarker: udpMotionPacketMarker
+                host: AppRuntimeConfig.WifiMotion.host,
+                port: AppRuntimeConfig.WifiMotion.port,
+                packetMarker: AppRuntimeConfig.WifiMotion.packetMarker,
+                schedulingMode: AppRuntimeConfig.WifiMotion.schedulingMode
             )
         }
         startDisplayLink()
@@ -140,6 +140,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         } else {
             displayLink.preferredFramesPerSecond = targetFPS
         }
+        displayLink.isPaused = pauseDisplayLinkWhenIdle
         displayLink.add(to: .main, forMode: .common) // ".main" run loop with ".common" mode
         self.displayLink = displayLink
     }
@@ -147,6 +148,22 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     private func stopDisplayLink() {
         displayLink?.invalidate()
         displayLink = nil
+    }
+
+    func wakeDisplayLinkForInput() {
+        guard pauseDisplayLinkWhenIdle else { return }
+        lastTickTimestamp = nil
+        displayLink?.isPaused = false
+    }
+
+    private func pauseDisplayLinkIfIdle() {
+        guard pauseDisplayLinkWhenIdle else { return }
+        guard buttonDirty == false,
+              wheelDelta == 0,
+              accumulatedDX == 0,
+              accumulatedDY == 0 else { return }
+        lastTickTimestamp = nil
+        displayLink?.isPaused = true
     }
     
     @objc private func tick(){
@@ -163,7 +180,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         onTick?(dt)
         
         // Collect packet stats every 2 seconds (even if no packets sent)
-        if let _ = peripheral, let _ = writeBleCharacteristic {
+        if RuntimeDiagnostics.periodicBlePacketStats,
+           let _ = peripheral, let _ = writeBleCharacteristic {
             let statsNow = Date()
             if statsNow.timeIntervalSince(lastStatsTime) >= 2.0 {
                 print("📊 Sent \(packetsSent) packets in 2s, dropped: \(packetsDropped)")
@@ -181,12 +199,15 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         
         let hasMoved = (accumulatedDX != 0 || accumulatedDY != 0)
         let hasWheel = (wheelDelta != 0)
-        let shouldSendBleMouse = leftHeld || buttonDirty || hasWheel || (!useUdpMotionPOC && hasMoved)
-        if useUdpMotionPOC && hasMoved && !shouldSendBleMouse {
+        let shouldSendBleMouse = buttonDirty || hasWheel || (!useWifiUdpMotion && hasMoved)
+        if useWifiUdpMotion && hasMoved && !shouldSendBleMouse {
             accumulatedDX = 0
             accumulatedDY = 0
         }
-        guard shouldSendBleMouse else { return }
+        guard shouldSendBleMouse else {
+            pauseDisplayLinkIfIdle()
+            return
+        }
         
         // Movement
         let dx = accumulatedDX
@@ -205,8 +226,8 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         wheelDelta = 0
 
         MovementDiagnostics.shared.recordBleAttempt()
-        let bleDxInt16: Int16 = useUdpMotionPOC ? 0 : dxInt16
-        let bleDyInt16: Int16 = useUdpMotionPOC ? 0 : dyInt16
+        let bleDxInt16: Int16 = useWifiUdpMotion ? 0 : dxInt16
+        let bleDyInt16: Int16 = useWifiUdpMotion ? 0 : dyInt16
         
         // Build packet
         // Release packet: [buttons, Scroll, dxLE(1), dxLE(2), dyLE(1), dyLE(2)] → 6 bytes
@@ -235,6 +256,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             if bleDxInt16 != 0 || bleDyInt16 != 0 {
                 MovementDiagnostics.shared.recordMovementDropped(reason: .disconnected, dx: CGFloat(bleDxInt16), dy: CGFloat(bleDyInt16))
             }
+            pauseDisplayLinkIfIdle()
             return
         }
         
@@ -251,6 +273,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
                 MovementDiagnostics.shared.recordMovementDropped(reason: .bleBlocked, dx: CGFloat(bleDxInt16), dy: CGFloat(bleDyInt16))
             }
         }
+        pauseDisplayLinkIfIdle()
     }
 
     // MARK: - PreConnection Model Updates
@@ -320,23 +343,26 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
     
     // MARK: - Public API
 
-    var isUdpMotionPOCEnabled: Bool {
-        useUdpMotionPOC
+    var isWifiUdpMotionEnabled: Bool {
+        useWifiUdpMotion
     }
     
     // Movement
     func accumulateDelta(dx: CGFloat, dy: CGFloat) {
         accumulatedDX += dx
         accumulatedDY += dy
+        if !useWifiUdpMotion {
+            wakeDisplayLinkForInput()
+        }
     }
 
     func enqueueUdpPointerMotion(dx: CGFloat, dy: CGFloat, timestamp: CFTimeInterval) {
-        guard useUdpMotionPOC else { return }
+        guard useWifiUdpMotion else { return }
         udpMotionSender?.enqueueMotion(dx: dx, dy: dy, timestamp: timestamp)
     }
 
     func endUdpMotionStream() {
-        guard useUdpMotionPOC else { return }
+        guard useWifiUdpMotion else { return }
         udpMotionSender?.endMotionStream()
     }
     
@@ -367,6 +393,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             // One haptic per "frame" where we emitted at least one tick
             scrollHaptic.selectionChanged()
             scrollHaptic.prepare()     // prepare for the next one
+            wakeDisplayLinkForInput()
         }
     }
     func resetScrollAccumulator() {
@@ -381,6 +408,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             buttonsState |= 0x01 // buttonsState(0x00) | 0x01 = 1
             buttonDirty = true
             leftHeld = true
+            wakeDisplayLinkForInput()
         }
     }
     func leftUp() {
@@ -389,6 +417,7 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
             buttonsState &= ~UInt8(0x01) // buttonsState(0b00000001) & 0b11111110 = 0
             buttonDirty = true
             leftHeld = false
+            wakeDisplayLinkForInput()
         }
     }
     func leftTap() {
@@ -405,12 +434,14 @@ class ConnectionManager: NSObject, ObservableObject, CBCentralManagerDelegate, C
         if (buttonsState & 0x02 ) == 0 { // if right is pressed
             buttonsState |= 0x02 // buttonsState(0b0000000) | 0b0000010 = 2
             buttonDirty = true
+            wakeDisplayLinkForInput()
         }
     }
     func rightUp() {
         if (buttonsState & 0x02) != 0 { // if right is not pressed
             buttonsState &= ~UInt8(0x02) // buttonsState(0b0000010) & 0b11111101 = 0
             buttonDirty = true
+            wakeDisplayLinkForInput()
         }
     }
     func rightTap() {
