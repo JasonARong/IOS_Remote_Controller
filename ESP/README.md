@@ -11,6 +11,14 @@ Execution plan: `../docs/tasks.md`.
   - Current production firmware base.
   - Use this for Step 3 feature work.
   - Preserves the TinyUSB motion path and adds shared HID/release-all foundation.
+  - The `.ino` file is startup wiring only; production behavior is split across `.h/.cpp` modules:
+    - `Config`: compile-time settings and lab flags.
+    - `UsbHid`: TinyUSB descriptor, initialization, and report send helpers.
+    - `HidState`: shared HID state, input staging, active mode, and release-all.
+    - `MotionQueue`: UDP motion frame queue.
+    - `UdpMotion`: Wi-Fi UDP setup, packet parsing, and RX task.
+    - `HidPacer`: timed HID report emission.
+    - `Diagnostics`: counters and summary printing.
 
 - `ESP_Bridge_TinyUSB.ino`
   - Smooth-motion POC reference.

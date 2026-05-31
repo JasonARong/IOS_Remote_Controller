@@ -11,15 +11,20 @@ import re
 import unittest
 
 
-SKETCH = Path(__file__).with_name("ESP_Bridge_Production.ino")
+FIRMWARE_DIR = Path(__file__).parent
+SOURCE_GLOBS = ("*.ino", "*.h", "*.cpp")
 
 
-def sketch_text() -> str:
-    return SKETCH.read_text(encoding="utf-8")
+def firmware_text() -> str:
+    chunks = []
+    for pattern in SOURCE_GLOBS:
+        for path in sorted(FIRMWARE_DIR.glob(pattern)):
+            chunks.append(path.read_text(encoding="utf-8"))
+    return "\n".join(chunks)
 
 
 def function_body(source: str, name: str) -> str:
-    match = re.search(rf"static [^{{;]+ {name}\([^)]*\) \{{", source)
+    match = re.search(rf"(?:static\s+)?[^{{;]+ {name}\([^)]*\) \{{", source)
     if not match:
         return ""
 
@@ -38,7 +43,7 @@ def function_body(source: str, name: str) -> str:
 
 class Step32FirmwareChecks(unittest.TestCase):
     def test_composite_mouse_and_keyboard_reports_use_explicit_report_ids(self) -> None:
-        source = sketch_text()
+        source = firmware_text()
 
         self.assertIn("#define MOUSE_REPORT_ID", source)
         self.assertIn("#define KEYBOARD_REPORT_ID", source)
@@ -48,7 +53,7 @@ class Step32FirmwareChecks(unittest.TestCase):
         self.assertIn("usb_hid.sendReport(KEYBOARD_REPORT_ID", source)
 
     def test_shared_state_tracks_active_mode_and_hid_staging(self) -> None:
-        source = sketch_text()
+        source = firmware_text()
 
         self.assertIn("enum ActiveInputMode", source)
         self.assertIn("INPUT_MODE_NONE", source)
@@ -59,7 +64,7 @@ class Step32FirmwareChecks(unittest.TestCase):
         self.assertIn("bool keyboardReportPending", source)
 
     def test_transport_helpers_feed_the_single_hid_state_layer(self) -> None:
-        source = sketch_text()
+        source = firmware_text()
 
         for helper in (
             "setActiveInputMode",
@@ -76,7 +81,7 @@ class Step32FirmwareChecks(unittest.TestCase):
         self.assertIn("stagePointerMotion", udp_body)
 
     def test_keyboard_send_and_release_all_are_not_stubbed(self) -> None:
-        source = sketch_text()
+        source = firmware_text()
         keyboard_body = function_body(source, "sendKeyboardHidReport")
         release_body = function_body(source, "releaseAllHidState")
 

@@ -106,10 +106,11 @@ Performance baseline: Continue product implementation unless a minimum gate in `
   Check: Shared HID state, HID staging, Wi-Fi motion feed, and release-all cleanup exist in the production firmware.
   Verification owner: This task closes structural shared-HID work. TCP/BLE route proof belongs to tasks 3.5 and 3.7; full regression belongs to Step 7.
 
-- [ ] 3.3 Reorganize production ESP firmware into smaller files
+- [~] 3.3 Reorganize production ESP firmware into smaller files
   Output: Production firmware split into focused files or clearly isolated modules for config, USB HID output, shared HID state, motion queue, UDP motion, diagnostics, and main task wiring.
   Non-goals: Add TCP, BLE fallback, pairing, or new behavior.
   Check: Firmware behavior is unchanged, source is easier to navigate, and the required manual smoke tests in `docs/manual-test.md` still pass.
+  Status: Source split and compile checks pass; manual hardware tests A/B/C are pending.
 
 - [ ] 3.4 Add ESP owner/session foundation
   Output: ESP state for `NoOwner`, `BleOwner`, `WifiOwner`, `sessionId`, `udpToken`, `inputEpoch`, `phoneId`, and owner heartbeat deadline.
@@ -311,3 +312,4 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-05-31: Completed Step 3.2 by adding shared production firmware HID staging, active mode state, composite mouse/keyboard TinyUSB reports, release-all cleanup, and a focused source verification test.
 - 2026-05-31: Added task closure rules, clarified that Step 7 owns final integration validation, and marked 3.2 as a structural shared-HID closure.
 - 2026-05-31: Added Step 3.3 to reorganize production ESP firmware before adding owner/session, TCP, UDP gate, and BLE fallback complexity.
+- 2026-05-31: Implemented Step 3.3 source split into production firmware modules; source tests and Arduino compile pass, manual smoke tests pending.
