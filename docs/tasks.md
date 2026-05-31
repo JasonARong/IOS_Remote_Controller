@@ -18,6 +18,13 @@ Last Updated: 2026-05-31
 4. Edit unfinished items (`[ ]`, `[~]`) as the plan evolves.
 5. Record plan changes in the change log.
 
+## Task Closure Rules
+
+1. Close a task only when its scoped output exists and available build/source checks pass.
+2. If hardware/manual validation is required, run the matching section in `docs/manual-test.md` or record why it is deferred.
+3. Structural tasks may close before future transports are wired, but the task must name the later integration owner.
+4. Transport-specific tasks own proving their own route into shared state; Step 7 owns final end-to-end product validation.
+
 ## Step 1: Architecture Baseline
 
 Goal: Lock the production transport architecture so implementation can proceed without reopening the core Wi-Fi/BLE mode decisions.
@@ -88,47 +95,53 @@ Exit criteria: Firmware has separated modules or clearly separated sections for 
 
 Performance baseline: Continue product implementation unless a minimum gate in `docs/reference/Performance_Findings.md` regresses. Do not block Step 3 on further smoothness tuning.
 
-- [ ] 3.1 Create production firmware base from TinyUSB POC
+- [x] 3.1 Create production firmware base from TinyUSB POC
   Output: A production ESP sketch/source layout based on `ESP_Bridge_TinyUSB.ino`.
   Non-goals: Build on legacy `ESP_Bridge.ino` as the production base.
   Check: TinyUSB, `setPollInterval(1)`, high-rate HID pacer, one-frame-per-tick motion queue, and pointer-scale remainder behavior are preserved.
 
-- [ ] 3.2 Extract shared HID input state and release-all cleanup
+- [x] 3.2 Extract shared HID input state and release-all cleanup
   Output: Shared ESP input state for buttons, wheel, keyboard, motion queue, HID staging, active mode, and release-all.
   Non-goals: New input features.
-  Check: Both Wi-Fi and BLE paths feed the same HID output layer, and release-all clears mouse, keyboard, wheel, motion queues, and HID staging.
+  Check: Shared HID state, HID staging, Wi-Fi motion feed, and release-all cleanup exist in the production firmware.
+  Verification owner: This task closes structural shared-HID work. TCP/BLE route proof belongs to tasks 3.5 and 3.7; full regression belongs to Step 7.
 
-- [ ] 3.3 Add ESP owner/session foundation
+- [ ] 3.3 Reorganize production ESP firmware into smaller files
+  Output: Production firmware split into focused files or clearly isolated modules for config, USB HID output, shared HID state, motion queue, UDP motion, diagnostics, and main task wiring.
+  Non-goals: Add TCP, BLE fallback, pairing, or new behavior.
+  Check: Firmware behavior is unchanged, source is easier to navigate, and the required manual smoke tests in `docs/manual-test.md` still pass.
+
+- [ ] 3.4 Add ESP owner/session foundation
   Output: ESP state for `NoOwner`, `BleOwner`, `WifiOwner`, `sessionId`, `udpToken`, `inputEpoch`, `phoneId`, and owner heartbeat deadline.
   Non-goals: Final crypto format or multi-phone UX.
   Check: ESP can grant one active owner, reject conflicting owners, timeout stale owners, and expose owner state to TCP/BLE code.
 
-- [ ] 3.4 Add Wi-Fi TCP control server
+- [ ] 3.5 Add Wi-Fi TCP control server
   Output: ESP TCP server for `Hello`, `Auth`, `ClaimOwner`, heartbeat, reliable HID controls, status, setup/admin, and errors.
   Non-goals: UDP motion transport.
   Check: TCP negotiates version/capabilities, grants Wi-Fi ownership, refreshes owner liveness, handles release-all, and rejects non-owner HID input.
 
-- [ ] 3.5 Gate production UDP motion by active TCP owner
+- [ ] 3.6 Gate production UDP motion by active TCP owner
   Output: UDP receiver for production gated motion packets.
   Non-goals: Reliable UDP.
   Check: UDP is accepted only when active mode is Wi-Fi and source endpoint, packet version, `sessionId`, `udpToken`, `inputEpoch`, frame count, and length all pass.
 
-- [ ] 3.6 Merge full-feature BLE fallback into TinyUSB firmware
+- [ ] 3.7 Merge full-feature BLE fallback into TinyUSB firmware
   Output: BLE path supporting cursor, buttons, drag, scroll, keyboard, ownership, setup/status, heartbeat, and release-all.
   Non-goals: Preserve BLE as the smooth cursor path.
   Check: BLE Mode drives all features only when it owns HID, uses the shared HID state, and cannot drive HID while Wi-Fi owns the ESP.
 
-- [ ] 3.7 Add ESP Wi-Fi profile storage
+- [ ] 3.8 Add ESP Wi-Fi profile storage
   Output: Storage for multiple simple `SSID + password` profiles.
   Non-goals: BSSID/mesh/router heuristics.
   Check: ESP can store, list, try, and clear saved profiles.
 
-- [ ] 3.8 Add ESP pairing identity storage
+- [ ] 3.9 Add ESP pairing identity storage
   Output: Storage for device identity and paired-phone secret(s).
   Non-goals: Final multi-phone UX.
   Check: ESP can persist device identity/secret across reboot and use it for TCP/BLE authentication hooks.
 
-- [ ] 3.9 Add ESP status, capability, and BLE Wi-Fi setup commands
+- [ ] 3.10 Add ESP status, capability, and BLE Wi-Fi setup commands
   Output: ESP status/capability reporting plus BLE scan/set/list/forget Wi-Fi setup commands.
   Non-goals: iOS current-SSID dependency.
   Check: App can read firmware/protocol/capabilities/device ID, show only ESP-visible SSIDs, and provision Wi-Fi without hardcoded credentials.
@@ -295,3 +308,6 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-05-18: Tightened Sections 1, 3, and 7 for heartbeat payload derivation, epoch updates, and BLE compatibility probing after whole-spec review.
 - 2026-05-23: Optimized unfinished task steps around the locked spec, tightening firmware ownership, UDP gate, iOS routing, setup/discovery, and validation dependencies.
 - 2026-05-31: Moved historical findings/logs into `docs/reference/`, added `Performance_Findings.md`, recorded the performance baseline, and marked task 2.8 complete.
+- 2026-05-31: Completed Step 3.2 by adding shared production firmware HID staging, active mode state, composite mouse/keyboard TinyUSB reports, release-all cleanup, and a focused source verification test.
+- 2026-05-31: Added task closure rules, clarified that Step 7 owns final integration validation, and marked 3.2 as a structural shared-HID closure.
+- 2026-05-31: Added Step 3.3 to reorganize production ESP firmware before adding owner/session, TCP, UDP gate, and BLE fallback complexity.

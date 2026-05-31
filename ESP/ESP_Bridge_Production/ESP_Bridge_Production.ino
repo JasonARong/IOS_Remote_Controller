@@ -1,7 +1,7 @@
 // ESP_Bridge_Production.ino
 //
 // Production firmware base for ESP32-S3 using Adafruit TinyUSB.
-// Slice 3A scope:
+// Step 3.2 scope:
 //   - preserve the proven UDP -> queue -> HID pacer motion behavior
 //   - add shared HID input state for mouse buttons, wheel, keyboard, and
 //     report staging
@@ -73,22 +73,30 @@
 #define HID_LOCAL_GENERATOR_TEST  0
 #define HID_RELEASE_SELF_TEST     0
 
+#define MOUSE_REPORT_ID           1
+#define KEYBOARD_REPORT_ID        2
+
 
 /************** USB HID DESCRIPTOR **************/
-// Slice 3A keeps the exact POC-compatible mouse HID shape because this is
-// the known-good smooth cursor path. Keyboard state is staged below, but
-// keyboard HID descriptor/report emission is deferred until the mouse path
-// is green again.
+// Composite mouse + keyboard descriptor. The mouse report payload remains the
+// known-good 6-byte TinyUSB path; report IDs only disambiguate the added
+// keyboard report.
 //
-// Mouse report payload (6 bytes, no Report ID):
+// Mouse report payload (6 bytes, Report ID supplied to sendReport):
 //   [0]    buttons (bit0=L, bit1=R, bits2..7 padding)
 //   [1..2] dx int16 LE
 //   [3..4] dy int16 LE
 //   [5]    wheel int8
+// Keyboard report payload (8 bytes, Report ID supplied to sendReport):
+//   [0]    modifiers
+//   [1]    reserved
+//   [2..7] up to six HID keycodes
 static uint8_t const desc_hid_report[] = {
+  // Mouse report
   0x05, 0x01,        // Usage Page (Generic Desktop)
   0x09, 0x02,        // Usage (Mouse)
   0xA1, 0x01,        // Collection (Application)
+    0x85, MOUSE_REPORT_ID, //   Report ID
     0x09, 0x01,      //   Usage (Pointer)
     0xA1, 0x00,      //   Collection (Physical)
 
@@ -124,6 +132,39 @@ static uint8_t const desc_hid_report[] = {
       0x81, 0x06,    //     Input (Data, Var, Rel)
 
     0xC0,            //   End Collection (Physical)
+  0xC0,              // End Collection (Application)
+
+  // Keyboard report
+  0x05, 0x01,        // Usage Page (Generic Desktop)
+  0x09, 0x06,        // Usage (Keyboard)
+  0xA1, 0x01,        // Collection (Application)
+    0x85, KEYBOARD_REPORT_ID, // Report ID
+
+    // Modifier byte
+    0x05, 0x07,      //   Usage Page (Keyboard/Keypad)
+    0x19, 0xE0,      //   Usage Minimum (Left Control)
+    0x29, 0xE7,      //   Usage Maximum (Right GUI)
+    0x15, 0x00,      //   Logical Minimum (0)
+    0x25, 0x01,      //   Logical Maximum (1)
+    0x75, 0x01,      //   Report Size (1)
+    0x95, 0x08,      //   Report Count (8)
+    0x81, 0x02,      //   Input (Data, Var, Abs)
+
+    // Reserved byte
+    0x95, 0x01,      //   Report Count (1)
+    0x75, 0x08,      //   Report Size (8)
+    0x81, 0x03,      //   Input (Const, Var, Abs)
+
+    // Six keycode slots
+    0x95, 0x06,      //   Report Count (6)
+    0x75, 0x08,      //   Report Size (8)
+    0x15, 0x00,      //   Logical Minimum (0)
+    0x25, 0x65,      //   Logical Maximum (101)
+    0x05, 0x07,      //   Usage Page (Keyboard/Keypad)
+    0x19, 0x00,      //   Usage Minimum (Reserved)
+    0x29, 0x65,      //   Usage Maximum (Keyboard Application)
+    0x81, 0x00,      //   Input (Data, Array)
+
   0xC0               // End Collection (Application)
 };
 
@@ -146,6 +187,12 @@ static Adafruit_USBD_HID usb_hid;
 
 
 /************** SHARED HID STATE **************/
+enum ActiveInputMode : uint8_t {
+  INPUT_MODE_NONE = 0,
+  INPUT_MODE_WIFI = 1,
+  INPUT_MODE_BLE = 2,
+};
+
 enum ReleaseReason : uint8_t {
   RELEASE_REASON_BACKGROUND = 1,
   RELEASE_REASON_TIMEOUT = 2,
@@ -155,13 +202,16 @@ enum ReleaseReason : uint8_t {
 };
 
 struct HidInputState {
+  ActiveInputMode activeMode = INPUT_MODE_NONE;
+
   uint8_t currentButtons = 0;
   int16_t pendingWheel = 0;
-  bool buttonDirty = false;
+  bool mouseReportPending = false;
 
   uint8_t keyboardModifiers = 0;
   uint8_t keyboardKeycodes[6] = {0, 0, 0, 0, 0, 0};
-  bool keyboardDirty = false;
+  bool keyboardReportPending = false;
+  bool keyboardReleasePending = false;
 
   // Scaled motion remainder after POINTER_SCALE division.
   int32_t scaledAccumX = 0;
@@ -296,6 +346,12 @@ static int8_t clampWheel(int16_t value) {
   return (int8_t)value;
 }
 
+static void setActiveInputMode(ActiveInputMode mode) {
+  portENTER_CRITICAL(&hidStateMux);
+  hidState.activeMode = mode;
+  portEXIT_CRITICAL(&hidStateMux);
+}
+
 static void resetSharedHidState() {
   portENTER_CRITICAL(&hidStateMux);
   hidState = HidInputState{};
@@ -307,7 +363,7 @@ static void stageMouseButtons(uint8_t buttons) {
   portENTER_CRITICAL(&hidStateMux);
   if (hidState.currentButtons != buttons) {
     hidState.currentButtons = buttons;
-    hidState.buttonDirty = true;
+    hidState.mouseReportPending = true;
   }
   portEXIT_CRITICAL(&hidStateMux);
 }
@@ -322,14 +378,86 @@ static void stageWheelTicks(int16_t wheelDelta) {
   portEXIT_CRITICAL(&hidStateMux);
 }
 
-static void stageKeyboardReport(uint8_t modifiers, const uint8_t keycodes[6]) {
+static bool mapLogicalKeyToKeyboardReport(uint8_t logicalKey, uint8_t* modifiers,
+                                          uint8_t keycodes[6], uint8_t* keycodeCount) {
+  switch (logicalKey) {
+    case 1: *modifiers |= 0x01; return true; // control
+    case 2: *modifiers |= 0x02; return true; // shift
+    case 3: *modifiers |= 0x04; return true; // alt/option
+    case 4: *modifiers |= 0x08; return true; // command/GUI
+    case 5: return false; // fn has no USB HID usage in this v1 mapping
+
+    case 20: keycodes[(*keycodeCount)++] = 0x50; return true; // left arrow
+    case 21: keycodes[(*keycodeCount)++] = 0x4F; return true; // right arrow
+    case 22: keycodes[(*keycodeCount)++] = 0x52; return true; // up arrow
+    case 23: keycodes[(*keycodeCount)++] = 0x51; return true; // down arrow
+
+    case 24: keycodes[(*keycodeCount)++] = 0x29; return true; // escape
+    case 25: keycodes[(*keycodeCount)++] = 0x2B; return true; // tab
+    case 26: keycodes[(*keycodeCount)++] = 0x28; return true; // enter
+    case 27: keycodes[(*keycodeCount)++] = 0x2A; return true; // backspace
+    case 28: keycodes[(*keycodeCount)++] = 0x4C; return true; // delete forward
+    case 29: keycodes[(*keycodeCount)++] = 0x2C; return true; // space
+
+    case 80: keycodes[(*keycodeCount)++] = 0x27; return true; // 0
+    case 81: keycodes[(*keycodeCount)++] = 0x1E; return true; // 1
+    case 82: keycodes[(*keycodeCount)++] = 0x1F; return true; // 2
+    case 83: keycodes[(*keycodeCount)++] = 0x20; return true; // 3
+    case 84: keycodes[(*keycodeCount)++] = 0x21; return true; // 4
+    case 85: keycodes[(*keycodeCount)++] = 0x22; return true; // 5
+    case 86: keycodes[(*keycodeCount)++] = 0x23; return true; // 6
+    case 87: keycodes[(*keycodeCount)++] = 0x24; return true; // 7
+    case 88: keycodes[(*keycodeCount)++] = 0x25; return true; // 8
+    case 89: keycodes[(*keycodeCount)++] = 0x26; return true; // 9
+
+    case 90: keycodes[(*keycodeCount)++] = 0x2D; return true; // -
+    case 91: keycodes[(*keycodeCount)++] = 0x2E; return true; // =
+    case 92: keycodes[(*keycodeCount)++] = 0x2F; return true; // [
+    case 93: keycodes[(*keycodeCount)++] = 0x30; return true; // ]
+    case 94: keycodes[(*keycodeCount)++] = 0x33; return true; // ;
+    case 95: keycodes[(*keycodeCount)++] = 0x34; return true; // '
+    case 96: keycodes[(*keycodeCount)++] = 0x36; return true; // ,
+    case 97: keycodes[(*keycodeCount)++] = 0x37; return true; // .
+    case 98: keycodes[(*keycodeCount)++] = 0x38; return true; // /
+    case 99: keycodes[(*keycodeCount)++] = 0x31; return true; // backslash
+    case 100: keycodes[(*keycodeCount)++] = 0x35; return true; // `
+  }
+
+  if (logicalKey >= 40 && logicalKey <= 65) {
+    keycodes[(*keycodeCount)++] = (uint8_t)(0x04 + (logicalKey - 40));
+    return true;
+  }
+
+  return false;
+}
+
+static void stageKeyboardReport(uint8_t modifiers, const uint8_t keycodes[6],
+                                bool releaseAfterSend) {
   portENTER_CRITICAL(&hidStateMux);
   hidState.keyboardModifiers = modifiers;
   for (uint8_t i = 0; i < 6; i++) {
     hidState.keyboardKeycodes[i] = keycodes[i];
   }
-  hidState.keyboardDirty = true;
+  hidState.keyboardReportPending = true;
+  hidState.keyboardReleasePending = releaseAfterSend;
   portEXIT_CRITICAL(&hidStateMux);
+}
+
+static void stageKeyboardCombo(const uint8_t* logicalKeys, uint8_t count) {
+  if (logicalKeys == nullptr || count == 0) return;
+
+  uint8_t modifiers = 0;
+  uint8_t keycodes[6] = {0, 0, 0, 0, 0, 0};
+  uint8_t keycodeCount = 0;
+  uint8_t limitedCount = count > 3 ? 3 : count;
+
+  for (uint8_t i = 0; i < limitedCount; i++) {
+    if (keycodeCount >= 6) break;
+    mapLogicalKeyToKeyboardReport(logicalKeys[i], &modifiers, keycodes, &keycodeCount);
+  }
+
+  if (modifiers == 0 && keycodeCount == 0) return;
+  stageKeyboardReport(modifiers, keycodes, true);
 }
 
 static void releaseAllHidState(ReleaseReason reason) {
@@ -337,9 +465,12 @@ static void releaseAllHidState(ReleaseReason reason) {
   resetMotionFrameQueue();
 
   portENTER_CRITICAL(&hidStateMux);
+  ActiveInputMode preservedMode = hidState.activeMode;
   hidState = HidInputState{};
-  hidState.buttonDirty = true;
-  hidState.keyboardDirty = true;
+  hidState.activeMode = preservedMode;
+  hidState.mouseReportPending = true;
+  hidState.keyboardReportPending = true;
+  hidState.keyboardReleasePending = false;
   hidState.releaseAllMousePending = true;
   hidState.releaseAllKeyboardPending = true;
   portEXIT_CRITICAL(&hidStateMux);
@@ -375,6 +506,10 @@ static uint8_t enqueueMotionFrame(int16_t dx, int16_t dy, bool* overflowOut) {
 
   if (overflowOut != nullptr) *overflowOut = overflow;
   return depth;
+}
+
+static uint8_t stagePointerMotion(int16_t dx, int16_t dy, bool* overflowOut) {
+  return enqueueMotionFrame(dx, dy, overflowOut);
 }
 
 static bool popFreshMotionFrame(MotionFrame* frameOut, uint32_t nowUs,
@@ -496,7 +631,7 @@ static void pollUdpMotionPackets() {
       int16_t dx = (int16_t)(packet[offset]     | (packet[offset + 1] << 8));
       int16_t dy = (int16_t)(packet[offset + 2] | (packet[offset + 3] << 8));
       bool overflow = false;
-      uint8_t depth = enqueueMotionFrame(dx, dy, &overflow);
+      uint8_t depth = stagePointerMotion(dx, dy, &overflow);
       if (overflow) diag.udpQueueOverflow++;
       if (depth > diag.udpQueueDepthMax) diag.udpQueueDepthMax = depth;
     }
@@ -544,13 +679,20 @@ static bool sendMouseHidReport(int16_t dx, int16_t dy, int8_t wheel, uint8_t but
   r.x = dx;
   r.y = dy;
   r.wheel = wheel;
-  return usb_hid.sendReport(0, &r, sizeof(r));
+  return usb_hid.sendReport(MOUSE_REPORT_ID, &r, sizeof(r));
 }
 
 static bool sendKeyboardHidReport(uint8_t modifiers, const uint8_t keycodes[6]) {
-  (void)modifiers;
-  (void)keycodes;
-  return false;
+  if (!TinyUSBDevice.mounted()) return false;
+  if (!usb_hid.ready()) return false;
+
+  KeyboardReport r{};
+  r.modifiers = modifiers;
+  r.reserved = 0;
+  for (uint8_t i = 0; i < 6; i++) {
+    r.keycodes[i] = keycodes[i];
+  }
+  return usb_hid.sendReport(KEYBOARD_REPORT_ID, &r, sizeof(r));
 }
 
 
@@ -611,6 +753,7 @@ static void hidPacerTask(void* /*parameter*/) {
     uint8_t keyboardModifiers = 0;
     uint8_t keyboardKeycodes[6] = {0, 0, 0, 0, 0, 0};
     bool keyboardShouldSend = false;
+    bool keyboardReleaseAfterSend = false;
 
     portENTER_CRITICAL(&hidStateMux);
 
@@ -646,21 +789,21 @@ static void hidPacerTask(void* /*parameter*/) {
     mouseShouldSend = (reportDx != 0 ||
                        reportDy != 0 ||
                        reportWheel != 0 ||
-                       hidState.buttonDirty ||
+                       hidState.mouseReportPending ||
                        hidState.releaseAllMousePending);
-    hidState.buttonDirty = false;
+    hidState.mouseReportPending = false;
     hidState.releaseAllMousePending = false;
 
-    // Keyboard HID emission is intentionally disabled in this mouse-first
-    // recovery patch. Keep state cleanup/staging, but do not send keyboard
-    // reports until we reintroduce a verified composite descriptor.
-    keyboardShouldSend = false;
+    keyboardShouldSend = (hidState.keyboardReportPending ||
+                          hidState.releaseAllKeyboardPending);
     keyboardModifiers = hidState.keyboardModifiers;
     for (uint8_t i = 0; i < 6; i++) {
       keyboardKeycodes[i] = hidState.keyboardKeycodes[i];
     }
-    hidState.keyboardDirty = false;
+    keyboardReleaseAfterSend = hidState.keyboardReleasePending;
+    hidState.keyboardReportPending = false;
     hidState.releaseAllKeyboardPending = false;
+    hidState.keyboardReleasePending = false;
 
     portEXIT_CRITICAL(&hidStateMux);
 
@@ -671,7 +814,7 @@ static void hidPacerTask(void* /*parameter*/) {
       diag.recordHidSend(ok, reportDx, reportDy, nowUs);
       if (!ok) {
         portENTER_CRITICAL(&hidStateMux);
-        hidState.buttonDirty = true;
+        hidState.mouseReportPending = true;
         portEXIT_CRITICAL(&hidStateMux);
       }
     }
@@ -680,10 +823,21 @@ static void hidPacerTask(void* /*parameter*/) {
       bool ok = sendKeyboardHidReport(keyboardModifiers, keyboardKeycodes);
       if (ok) {
         diag.hidKeyboardReports++;
+        if (keyboardReleaseAfterSend) {
+          portENTER_CRITICAL(&hidStateMux);
+          hidState.keyboardModifiers = 0;
+          for (uint8_t i = 0; i < 6; i++) {
+            hidState.keyboardKeycodes[i] = 0;
+          }
+          hidState.keyboardReportPending = true;
+          hidState.keyboardReleasePending = false;
+          portEXIT_CRITICAL(&hidStateMux);
+        }
       } else {
         diag.hidReportFails++;
         portENTER_CRITICAL(&hidStateMux);
-        hidState.keyboardDirty = true;
+        hidState.keyboardReportPending = true;
+        hidState.keyboardReleasePending = keyboardReleaseAfterSend;
         portEXIT_CRITICAL(&hidStateMux);
       }
     }
@@ -811,6 +965,7 @@ void setup() {
   startHidPacerTask();
 
   if (setupUdpMotionPoc()) {
+    setActiveInputMode(INPUT_MODE_WIFI);
     startUdpRxTask();
   }
 
