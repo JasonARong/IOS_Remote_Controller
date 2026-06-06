@@ -42,6 +42,9 @@
 
 #define DIAGNOSTICS_INTERVAL_MS   1000
 
+#define OWNER_HEARTBEAT_TIMEOUT_MS 1500
+#define OWNER_SESSION_INITIAL_EPOCH 1
+
 // Optional local test knobs. Keep disabled in the normal production base.
 #define HID_LOCAL_GENERATOR_TEST  0
 #define HID_RELEASE_SELF_TEST     0

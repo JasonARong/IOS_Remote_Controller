@@ -5,6 +5,7 @@
 #include <WiFi.h>
 
 #include "Config.h"
+#include "OwnerSession.h"
 #include "UsbHid.h"
 
 Diagnostics diag;
@@ -110,6 +111,29 @@ void printSummaryIfNeeded() {
     "  emit delta:    0=%lu 1=%lu 2-4=%lu 4-8=%lu 8-16=%lu 16-32=%lu 32-64=%lu 64-127=%lu\n",
     (unsigned long)ed[0], (unsigned long)ed[1], (unsigned long)ed[2], (unsigned long)ed[3],
     (unsigned long)ed[4], (unsigned long)ed[5], (unsigned long)ed[6], (unsigned long)ed[7]);
+
+  OwnerSnapshot owner = getOwnerSnapshot(now);
+  const char* ownerLabel = "none";
+  if (owner.state.ownerKind == OWNER_WIFI) ownerLabel = "wifi";
+  else if (owner.state.ownerKind == OWNER_BLE) ownerLabel = "ble";
+
+  if (owner.state.ownerKind == OWNER_NONE) {
+    Serial.printf("  owner: kind=none session=0 epoch=0 hb=expired\n");
+  } else if (owner.heartbeatExpired) {
+    Serial.printf(
+      "  owner: kind=%s session=%lu epoch=%lu hb=expired (%ldms ago)\n",
+      ownerLabel,
+      (unsigned long)owner.state.sessionId,
+      (unsigned long)owner.state.inputEpoch,
+      (long)owner.heartbeatRemainingMs);
+  } else {
+    Serial.printf(
+      "  owner: kind=%s session=%lu epoch=%lu hb=%ldms left\n",
+      ownerLabel,
+      (unsigned long)owner.state.sessionId,
+      (unsigned long)owner.state.inputEpoch,
+      (long)owner.heartbeatRemainingMs);
+  }
 
   diag.resetWindow();
   diag.lastSummaryMs = now;

@@ -112,10 +112,11 @@ Performance baseline: Continue product implementation unless a minimum gate in `
   Check: Firmware behavior is unchanged, source is easier to navigate, and the required manual smoke tests in `docs/manual-test.md` still pass.
   Status: Source split, source checks, Arduino compile, and manual hardware tests A/B/C pass.
 
-- [ ] 3.4 Add ESP owner/session foundation
+- [x] 3.4 Add ESP owner/session foundation
   Output: ESP state for `NoOwner`, `BleOwner`, `WifiOwner`, `sessionId`, `udpToken`, `inputEpoch`, `phoneId`, and owner heartbeat deadline.
   Non-goals: Final crypto format or multi-phone UX.
   Check: ESP can grant one active owner, reject conflicting owners, timeout stale owners, and expose owner state to TCP/BLE code.
+  Status: `OwnerSession` module, boot/diagnostics wiring, source tests, and Arduino compile pass; runtime route proof deferred to 3.5–3.7 and Step 7.4.
 
 - [ ] 3.5 Add Wi-Fi TCP control server
   Output: ESP TCP server for `Hello`, `Auth`, `ClaimOwner`, heartbeat, reliable HID controls, status, setup/admin, and errors.
@@ -314,3 +315,4 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-05-31: Added Step 3.3 to reorganize production ESP firmware before adding owner/session, TCP, UDP gate, and BLE fallback complexity.
 - 2026-05-31: Implemented Step 3.3 source split into production firmware modules; source tests and Arduino compile pass, manual smoke tests pending.
 - 2026-05-31: Marked Step 3.3 complete after hardware run confirmed the reorganized production firmware works.
+- 2026-05-31: Implemented Step 3.4 owner/session foundation (`OwnerSession` module, boot heartbeat polling, diagnostics owner line); source tests and Arduino compile pass.

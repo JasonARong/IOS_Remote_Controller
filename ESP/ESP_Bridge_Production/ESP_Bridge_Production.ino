@@ -21,6 +21,7 @@
 #include "HidPacer.h"
 #include "HidState.h"
 #include "MotionQueue.h"
+#include "OwnerSession.h"
 #include "UdpMotion.h"
 #include "UsbHid.h"
 
@@ -41,10 +42,10 @@ void setup() {
 
   resetMotionFrameQueue();
   resetSharedHidState();
+  resetOwnerSession();
   startHidPacerTask();
 
   if (setupUdpMotion()) {
-    setActiveInputMode(INPUT_MODE_WIFI);
     startUdpRxTask();
   }
 
@@ -62,6 +63,7 @@ void loop() {
   }
   #endif
 
+  checkOwnerHeartbeatTimeout(millis());
   printSummaryIfNeeded();
   delay(10);
 }

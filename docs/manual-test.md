@@ -105,8 +105,8 @@ Verification:
 
 Result:
 
-- Notes:
-- Decision:
+- Notes: `test_step_3_4.py` and `test_step_3_2.py` pass. Arduino compile for `ESP/ESP_Bridge_Production` succeeds. Boot no longer sets `INPUT_MODE_WIFI` without an owner; diagnostics print owner kind/session/epoch/heartbeat. Legacy `0xB2` UDP motion path unchanged.
+- Decision: pass
 
 ### Task 3.5: TCP Control Server
 
