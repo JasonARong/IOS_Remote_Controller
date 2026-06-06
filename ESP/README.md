@@ -17,8 +17,10 @@ Execution plan: `../docs/tasks.md`.
     - `HidState`: shared HID state, input staging, active mode, and release-all.
     - `MotionQueue`: UDP motion frame queue.
     - `UdpMotion`: Wi-Fi UDP setup, packet parsing, and RX task.
+    - `WifiTcpControl`: framed TCP control server for Wi-Fi ownership, heartbeat, status, reliable HID controls, and setup/admin placeholders.
     - `HidPacer`: timed HID report emission.
     - `Diagnostics`: counters and summary printing.
+  - `tools/tcp_control_client.py` is the macOS/manual-test helper for sending raw binary TCP control frames to port `4211`.
 
 - `ESP_Bridge_TinyUSB.ino`
   - Smooth-motion POC reference.

@@ -1,0 +1,39 @@
+// WifiTcpControl.h - Wi-Fi TCP control protocol for reliable owner/HID events.
+
+#pragma once
+
+#include <Arduino.h>
+
+enum TcpMessageType : uint8_t {
+  TCP_MSG_HELLO = 1,
+  TCP_MSG_HELLO_ACK = 2,
+  TCP_MSG_AUTH = 3,
+  TCP_MSG_AUTH_RESULT = 4,
+  TCP_MSG_CLAIM_OWNER = 5,
+  TCP_MSG_OWNER_RESULT = 6,
+  TCP_MSG_HEARTBEAT = 7,
+  TCP_MSG_STATUS_REQUEST = 8,
+  TCP_MSG_STATUS_RESPONSE = 9,
+  TCP_MSG_BUTTON_STATE = 10,
+  TCP_MSG_WHEEL_TICK = 11,
+  TCP_MSG_KEY_COMBO = 12,
+  TCP_MSG_RELEASE_ALL = 13,
+  TCP_MSG_SETUP_COMMAND = 14,
+  TCP_MSG_SETUP_RESULT = 15,
+  TCP_MSG_ERROR = 16,
+};
+
+enum TcpErrorCode : uint16_t {
+  TCP_ERROR_BAD_FRAME = 1,
+  TCP_ERROR_UNSUPPORTED_VERSION = 2,
+  TCP_ERROR_AUTH_FAILED = 3,
+  TCP_ERROR_NOT_AUTHENTICATED = 4,
+  TCP_ERROR_NOT_OWNER = 5,
+  TCP_ERROR_ALREADY_OWNED = 6,
+  TCP_ERROR_INVALID_STATE = 7,
+  TCP_ERROR_UNKNOWN_MESSAGE = 8,
+  TCP_ERROR_PAYLOAD_TOO_LARGE = 9,
+};
+
+void setupWifiTcpControl();
+void pollWifiTcpControl();

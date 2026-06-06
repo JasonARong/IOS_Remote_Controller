@@ -45,6 +45,26 @@
 #define OWNER_HEARTBEAT_TIMEOUT_MS 1500
 #define OWNER_SESSION_INITIAL_EPOCH 1
 
+#define TCP_CONTROL_PORT          4211
+#define TCP_CONTROL_MAGIC         0x5243
+#define TCP_CONTROL_FRAME_VERSION 1
+#define TCP_CONTROL_PROTOCOL_VERSION 1
+#define TCP_CONTROL_MAX_PAYLOAD_LENGTH 1024
+#define TCP_CONTROL_FIRMWARE_VERSION "esp-production-3.5"
+
+#define TCP_CAP_WIFI_CONTROL      0x00000001UL
+#define TCP_CAP_UDP_MOTION        0x00000002UL
+#define TCP_CAP_MOUSE_BUTTONS     0x00000004UL
+#define TCP_CAP_WHEEL             0x00000008UL
+#define TCP_CAP_KEYBOARD          0x00000010UL
+#define TCP_CAP_RELEASE_ALL       0x00000020UL
+#define TCP_CAP_STATUS            0x00000040UL
+#define TCP_CAP_SETUP_ADMIN       0x00000080UL
+#define TCP_CONTROL_CAPABILITIES  (TCP_CAP_WIFI_CONTROL | TCP_CAP_UDP_MOTION | \
+                                   TCP_CAP_MOUSE_BUTTONS | TCP_CAP_WHEEL | \
+                                   TCP_CAP_KEYBOARD | TCP_CAP_RELEASE_ALL | \
+                                   TCP_CAP_STATUS | TCP_CAP_SETUP_ADMIN)
+
 // Optional local test knobs. Keep disabled in the normal production base.
 #define HID_LOCAL_GENERATOR_TEST  0
 #define HID_RELEASE_SELF_TEST     0

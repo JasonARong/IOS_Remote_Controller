@@ -24,6 +24,7 @@
 #include "OwnerSession.h"
 #include "UdpMotion.h"
 #include "UsbHid.h"
+#include "WifiTcpControl.h"
 
 // Boot order: USB stack → HID mount → motion queue → pacer task → Wi-Fi/UDP RX.
 void setup() {
@@ -46,6 +47,7 @@ void setup() {
   startHidPacerTask();
 
   if (setupUdpMotion()) {
+    setupWifiTcpControl();
     startUdpRxTask();
   }
 
@@ -64,6 +66,7 @@ void loop() {
   #endif
 
   checkOwnerHeartbeatTimeout(millis());
+  pollWifiTcpControl();
   printSummaryIfNeeded();
   delay(10);
 }

@@ -118,10 +118,11 @@ Performance baseline: Continue product implementation unless a minimum gate in `
   Check: ESP can grant one active owner, reject conflicting owners, timeout stale owners, and expose owner state to TCP/BLE code.
   Status: `OwnerSession` module, boot/diagnostics wiring, source tests, and Arduino compile pass; runtime route proof deferred to 3.5–3.7 and Step 7.4.
 
-- [ ] 3.5 Add Wi-Fi TCP control server
+- [x] 3.5 Add Wi-Fi TCP control server
   Output: ESP TCP server for `Hello`, `Auth`, `ClaimOwner`, heartbeat, reliable HID controls, status, setup/admin, and errors.
   Non-goals: UDP motion transport.
   Check: TCP negotiates version/capabilities, grants Wi-Fi ownership, refreshes owner liveness, handles release-all, and rejects non-owner HID input.
+  Status: TCP control module, source checks, Arduino compile, and hardware TCP manual validation pass; a first-run helper timeout was resolved by confirming port `4211` reachability and rerunning.
 
 - [ ] 3.6 Gate production UDP motion by active TCP owner
   Output: UDP receiver for production gated motion packets.
@@ -316,3 +317,4 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-05-31: Implemented Step 3.3 source split into production firmware modules; source tests and Arduino compile pass, manual smoke tests pending.
 - 2026-05-31: Marked Step 3.3 complete after hardware run confirmed the reorganized production firmware works.
 - 2026-05-31: Implemented Step 3.4 owner/session foundation (`OwnerSession` module, boot heartbeat polling, diagnostics owner line); source tests and Arduino compile pass.
+- 2026-06-06: Completed Step 3.5 Wi-Fi TCP control server (`WifiTcpControl` module with negotiation, placeholder auth, owner claim, heartbeat, status, reliable HID controls, release-all, setup result, and error handling); source checks, Arduino compile, TCP smoke, HID smoke, bad-session rejection, and heartbeat-timeout validation pass. Recorded one resolved first-run helper timeout.

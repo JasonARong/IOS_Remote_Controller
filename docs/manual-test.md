@@ -110,11 +110,62 @@ Result:
 
 ### Task 3.5: TCP Control Server
 
-Manual tests:
+Goal: prove the ESP can accept a Wi-Fi TCP owner, keep it alive, reject bad sessions, drive reliable HID controls, and clear ownership safely.
 
-- Test A: Build And Upload
-- Test B: USB HID Mount
-- Add focused TCP control tests when this task is implemented.
+Prerequisites:
+
+- ESP is connected over USB to the host computer.
+- Mac and ESP are on the same Wi-Fi network.
+- Serial Monitor is open at `115200`.
+- Firmware has been built and uploaded.
+
+Steps:
+
+1. Wait for Serial Monitor to print `ESP_Bridge_Production ready`.
+2. Find the ESP IP in the Serial diagnostics line, for example `ip=192.168.18.123`.
+3. Run the safe TCP smoke test from the repo root:
+
+```bash
+python3 ESP/ESP_Bridge_Production/tools/tcp_control_client.py ESP_IP smoke
+```
+
+Expected:
+
+- Script prints `HelloAck`, `AuthResult accepted=True`, and `OwnerResult granted=True`.
+- Script prints `StatusResponse activeMode=wifi`.
+- Script prints `Expected bad-session rejection: PASS`.
+- Serial Monitor shows `owner: kind=wifi ... hb=...ms left` while the script is active.
+
+4. Run the HID smoke test:
+
+```bash
+python3 ESP/ESP_Bridge_Production/tools/tcp_control_client.py ESP_IP hid-smoke
+```
+
+Expected:
+
+- Host receives one left click, one wheel tick, one Escape key press, and then release-all.
+- Script finishes without `FAIL`.
+- Serial Monitor increments `releaseAll`.
+
+5. Run the timeout test:
+
+```bash
+python3 ESP/ESP_Bridge_Production/tools/tcp_control_client.py ESP_IP timeout
+```
+
+Expected:
+
+- Script claims Wi-Fi ownership, waits without heartbeat, then prints status.
+- Serial Monitor shows owner clearing after heartbeat timeout.
+- Serial Monitor increments `releaseAll`.
+
+Pass criteria:
+
+- All three helper commands finish without unexpected `FAIL`.
+- Safe smoke confirms owner claim, heartbeat/status, and bad-session rejection.
+- HID smoke visibly drives and clears HID state.
+- Timeout test clears Wi-Fi ownership and runs release-all.
 
 Verification:
 
@@ -122,8 +173,8 @@ Verification:
 
 Result:
 
-- Notes:
-- Decision:
+- Notes: `test_step_3_2.py`, `test_step_3_4.py`, and `test_step_3_5.py` pass. Arduino compile for `ESP/ESP_Bridge_Production` succeeds. Hardware TCP runtime validation passed against `192.168.18.104`: `smoke` confirmed owner claim/status/heartbeat/bad-session rejection, `hid-smoke` confirmed reliable HID controls and release-all, and `timeout` confirmed heartbeat timeout clears Wi-Fi ownership. Minor hiccup: one first-run `smoke` attempt timed out before `HelloAck`; `nc -vz 192.168.18.104 4211` showed TCP reachable and rerunning the helper passed.
+- Decision: pass
 
 ### Task 3.6: UDP Owner Gate
 
