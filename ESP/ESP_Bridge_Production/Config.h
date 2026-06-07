@@ -54,7 +54,7 @@
 #define TCP_CONTROL_FRAME_VERSION 1
 #define TCP_CONTROL_PROTOCOL_VERSION 1
 #define TCP_CONTROL_MAX_PAYLOAD_LENGTH 1024
-#define TCP_CONTROL_FIRMWARE_VERSION "esp-production-3.6"
+#define TCP_CONTROL_FIRMWARE_VERSION "esp-production-3.7"
 #define TCP_CONTROL_IDLE_TIMEOUT_MS 3000
 #define TCP_CONTROL_HELLO_TIMEOUT_MS 1500
 
@@ -66,10 +66,12 @@
 #define TCP_CAP_RELEASE_ALL       0x00000020UL
 #define TCP_CAP_STATUS            0x00000040UL
 #define TCP_CAP_SETUP_ADMIN       0x00000080UL
+#define TCP_CAP_SAVED_WIFI_PROFILES 0x00002000UL
 #define TCP_CONTROL_CAPABILITIES  (TCP_CAP_WIFI_CONTROL | TCP_CAP_UDP_MOTION | \
                                    TCP_CAP_MOUSE_BUTTONS | TCP_CAP_WHEEL | \
                                    TCP_CAP_KEYBOARD | TCP_CAP_RELEASE_ALL | \
-                                   TCP_CAP_STATUS | TCP_CAP_SETUP_ADMIN)
+                                   TCP_CAP_STATUS | TCP_CAP_SETUP_ADMIN | \
+                                   TCP_CAP_SAVED_WIFI_PROFILES)
 
 // Optional local test knobs. Keep disabled in the normal production base.
 #define HID_LOCAL_GENERATOR_TEST  0

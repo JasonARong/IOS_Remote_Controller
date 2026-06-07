@@ -12,6 +12,7 @@
 #include "Diagnostics.h"
 #include "HidState.h"
 #include "OwnerSession.h"
+#include "PersistentStore.h"
 
 static WiFiUDP udpMotion;
 static TaskHandle_t udpRxTaskHandle = nullptr;
@@ -27,26 +28,51 @@ static uint32_t readLe32(const uint8_t* bytes) {
          ((uint32_t)bytes[3] << 24);
 }
 
-// Connect to WIFI_SSID and bind UDP_MOTION_PORT; returns false if Wi-Fi or bind fails.
-bool setupUdpMotion() {
-  Serial.println("🔧 Initializing UDP motion...");
-  if (strlen(WIFI_SSID) == 0) {
-    Serial.println("⚠️ WIFI_SSID empty; UDP motion disabled.");
-    return false;
-  }
+static bool connectWifiCredential(const char* ssid, const char* password) {
+  if (ssid == nullptr || ssid[0] == '\0') return false;
 
-  WiFi.mode(WIFI_STA);
-  WiFi.setSleep(false);
-  esp_wifi_set_ps(WIFI_PS_NONE);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(ssid, password == nullptr ? "" : password);
 
-  Serial.printf("📡 Connecting to Wi-Fi SSID: %s", WIFI_SSID);
+  Serial.printf("📡 Connecting to Wi-Fi SSID: %s", ssid);
   uint32_t startMs = millis();
   while (WiFi.status() != WL_CONNECTED && (millis() - startMs) < 10000) {
     delay(250);
     Serial.print(".");
   }
   Serial.println();
+
+  return WiFi.status() == WL_CONNECTED;
+}
+
+static bool connectStoredWifiProfiles() {
+  uint8_t count = getStoredWifiProfileCount();
+  for (uint8_t i = 0; i < count; i++) {
+    StoredWifiProfile profile;
+    if (!getStoredWifiProfile(i, &profile)) continue;
+    if (connectWifiCredential(profile.ssid, profile.password)) return true;
+    WiFi.disconnect(true);
+    delay(100);
+  }
+  return false;
+}
+
+// Connect to stored Wi-Fi or WIFI_SSID fallback and bind UDP_MOTION_PORT.
+bool setupUdpMotion() {
+  Serial.println("🔧 Initializing UDP motion...");
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
+  esp_wifi_set_ps(WIFI_PS_NONE);
+
+  if (!connectStoredWifiProfiles()) {
+    if (strlen(WIFI_SSID) == 0) {
+      Serial.println("⚠️ No stored Wi-Fi profiles and WIFI_SSID empty; UDP motion disabled.");
+      return false;
+    }
+    if (!connectWifiCredential(WIFI_SSID, WIFI_PASSWORD)) {
+      Serial.println("⚠️ Wi-Fi connection failed; UDP motion inactive.");
+      return false;
+    }
+  }
 
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("⚠️ Wi-Fi connection failed; UDP motion inactive.");

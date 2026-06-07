@@ -45,6 +45,10 @@ MSG_ERROR = 16
 
 ERROR_NOT_OWNER = 5
 
+SETUP_LIST_SAVED_WIFI = 1
+SETUP_FORGET_WIFI = 2
+SETUP_RESET_PAIRING = 3
+
 ERROR_NAMES = {
     1: "badFrame",
     2: "unsupportedVersion",
@@ -315,6 +319,22 @@ def parse_status(frame: Frame) -> None:
     )
 
 
+def parse_setup_result(frame: Frame) -> None:
+    reader = PayloadReader(frame.payload)
+    command = reader.u8()
+    success = reader.bool()
+    message = reader.string()
+    details: list[str] = []
+    if command == SETUP_LIST_SAVED_WIFI and not reader.done():
+        count = reader.u8()
+        ssids = [reader.string() for _ in range(count)]
+        details.append(f"count={count}")
+        details.append(f"ssids={ssids}")
+    if not reader.done():
+        raise RuntimeError("setup result has trailing bytes")
+    print(f"SetupResult command={command} success={success} message={message} {' '.join(details)}")
+
+
 def handshake(client: TcpControlClient, phone_id: str) -> Owner:
     client.send(MSG_HELLO, struct.pack("<HHI", PROTOCOL_VERSION, PROTOCOL_VERSION, 0xFFFFFFFF))
     parse_hello_ack(client.expect(MSG_HELLO_ACK))
@@ -330,6 +350,11 @@ def handshake(client: TcpControlClient, phone_id: str) -> Owner:
 def send_status(client: TcpControlClient, request_id: int = 1) -> None:
     client.send(MSG_STATUS_REQUEST, struct.pack("<I", request_id))
     parse_status(client.expect(MSG_STATUS_RESPONSE))
+
+
+def send_setup(client: TcpControlClient, command: int, payload: bytes = b"") -> None:
+    client.send(MSG_SETUP_COMMAND, struct.pack("<B", command) + payload)
+    parse_setup_result(client.expect(MSG_SETUP_RESULT))
 
 
 def send_heartbeat(client: TcpControlClient, owner: Owner) -> None:
@@ -476,6 +501,24 @@ def command_udp_smoke(args: argparse.Namespace) -> None:
         print("UDP smoke complete. Expect cursor movement from valid packets only; invalid probes should raise gateReject/malformed diagnostics.")
 
 
+def command_list_saved_wifi(args: argparse.Namespace) -> None:
+    with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
+        handshake(client, args.phone_id)
+        send_setup(client, SETUP_LIST_SAVED_WIFI)
+
+
+def command_forget_wifi(args: argparse.Namespace) -> None:
+    with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
+        handshake(client, args.phone_id)
+        send_setup(client, SETUP_FORGET_WIFI, text(args.ssid))
+
+
+def command_reset_pairing(args: argparse.Namespace) -> None:
+    with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
+        handshake(client, args.phone_id)
+        send_setup(client, SETUP_RESET_PAIRING)
+
+
 def command_timeout(args: argparse.Namespace) -> None:
     with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
         handshake(client, args.phone_id)
@@ -510,6 +553,16 @@ def build_parser() -> argparse.ArgumentParser:
     udp.add_argument("--dy", type=int, default=0)
     udp.add_argument("--count", type=int, default=8)
     udp.set_defaults(func=command_udp_smoke)
+
+    list_wifi = subparsers.add_parser("list-saved-wifi", help="list persisted Wi-Fi profile SSIDs")
+    list_wifi.set_defaults(func=command_list_saved_wifi)
+
+    forget_wifi = subparsers.add_parser("forget-wifi", help="forget one persisted Wi-Fi profile")
+    forget_wifi.add_argument("ssid")
+    forget_wifi.set_defaults(func=command_forget_wifi)
+
+    reset_pairing = subparsers.add_parser("reset-pairing", help="clear persisted pairing identity")
+    reset_pairing.set_defaults(func=command_reset_pairing)
 
     timeout = subparsers.add_parser("timeout", help="claim owner, stop heartbeat, then request status")
     timeout.add_argument("--wait", type=float, default=2.0)

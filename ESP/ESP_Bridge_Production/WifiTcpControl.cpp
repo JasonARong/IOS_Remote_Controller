@@ -8,6 +8,7 @@
 #include "Diagnostics.h"
 #include "HidState.h"
 #include "OwnerSession.h"
+#include "PersistentStore.h"
 #include "UsbHid.h"
 
 static constexpr size_t TCP_FRAME_HEADER_LENGTH = 12;
@@ -72,6 +73,20 @@ struct PayloadReader {
 
   bool skipBytes(uint8_t count) {
     if (pos + count > len) return false;
+    pos += count;
+    return true;
+  }
+
+  bool readString(char* out, size_t capacity) {
+    uint8_t count = 0;
+    if (!readU8(&count) || out == nullptr || capacity == 0 ||
+        pos + count > len) {
+      return false;
+    }
+    size_t copyLen = count;
+    if (copyLen >= capacity) copyLen = capacity - 1;
+    memcpy(out, &data[pos], copyLen);
+    out[copyLen] = '\0';
     pos += count;
     return true;
   }
@@ -289,11 +304,12 @@ static void handleHello(const TcpFrame& frame) {
     return;
   }
 
-  uint8_t deviceId[4] = {'E', 'S', 'P', '3'};
+  char deviceId[PERSISTENT_MAX_DEVICE_ID_LENGTH + 1] = "ESP3";
+  getPersistentDeviceId(deviceId, sizeof(deviceId));
   PayloadWriter writer;
   writer.writeU16(TCP_CONTROL_PROTOCOL_VERSION);
   writer.writeU32(TCP_CONTROL_CAPABILITIES);
-  writer.writeBytes(deviceId, sizeof(deviceId));
+  writer.writeBytes((const uint8_t*)deviceId, (uint8_t)strlen(deviceId));
   writer.writeString(TCP_CONTROL_FIRMWARE_VERSION);
   if (!writer.ok) {
     sendError(TCP_ERROR_PAYLOAD_TOO_LARGE, frame.seq, "hello ack too large");
@@ -322,18 +338,21 @@ static void handleAuth(const TcpFrame& frame) {
   }
 
   uint8_t proofLength = 0;
-  if (!reader.readU8(&proofLength) || !reader.skipBytes(proofLength) ||
-      !reader.fullyRead()) {
+  if (!reader.readU8(&proofLength) ||
+      reader.pos + proofLength != reader.len) {
     sendError(TCP_ERROR_BAD_FRAME, frame.seq, "bad auth proof");
     return;
   }
 
-  // Temporary 3.5 hook: final credential proof validation belongs to 3.9.
-  tcpClientAuthenticated = true;
+  tcpClientAuthenticated = validateStoredPairingProof(
+      tcpClientPhoneId, &reader.data[reader.pos], proofLength);
   PayloadWriter writer;
-  writer.writeBool(true);
-  writer.writeU8(0);
+  writer.writeBool(tcpClientAuthenticated);
+  writer.writeU8(tcpClientAuthenticated ? 0 : TCP_ERROR_AUTH_FAILED);
   sendFrame(TCP_MSG_AUTH_RESULT, writer.data, (uint16_t)writer.len);
+  if (!tcpClientAuthenticated) {
+    sendError(TCP_ERROR_AUTH_FAILED, frame.seq, "auth proof rejected");
+  }
 }
 
 static void handleClaimOwner(const TcpFrame& frame) {
@@ -516,15 +535,51 @@ static void handleSetupCommand(const TcpFrame& frame) {
 
   PayloadReader reader{frame.payload, frame.payloadLength, 0};
   uint8_t command = 0;
-  if (!reader.readU8(&command) || !reader.fullyRead()) {
+  if (!reader.readU8(&command)) {
     sendError(TCP_ERROR_BAD_FRAME, frame.seq, "bad setup command");
     return;
   }
 
   PayloadWriter writer;
   writer.writeU8(command);
-  writer.writeBool(true);
-  writer.writeString("deferred to storage tasks");
+  if (command == TCP_SETUP_LIST_SAVED_WIFI) {
+    if (!reader.fullyRead()) {
+      sendError(TCP_ERROR_BAD_FRAME, frame.seq, "bad list saved wifi");
+      return;
+    }
+    uint8_t count = getStoredWifiProfileCount();
+    writer.writeBool(true);
+    writer.writeString("saved wifi profiles");
+    writer.writeU8(count);
+    for (uint8_t i = 0; i < count; i++) {
+      StoredWifiProfile profile;
+      if (getStoredWifiProfile(i, &profile)) writer.writeString(profile.ssid);
+    }
+  } else if (command == TCP_SETUP_FORGET_WIFI) {
+    char ssid[PERSISTENT_MAX_SSID_LENGTH + 1] = {0};
+    if (!reader.readString(ssid, sizeof(ssid)) || !reader.fullyRead()) {
+      sendError(TCP_ERROR_BAD_FRAME, frame.seq, "bad forget wifi");
+      return;
+    }
+    bool removed = forgetStoredWifiProfile(ssid);
+    writer.writeBool(removed);
+    writer.writeString(removed ? "wifi profile forgotten" : "wifi profile not found");
+  } else if (command == TCP_SETUP_RESET_PAIRING) {
+    if (!reader.fullyRead()) {
+      sendError(TCP_ERROR_BAD_FRAME, frame.seq, "bad reset pairing");
+      return;
+    }
+    releaseOwner(tcpClientSessionId, OWNER_WIFI, RELEASE_REASON_USER_EMERGENCY);
+    clearStoredPairingIdentity();
+    tcpClientOwnsWifi = false;
+    tcpClientSessionId = 0;
+    tcpClientAuthenticated = false;
+    writer.writeBool(true);
+    writer.writeString("pairing identity cleared");
+  } else {
+    sendError(TCP_ERROR_UNKNOWN_MESSAGE, frame.seq, "unknown setup command");
+    return;
+  }
   sendFrame(TCP_MSG_SETUP_RESULT, writer.data, (uint16_t)writer.len);
 }
 

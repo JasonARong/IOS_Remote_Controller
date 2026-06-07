@@ -35,5 +35,11 @@ enum TcpErrorCode : uint16_t {
   TCP_ERROR_PAYLOAD_TOO_LARGE = 9,
 };
 
+enum TcpSetupCommand : uint8_t {
+  TCP_SETUP_LIST_SAVED_WIFI = 1,
+  TCP_SETUP_FORGET_WIFI = 2,
+  TCP_SETUP_RESET_PAIRING = 3,
+};
+
 void setupWifiTcpControl();
 void pollWifiTcpControl();

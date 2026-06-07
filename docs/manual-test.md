@@ -228,7 +228,48 @@ Result:
 
 Manual tests:
 
-- Add persistence/reboot tests when this task is implemented.
+Source checks:
+
+```bash
+python3 ESP/ESP_Bridge_Production/test_step_3_7.py
+```
+
+Arduino compile:
+
+```bash
+"/Applications/Arduino IDE.app/Contents/Resources/app/lib/backend/resources/arduino-cli" compile --fqbn esp32:esp32:esp32s3 ESP/ESP_Bridge_Production
+```
+
+Hardware smoke:
+
+1. Upload `ESP/ESP_Bridge_Production` to the ESP32-S3.
+2. Reset the ESP and wait for Serial to print `ESP_Bridge_Production ready`.
+3. Find the ESP IP in the Serial diagnostics line.
+4. List saved Wi-Fi profile hooks:
+
+```bash
+python3 ESP/ESP_Bridge_Production/tools/tcp_control_client.py ESP_IP list-saved-wifi
+```
+
+5. Exercise a not-found forget path:
+
+```bash
+python3 ESP/ESP_Bridge_Production/tools/tcp_control_client.py ESP_IP forget-wifi "__missing_test_ssid__"
+```
+
+6. Exercise pairing reset:
+
+```bash
+python3 ESP/ESP_Bridge_Production/tools/tcp_control_client.py ESP_IP reset-pairing
+```
+
+Expected:
+
+- `HelloAck` reports firmware `esp-production-3.7`.
+- `HelloAck` device ID is stable across ESP reset.
+- `list-saved-wifi` returns a `SetupResult` with a count and SSID list.
+- `forget-wifi "__missing_test_ssid__"` returns `success=False` without crashing.
+- `reset-pairing` returns `success=True`, releases ownership, and leaves the ESP able to accept a fresh auth/claim session.
 
 Verification:
 
@@ -236,8 +277,8 @@ Verification:
 
 Result:
 
-- Notes:
-- Decision:
+- Notes: `test_step_3_7.py` passes. Arduino compile for `ESP/ESP_Bridge_Production` succeeds. Hardware smoke passed on `192.168.3.228`: `HelloAck` reported firmware `esp-production-3.7`, capabilities `0x000020ff`, and device ID `ESP3-F01005BA2010`; after ESP reset, `HelloAck` reported the same device ID, proving the identity persisted across reboot. `list-saved-wifi` returned `SetupResult command=1 success=True message=saved wifi profiles count=0 ssids=[]`. `forget-wifi "__missing_test_ssid__"` returned `SetupResult command=2 success=False message=wifi profile not found`. `reset-pairing` returned `SetupResult command=3 success=True message=pairing identity cleared`. Each helper run completed Hello/Auth/ClaimOwner successfully before the setup command.
+- Decision: pass
 
 ### Task 3.8: BLE Fallback And Setup/Status
 

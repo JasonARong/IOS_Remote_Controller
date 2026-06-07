@@ -22,6 +22,7 @@
 #include "HidState.h"
 #include "MotionQueue.h"
 #include "OwnerSession.h"
+#include "PersistentStore.h"
 #include "UdpMotion.h"
 #include "UsbHid.h"
 #include "WifiTcpControl.h"
@@ -44,6 +45,7 @@ void setup() {
   resetMotionFrameQueue();
   resetSharedHidState();
   resetOwnerSession();
+  setupPersistentStore();
   startHidPacerTask();
 
   if (setupUdpMotion()) {

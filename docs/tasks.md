@@ -130,10 +130,11 @@ Performance baseline: Continue product implementation unless a minimum gate in `
   Check: UDP is accepted only when active mode is Wi-Fi and source endpoint, packet version, `sessionId`, `udpToken`, `inputEpoch`, frame count, and length all pass.
   Status: Production `0xB3` UDP packet gate, source checks, helper script, stale TCP-client timeout hardening, Arduino compile, and hardware `udp-smoke` validation pass. Old Wi-Fi caused high packet loss/timeouts; moving Mac and ESP to `192.168.3.x` resolved transport instability.
 
-- [ ] 3.7 Add ESP persistence foundation
+- [x] 3.7 Add ESP persistence foundation
   Output: One ESP storage layer for Wi-Fi profiles and pairing identity.
   Non-goals: BSSID/mesh/router heuristics, final multi-phone UX, or final crypto format.
   Check: ESP can persist Wi-Fi profiles, device identity, and paired-phone secret data across reboot and expose hooks for TCP/BLE auth and setup.
+  Status: NVS-backed persistence store, saved Wi-Fi profile hooks, stable device ID, pairing proof hook, TCP setup commands, source checks, Arduino compile, and hardware smoke validation pass on `192.168.3.228`; `HelloAck` device ID stayed `ESP3-F01005BA2010` across reset.
   Sub-steps:
   - Former 3.8: Add storage for multiple simple `SSID + password` profiles; ESP can store, list, try, and clear saved profiles.
   - Former 3.9: Add storage for device identity and paired-phone secret(s); ESP can persist identity/secret across reboot and use them for TCP/BLE authentication hooks.
@@ -321,3 +322,4 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-06-06: Hardened Step 3.6/3.5 TCP helper path after repeated manual-test timeouts by adding hello/idle timeout cleanup for stale single TCP clients and diagnostics for TCP client timeouts.
 - 2026-06-07: Added TCP frame-level diagnostics (`rx`, `tx`, read bytes, write failures, counters) and increased periodic Serial summary interval to reduce log noise while investigating intermittent TCP manual-test timeouts.
 - 2026-06-07: Hardened TCP response delivery by enabling no-delay on accepted clients and sending each TCP response as one contiguous frame with flush; source checks and Arduino compile pass.
+- 2026-06-07: Completed Step 3.7 ESP persistence foundation (`PersistentStore` NVS storage, saved Wi-Fi profile list/forget hooks, persistent device ID, pairing validation/reset hook, and `esp-production-3.7` firmware reporting); source checks, Arduino compile, hardware setup commands, pairing reset, and reboot-stable device ID validation pass on `192.168.3.228`.
