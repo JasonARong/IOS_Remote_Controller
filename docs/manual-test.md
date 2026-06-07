@@ -178,12 +178,41 @@ Result:
 
 ### Task 3.6: UDP Owner Gate
 
-Manual tests:
+Goal: prove production UDP motion is accepted only after TCP Wi-Fi ownership and only when source IP, packet version, `sessionId`, `udpToken`, `inputEpoch`, frame count, and packet length are valid.
 
-- Test A: Build And Upload
-- Test B: USB HID Mount
-- Test C: UDP Cursor Smoke
-- Add rejected-UDP tests when this task is implemented.
+Prerequisites:
+
+- Task 3.5 TCP tests pass.
+- ESP is connected over USB to the host computer.
+- Mac and ESP are on the same Wi-Fi network.
+- Serial Monitor is open at `115200`.
+- Firmware has been built and uploaded.
+
+Steps:
+
+1. Wait for Serial Monitor to print `ESP_Bridge_Production ready`.
+2. Find the ESP IP in the Serial diagnostics line, for example `ip=192.168.18.123`.
+3. Run the gated UDP smoke test from the repo root:
+
+```bash
+python3 ESP/ESP_Bridge_Production/tools/tcp_control_client.py ESP_IP udp-smoke
+```
+
+Expected:
+
+- Script prints `OwnerResult granted=True`.
+- Host receives visible cursor motion from the valid UDP burst.
+- Script prints invalid UDP probes for bad session, bad token, bad epoch, bad frame count, and old `0xB2` marker.
+- Serial Monitor shows accepted UDP datagrams/subframes for the valid burst.
+- Serial Monitor shows `gateReject` and/or `malformed` increments for invalid probes.
+- Serial Monitor still shows Wi-Fi owner while heartbeats are active.
+
+Pass criteria:
+
+- `udp-smoke` finishes without `FAIL`.
+- Cursor moves from valid gated UDP packets.
+- Invalid probes do not create extra cursor movement.
+- Diagnostics show valid UDP accepted and invalid UDP rejected.
 
 Verification:
 
@@ -191,14 +220,30 @@ Verification:
 
 Result:
 
-- Notes:
-- Decision:
+- Notes: `test_step_3_2.py`, `test_step_3_4.py`, `test_step_3_5.py`, and `test_step_3_6.py` pass. Arduino compile for `ESP/ESP_Bridge_Production` succeeds. Hardware `udp-smoke` runtime validation passed on `192.168.3.228`: TCP owner claim/status succeeded, valid gated UDP packets moved the cursor, and invalid probes were sent for bad session, bad token, bad epoch, bad frame count, and old `0xB2` marker. Earlier intermittent TCP/UDP timeouts were traced to the old Wi-Fi network path with severe packet loss.
+- Debugging lessons: When ESP Serial shows `TCP tx ... ok=yes` but the Mac client times out, first check network health with `ping` and `nc` before changing protocol code. `arp` helped confirm the target MAC belonged to the ESP, while high packet loss and delayed ping replies pointed to Wi-Fi/AP forwarding instability. A temporary `UDP_RX_TASK_ENABLED=0` isolation build proved UDP polling was not the root cause. After re-enabling UDP RX, `udpRx iters=0/s` in Serial meant the new firmware had not actually been uploaded yet; `udpRx iters=~1000/s` confirms the UDP task is running.
+- Decision: pass
 
-### Task 3.7: BLE Fallback
+### Task 3.7: ESP Persistence Foundation
 
 Manual tests:
 
-- Add BLE feature tests when this task is implemented.
+- Add persistence/reboot tests when this task is implemented.
+
+Verification:
+
+- Full setup persistence validation is deferred to Step 7.
+
+Result:
+
+- Notes:
+- Decision:
+
+### Task 3.8: BLE Fallback And Setup/Status
+
+Manual tests:
+
+- Add BLE fallback and Wi-Fi setup/status tests when this task is implemented.
 
 Verification:
 

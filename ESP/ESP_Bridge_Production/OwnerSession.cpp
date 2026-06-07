@@ -220,6 +220,21 @@ bool acceptWifiControlAndRefresh(uint32_t sessionId, uint32_t nowMs) {
   return refreshOwnerHeartbeat(sessionId, OWNER_WIFI, nowMs);
 }
 
+bool acceptWifiUdpMotionForOwner(uint32_t sessionId, uint32_t udpToken,
+                                 uint32_t inputEpoch, uint32_t remoteIpv4,
+                                 uint32_t nowMs) {
+  portENTER_CRITICAL(&ownerSessionMux);
+  bool accepted = ownerState.ownerKind == OWNER_WIFI &&
+                  ownerState.sessionId == sessionId &&
+                  ownerState.udpToken == udpToken &&
+                  ownerState.inputEpoch == inputEpoch &&
+                  ownerState.tcpEndpoint.ipv4 == remoteIpv4 &&
+                  ownerState.heartbeatDeadlineMs != 0 &&
+                  nowMs < ownerState.heartbeatDeadlineMs;
+  portEXIT_CRITICAL(&ownerSessionMux);
+  return accepted;
+}
+
 bool updateOwnerInputEpoch(uint32_t sessionId, uint32_t newEpoch) {
   if (newEpoch == 0) return false;
 

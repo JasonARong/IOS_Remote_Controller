@@ -54,6 +54,8 @@ class Step35TcpControlChecks(unittest.TestCase):
             "TCP_CONTROL_PROTOCOL_VERSION",
             "TCP_CONTROL_MAX_PAYLOAD_LENGTH",
             "TCP_CONTROL_CAPABILITIES",
+            "TCP_CONTROL_IDLE_TIMEOUT_MS",
+            "TCP_CONTROL_HELLO_TIMEOUT_MS",
         ):
             with self.subTest(symbol=symbol):
                 self.assertIn(symbol, config)
@@ -171,6 +173,30 @@ class Step35TcpControlChecks(unittest.TestCase):
         ):
             with self.subTest(symbol=symbol):
                 self.assertIn(symbol, source)
+
+    def test_tcp_control_drops_stale_single_client(self) -> None:
+        source = read_file("WifiTcpControl.cpp")
+        diagnostics = read_file("Diagnostics.h")
+        expire_body = function_body(source, "expireTcpClientIfTimedOut")
+        accept_body = function_body(source, "acceptPendingClient")
+        poll_body = function_body(source, "pollWifiTcpControl")
+
+        self.assertIn("TCP_CONTROL_HELLO_TIMEOUT_MS", expire_body)
+        self.assertIn("TCP_CONTROL_IDLE_TIMEOUT_MS", expire_body)
+        self.assertIn("stopTcpClientForTimeout", expire_body)
+        self.assertIn("diag.tcpClientTimeouts++", source)
+        self.assertIn("expireTcpClientIfTimedOut", accept_body)
+        self.assertIn("expireTcpClientIfTimedOut", poll_body)
+
+        for symbol in ("tcpFramesRx", "tcpFramesTx", "tcpBytesRx", "tcpWriteFails"):
+            with self.subTest(symbol=symbol):
+                self.assertIn(symbol, diagnostics)
+                self.assertIn(symbol, source)
+
+        self.assertIn("tcpMessageName", source)
+        self.assertIn("TCP rx", source)
+        self.assertIn("TCP tx", source)
+        self.assertIn("TCP read bytes", source)
 
 
 if __name__ == "__main__":

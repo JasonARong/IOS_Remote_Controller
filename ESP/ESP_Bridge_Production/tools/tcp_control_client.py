@@ -20,6 +20,11 @@ MAGIC = 0x5243
 FRAME_VERSION = 1
 PROTOCOL_VERSION = 1
 DEFAULT_PORT = 4211
+UDP_PORT = 4210
+UDP_MARKER = 0xB3
+UDP_VERSION = 1
+UDP_FRAME_COUNT = 1
+DEFAULT_STEP_DELAY = 0.05
 
 MSG_HELLO = 1
 MSG_HELLO_ACK = 2
@@ -53,10 +58,20 @@ ERROR_NAMES = {
 }
 
 MESSAGE_NAMES = {
+    MSG_HELLO: "Hello",
     MSG_HELLO_ACK: "HelloAck",
+    MSG_AUTH: "Auth",
     MSG_AUTH_RESULT: "AuthResult",
+    MSG_CLAIM_OWNER: "ClaimOwner",
     MSG_OWNER_RESULT: "OwnerResult",
+    MSG_HEARTBEAT: "Heartbeat",
+    MSG_STATUS_REQUEST: "StatusRequest",
     MSG_STATUS_RESPONSE: "StatusResponse",
+    MSG_BUTTON_STATE: "ButtonState",
+    MSG_WHEEL_TICK: "WheelTick",
+    MSG_KEY_COMBO: "KeyCombo",
+    MSG_RELEASE_ALL: "ReleaseAll",
+    MSG_SETUP_COMMAND: "SetupCommand",
     MSG_SETUP_RESULT: "SetupResult",
     MSG_ERROR: "Error",
 }
@@ -129,16 +144,19 @@ class Owner:
 
 
 class TcpControlClient:
-    def __init__(self, host: str, port: int, timeout: float) -> None:
+    def __init__(self, host: str, port: int, timeout: float, step_delay: float) -> None:
         self.host = host
         self.port = port
         self.timeout = timeout
+        self.step_delay = step_delay
         self.sock: socket.socket | None = None
         self.tx_seq = 1
 
     def __enter__(self) -> "TcpControlClient":
         self.sock = socket.create_connection((self.host, self.port), self.timeout)
+        self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.sock.settimeout(self.timeout)
+        print(f"CLIENT connected {self.host}:{self.port} timeout={self.timeout}s stepDelay={self.step_delay}s tcpNoDelay=on")
         return self
 
     def __exit__(self, *_exc: object) -> None:
@@ -163,6 +181,8 @@ class TcpControlClient:
             0,
         )
         self._socket().sendall(header + payload)
+        print(f"CLIENT tx {MESSAGE_NAMES.get(msg_type, msg_type)} seq={seq} len={len(payload)}")
+        self.pause()
         return seq
 
     def recv_frame(self) -> Frame:
@@ -174,7 +194,14 @@ class TcpControlClient:
             raise RuntimeError(f"bad frame version {version}")
         if flags != 0:
             raise RuntimeError(f"bad flags {flags}")
-        return Frame(msg_type, seq, self._recv_exact(payload_len))
+        frame = Frame(msg_type, seq, self._recv_exact(payload_len))
+        print(f"CLIENT rx {MESSAGE_NAMES.get(msg_type, msg_type)} seq={seq} len={payload_len}")
+        self.pause()
+        return frame
+
+    def pause(self) -> None:
+        if self.step_delay > 0:
+            time.sleep(self.step_delay)
 
     def expect(self, msg_type: int) -> Frame:
         frame = self.recv_frame()
@@ -360,8 +387,57 @@ def hid_smoke(client: TcpControlClient, owner: Owner) -> Owner:
     return owner
 
 
+def build_udp_motion_packet(
+    owner: Owner,
+    packet_seq: int,
+    dx: int,
+    dy: int,
+    *,
+    session_id: int | None = None,
+    udp_token: int | None = None,
+    input_epoch: int | None = None,
+    frame_count: int = UDP_FRAME_COUNT,
+) -> bytes:
+    return struct.pack(
+        "<BBIIHIBhh",
+        UDP_MARKER,
+        UDP_VERSION,
+        owner.session_id if session_id is None else session_id,
+        owner.udp_token if udp_token is None else udp_token,
+        packet_seq & 0xFFFF,
+        owner.input_epoch if input_epoch is None else input_epoch,
+        frame_count,
+        dx,
+        dy,
+    )
+
+
+def send_udp_motion(host: str, owner: Owner, dx: int, dy: int, count: int) -> None:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp:
+        for index in range(count):
+            packet = build_udp_motion_packet(owner, index, dx, dy)
+            udp.sendto(packet, (host, UDP_PORT))
+            time.sleep(0.01)
+    print(f"Sent {count} valid UDP motion packet(s) to {host}:{UDP_PORT}")
+
+
+def send_udp_rejection_probes(host: str, owner: Owner) -> None:
+    probes = (
+        ("bad session", build_udp_motion_packet(owner, 100, 60, 0, session_id=owner.session_id ^ 0xFFFFFFFF)),
+        ("bad token", build_udp_motion_packet(owner, 101, 60, 0, udp_token=owner.udp_token ^ 0xFFFFFFFF)),
+        ("bad epoch", build_udp_motion_packet(owner, 102, 60, 0, input_epoch=owner.input_epoch + 99)),
+        ("bad frameCount", build_udp_motion_packet(owner, 103, 60, 0, frame_count=2)),
+        ("old 0xB2 marker", bytes([0xB2, 0x00, 0x01, 60, 0, 0, 0])),
+    )
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp:
+        for label, packet in probes:
+            udp.sendto(packet, (host, UDP_PORT))
+            print(f"Sent invalid UDP probe: {label}")
+            time.sleep(0.02)
+
+
 def command_claim(args: argparse.Namespace) -> None:
-    with TcpControlClient(args.host, args.port, args.timeout) as client:
+    with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
         owner = handshake(client, args.phone_id)
         send_status(client)
         if args.keepalive > 0:
@@ -369,7 +445,7 @@ def command_claim(args: argparse.Namespace) -> None:
 
 
 def command_smoke(args: argparse.Namespace) -> None:
-    with TcpControlClient(args.host, args.port, args.timeout) as client:
+    with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
         owner = handshake(client, args.phone_id)
         send_status(client, 1)
         keepalive(client, owner, 2.0)
@@ -379,7 +455,7 @@ def command_smoke(args: argparse.Namespace) -> None:
 
 
 def command_hid_smoke(args: argparse.Namespace) -> None:
-    with TcpControlClient(args.host, args.port, args.timeout) as client:
+    with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
         owner = handshake(client, args.phone_id)
         send_status(client, 1)
         owner = hid_smoke(client, owner)
@@ -389,8 +465,19 @@ def command_hid_smoke(args: argparse.Namespace) -> None:
             keepalive(client, owner, args.keepalive)
 
 
+def command_udp_smoke(args: argparse.Namespace) -> None:
+    with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
+        owner = handshake(client, args.phone_id)
+        send_status(client, 1)
+        send_udp_motion(args.host, owner, args.dx, args.dy, args.count)
+        send_heartbeat(client, owner)
+        send_udp_rejection_probes(args.host, owner)
+        send_status(client, 2)
+        print("UDP smoke complete. Expect cursor movement from valid packets only; invalid probes should raise gateReject/malformed diagnostics.")
+
+
 def command_timeout(args: argparse.Namespace) -> None:
-    with TcpControlClient(args.host, args.port, args.timeout) as client:
+    with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
         handshake(client, args.phone_id)
         print(f"Waiting {args.wait}s without heartbeat...")
         time.sleep(args.wait)
@@ -402,6 +489,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("host", help="ESP IP address, shown in Serial diagnostics")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--timeout", type=float, default=3.0)
+    parser.add_argument("--step-delay", type=float, default=DEFAULT_STEP_DELAY, help="seconds to pause after each TCP frame send/receive")
     parser.add_argument("--phone-id", default="mac-manual-test")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -416,6 +504,12 @@ def build_parser() -> argparse.ArgumentParser:
     hid = subparsers.add_parser("hid-smoke", help="sends click, wheel, Escape, and release-all")
     hid.add_argument("--keepalive", type=float, default=0.0, help="seconds to send heartbeat after HID")
     hid.set_defaults(func=command_hid_smoke)
+
+    udp = subparsers.add_parser("udp-smoke", help="claims TCP owner, then sends gated UDP motion/probes")
+    udp.add_argument("--dx", type=int, default=80)
+    udp.add_argument("--dy", type=int, default=0)
+    udp.add_argument("--count", type=int, default=8)
+    udp.set_defaults(func=command_udp_smoke)
 
     timeout = subparsers.add_parser("timeout", help="claim owner, stop heartbeat, then request status")
     timeout.add_argument("--wait", type=float, default=2.0)

@@ -59,4 +59,7 @@ bool isWifiOwnerSession();
 bool isBleOwnerSession();
 bool acceptWifiTcpHidForOwner(uint32_t sessionId);
 bool acceptWifiControlAndRefresh(uint32_t sessionId, uint32_t nowMs);
+bool acceptWifiUdpMotionForOwner(uint32_t sessionId, uint32_t udpToken,
+                                 uint32_t inputEpoch, uint32_t remoteIpv4,
+                                 uint32_t nowMs);
 bool updateOwnerInputEpoch(uint32_t sessionId, uint32_t newEpoch);

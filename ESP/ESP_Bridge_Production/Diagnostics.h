@@ -1,5 +1,5 @@
 // Diagnostics.h — rolling counters and histograms for UDP ingress and HID egress.
-// printSummaryIfNeeded() emits a once-per-second Serial summary then resets windows.
+// printSummaryIfNeeded() emits a periodic Serial summary then resets windows.
 
 #pragma once
 
@@ -11,6 +11,7 @@ struct Diagnostics {
   volatile uint32_t udpDatagrams = 0;
   volatile uint32_t udpSubframes = 0;
   volatile uint32_t udpMalformed = 0;
+  volatile uint32_t udpGateRejected = 0;
   volatile uint32_t udpQueueOverflow = 0;
   volatile uint8_t  udpQueueDepthMax = 0;
 
@@ -20,6 +21,11 @@ struct Diagnostics {
   volatile uint32_t hidReportFails = 0;
   volatile uint32_t hidMotionStaleDrops = 0;
   volatile uint32_t releaseAllCount = 0;
+  volatile uint32_t tcpFramesRx = 0;
+  volatile uint32_t tcpFramesTx = 0;
+  volatile uint32_t tcpBytesRx = 0;
+  volatile uint32_t tcpWriteFails = 0;
+  volatile uint32_t tcpClientTimeouts = 0;
   volatile uint32_t hidLateMaxUs = 0;
 
   // Time between consecutive successful mouse HID sends (ms buckets).

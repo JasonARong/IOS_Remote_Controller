@@ -6,18 +6,22 @@
 #include <Arduino.h>
 
 /************** CONFIG **************/
-#define WIFI_SSID                 "LOSUS WIFI_0122"
-#define WIFI_PASSWORD             "66668888"
+#define WIFI_SSID                 "SMARTPOOL-10G"
+#define WIFI_PASSWORD             "13661663267"
 
 #define UDP_MOTION_PORT           4210
-#define UDP_MOTION_PACKET_MARKER  0xB2
-// Max subframes per UDP datagram. Must be >= UDPMotionSender.maxSubframesPerDatagram.
-// Current iOS sender ships one subframe per datagram. The receiver accepts
-// more so old lab senders and future batching tests remain parseable.
-#define UDP_SUBFRAMES_PER_PACKET  8
+#define UDP_MOTION_PACKET_MARKER  0xB3
+#define UDP_MOTION_PACKET_VERSION 1
+#define UDP_MOTION_FRAME_COUNT    1
+#define UDP_MOTION_PACKET_LENGTH  21
 
 #define UDP_FRAME_QUEUE_SIZE      32
 #define UDP_FRAME_STALE_US        48000UL
+
+// UDP RX task knobs. Keep enabled for normal production validation.
+#define UDP_RX_TASK_ENABLED       1
+#define UDP_RX_TASK_INTERVAL_MS   1
+#define UDP_RX_TASK_PRIORITY      4
 
 // HID pacer cadence. With bInterval=1 (1000 Hz host polling) we can pump
 // at 2 ms (500 Hz) and the host will pick up every report on the next IN
@@ -40,7 +44,7 @@
 // want Wi-Fi/UDP to come up so the diagnostic line tells us what failed.
 #define USB_MOUNT_TIMEOUT_MS      3000
 
-#define DIAGNOSTICS_INTERVAL_MS   1000
+#define DIAGNOSTICS_INTERVAL_MS   3000
 
 #define OWNER_HEARTBEAT_TIMEOUT_MS 1500
 #define OWNER_SESSION_INITIAL_EPOCH 1
@@ -50,7 +54,9 @@
 #define TCP_CONTROL_FRAME_VERSION 1
 #define TCP_CONTROL_PROTOCOL_VERSION 1
 #define TCP_CONTROL_MAX_PAYLOAD_LENGTH 1024
-#define TCP_CONTROL_FIRMWARE_VERSION "esp-production-3.5"
+#define TCP_CONTROL_FIRMWARE_VERSION "esp-production-3.6"
+#define TCP_CONTROL_IDLE_TIMEOUT_MS 3000
+#define TCP_CONTROL_HELLO_TIMEOUT_MS 1500
 
 #define TCP_CAP_WIFI_CONTROL      0x00000001UL
 #define TCP_CAP_UDP_MOTION        0x00000002UL

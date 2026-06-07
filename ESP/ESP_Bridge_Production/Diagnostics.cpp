@@ -48,6 +48,7 @@ void Diagnostics::resetWindow() {
   udpDatagrams = 0;
   udpSubframes = 0;
   udpMalformed = 0;
+  udpGateRejected = 0;
   udpQueueOverflow = 0;
   udpQueueDepthMax = 0;
   hidTicks = 0;
@@ -56,6 +57,11 @@ void Diagnostics::resetWindow() {
   hidReportFails = 0;
   hidMotionStaleDrops = 0;
   releaseAllCount = 0;
+  tcpFramesRx = 0;
+  tcpFramesTx = 0;
+  tcpBytesRx = 0;
+  tcpWriteFails = 0;
+  tcpClientTimeouts = 0;
   hidLateMaxUs = 0;
   for (int i = 0; i < 5; i++) hidIntervalBuckets[i] = 0;
   for (int i = 0; i < 8; i++) emitDeltaBuckets[i] = 0;
@@ -95,12 +101,21 @@ void printSummaryIfNeeded() {
     (float)diag.hidLateMaxUs / 1000.0f);
 
   Serial.printf(
-    "  net: wifi=%s ip=%s rssi=%d mounted=%s | udpRx iters=%lu/s\n",
+    "  net: wifi=%s ip=%s rssi=%d mounted=%s | udpRx iters=%lu/s gateReject=%lu/s\n",
     wifiUp ? "connected" : "down",
     wifiUp ? WiFi.localIP().toString().c_str() : "0.0.0.0",
     wifiUp ? (int)WiFi.RSSI() : 0,
     isUsbHidMounted() ? "yes" : "no",
-    (unsigned long)diag.udpRxIters);
+    (unsigned long)diag.udpRxIters,
+    (unsigned long)diag.udpGateRejected);
+
+  Serial.printf(
+    "  tcp: framesRx=%lu framesTx=%lu bytesRx=%lu writeFails=%lu timeouts=%lu\n",
+    (unsigned long)diag.tcpFramesRx,
+    (unsigned long)diag.tcpFramesTx,
+    (unsigned long)diag.tcpBytesRx,
+    (unsigned long)diag.tcpWriteFails,
+    (unsigned long)diag.tcpClientTimeouts);
 
   Serial.printf(
     "  HID interval ms <2=%lu 2-4=%lu 4-8=%lu 8-16=%lu >=16=%lu\n",

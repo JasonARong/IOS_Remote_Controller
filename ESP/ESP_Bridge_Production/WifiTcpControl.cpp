@@ -5,6 +5,7 @@
 #include <WiFi.h>
 
 #include "Config.h"
+#include "Diagnostics.h"
 #include "HidState.h"
 #include "OwnerSession.h"
 #include "UsbHid.h"
@@ -21,6 +22,8 @@ static bool tcpClientAuthenticated = false;
 static bool tcpClientOwnsWifi = false;
 static uint32_t tcpClientPhoneId = 0;
 static uint32_t tcpClientSessionId = 0;
+static uint32_t tcpClientConnectedAtMs = 0;
+static uint32_t tcpClientLastActivityMs = 0;
 static uint32_t tcpTxSeq = 1;
 static uint8_t tcpRxBuffer[TCP_RX_BUFFER_LENGTH];
 static size_t tcpRxLength = 0;
@@ -159,6 +162,28 @@ static void writeLe32(uint8_t* bytes, uint32_t value) {
   bytes[3] = (uint8_t)((value >> 24) & 0xff);
 }
 
+static const char* tcpMessageName(uint8_t type) {
+  switch ((TcpMessageType)type) {
+    case TCP_MSG_HELLO: return "Hello";
+    case TCP_MSG_HELLO_ACK: return "HelloAck";
+    case TCP_MSG_AUTH: return "Auth";
+    case TCP_MSG_AUTH_RESULT: return "AuthResult";
+    case TCP_MSG_CLAIM_OWNER: return "ClaimOwner";
+    case TCP_MSG_OWNER_RESULT: return "OwnerResult";
+    case TCP_MSG_HEARTBEAT: return "Heartbeat";
+    case TCP_MSG_STATUS_REQUEST: return "StatusRequest";
+    case TCP_MSG_STATUS_RESPONSE: return "StatusResponse";
+    case TCP_MSG_BUTTON_STATE: return "ButtonState";
+    case TCP_MSG_WHEEL_TICK: return "WheelTick";
+    case TCP_MSG_KEY_COMBO: return "KeyCombo";
+    case TCP_MSG_RELEASE_ALL: return "ReleaseAll";
+    case TCP_MSG_SETUP_COMMAND: return "SetupCommand";
+    case TCP_MSG_SETUP_RESULT: return "SetupResult";
+    case TCP_MSG_ERROR: return "Error";
+  }
+  return "Unknown";
+}
+
 static uint32_t foldPhoneId(const uint8_t* data, uint8_t len) {
   uint32_t value = 2166136261UL;
   for (uint8_t i = 0; i < len; i++) {
@@ -174,23 +199,44 @@ static void resetTcpClientState() {
   tcpClientOwnsWifi = false;
   tcpClientPhoneId = 0;
   tcpClientSessionId = 0;
+  tcpClientConnectedAtMs = 0;
+  tcpClientLastActivityMs = 0;
   tcpRxLength = 0;
 }
 
 static bool sendFrame(uint8_t type, const uint8_t* payload, uint16_t payloadLength) {
   if (!tcpClient || !tcpClient.connected()) return false;
 
-  uint8_t header[TCP_FRAME_HEADER_LENGTH];
-  writeLe16(&header[0], TCP_CONTROL_MAGIC);
-  header[2] = TCP_CONTROL_FRAME_VERSION;
-  header[3] = type;
-  writeLe32(&header[4], tcpTxSeq++);
-  writeLe16(&header[8], payloadLength);
-  writeLe16(&header[10], 0);
+  uint8_t frame[TCP_RX_BUFFER_LENGTH];
+  writeLe16(&frame[0], TCP_CONTROL_MAGIC);
+  frame[2] = TCP_CONTROL_FRAME_VERSION;
+  frame[3] = type;
+  writeLe32(&frame[4], tcpTxSeq++);
+  writeLe16(&frame[8], payloadLength);
+  writeLe16(&frame[10], 0);
+  for (uint16_t i = 0; i < payloadLength; i++) {
+    frame[TCP_FRAME_HEADER_LENGTH + i] = payload[i];
+  }
 
-  if (tcpClient.write(header, sizeof(header)) != sizeof(header)) return false;
-  if (payloadLength == 0) return true;
-  return tcpClient.write(payload, payloadLength) == payloadLength;
+  size_t totalLength = TCP_FRAME_HEADER_LENGTH + payloadLength;
+  size_t totalWritten = tcpClient.write(frame, totalLength);
+  tcpClient.flush();
+  bool ok = totalWritten == totalLength;
+
+  if (ok) {
+    diag.tcpFramesTx++;
+  } else {
+    diag.tcpWriteFails++;
+  }
+  Serial.printf(
+    "TCP tx %s seq=%lu len=%u ok=%s written=%u expected=%u\n",
+    tcpMessageName(type),
+    (unsigned long)(tcpTxSeq - 1),
+    (unsigned)payloadLength,
+    ok ? "yes" : "no",
+    (unsigned)totalWritten,
+    (unsigned)totalLength);
+  return ok;
 }
 
 static void sendError(TcpErrorCode code, uint32_t relatedSeq, const char* message) {
@@ -562,6 +608,12 @@ static bool parseOneFrame(size_t* consumed) {
   frame.seq = seq;
   frame.payload = &tcpRxBuffer[TCP_FRAME_HEADER_LENGTH];
   frame.payloadLength = payloadLength;
+  diag.tcpFramesRx++;
+  Serial.printf(
+    "TCP rx %s seq=%lu len=%u\n",
+    tcpMessageName(type),
+    (unsigned long)seq,
+    (unsigned)payloadLength);
   handleFrame(frame);
 
   *consumed = frameLength;
@@ -589,9 +641,34 @@ static void releaseOwnedClientOnDisconnect() {
   resetTcpClientState();
 }
 
+static void stopTcpClientForTimeout(const char* reason) {
+  Serial.printf("TCP control client timeout: %s\n", reason);
+  diag.tcpClientTimeouts++;
+  tcpClient.stop();
+  releaseOwnedClientOnDisconnect();
+}
+
+static bool expireTcpClientIfTimedOut(uint32_t nowMs) {
+  if (!tcpClient || !tcpClient.connected()) return false;
+
+  if (!tcpClientHelloDone &&
+      nowMs - tcpClientConnectedAtMs > TCP_CONTROL_HELLO_TIMEOUT_MS) {
+    stopTcpClientForTimeout("hello");
+    return true;
+  }
+  if (tcpClientHelloDone &&
+      nowMs - tcpClientLastActivityMs > TCP_CONTROL_IDLE_TIMEOUT_MS) {
+    stopTcpClientForTimeout("idle");
+    return true;
+  }
+  return false;
+}
+
 static void acceptPendingClient() {
   WiFiClient pending = tcpControlServer.available();
   if (!pending) return;
+
+  expireTcpClientIfTimedOut(millis());
 
   if (tcpClient && tcpClient.connected()) {
     pending.stop();
@@ -599,7 +676,10 @@ static void acceptPendingClient() {
   }
 
   tcpClient = pending;
+  tcpClient.setNoDelay(true);
   resetTcpClientState();
+  tcpClientConnectedAtMs = millis();
+  tcpClientLastActivityMs = tcpClientConnectedAtMs;
   Serial.printf("TCP control client connected from %s:%u\n",
                 tcpClient.remoteIP().toString().c_str(),
                 (unsigned)tcpClient.remotePort());
@@ -618,6 +698,7 @@ void setupWifiTcpControl() {
 void pollWifiTcpControl() {
   if (!tcpServerStarted) return;
 
+  expireTcpClientIfTimedOut(millis());
   acceptPendingClient();
 
   if (!tcpClient) return;
@@ -637,6 +718,11 @@ void pollWifiTcpControl() {
     int readLen = tcpClient.read(&tcpRxBuffer[tcpRxLength],
                                  sizeof(tcpRxBuffer) - tcpRxLength);
     if (readLen <= 0) break;
+    tcpClientLastActivityMs = millis();
+    diag.tcpBytesRx += (uint32_t)readLen;
+    Serial.printf("TCP read bytes=%d buffered=%u\n",
+                  readLen,
+                  (unsigned)(tcpRxLength + (size_t)readLen));
     tcpRxLength += (size_t)readLen;
     processRxBuffer();
     if (!tcpClient.connected()) return;

@@ -124,30 +124,27 @@ Performance baseline: Continue product implementation unless a minimum gate in `
   Check: TCP negotiates version/capabilities, grants Wi-Fi ownership, refreshes owner liveness, handles release-all, and rejects non-owner HID input.
   Status: TCP control module, source checks, Arduino compile, and hardware TCP manual validation pass; a first-run helper timeout was resolved by confirming port `4211` reachability and rerunning.
 
-- [ ] 3.6 Gate production UDP motion by active TCP owner
+- [x] 3.6 Gate production UDP motion by active TCP owner
   Output: UDP receiver for production gated motion packets.
   Non-goals: Reliable UDP.
   Check: UDP is accepted only when active mode is Wi-Fi and source endpoint, packet version, `sessionId`, `udpToken`, `inputEpoch`, frame count, and length all pass.
+  Status: Production `0xB3` UDP packet gate, source checks, helper script, stale TCP-client timeout hardening, Arduino compile, and hardware `udp-smoke` validation pass. Old Wi-Fi caused high packet loss/timeouts; moving Mac and ESP to `192.168.3.x` resolved transport instability.
 
-- [ ] 3.7 Merge full-feature BLE fallback into TinyUSB firmware
-  Output: BLE path supporting cursor, buttons, drag, scroll, keyboard, ownership, setup/status, heartbeat, and release-all.
-  Non-goals: Preserve BLE as the smooth cursor path.
-  Check: BLE Mode drives all features only when it owns HID, uses the shared HID state, and cannot drive HID while Wi-Fi owns the ESP.
+- [ ] 3.7 Add ESP persistence foundation
+  Output: One ESP storage layer for Wi-Fi profiles and pairing identity.
+  Non-goals: BSSID/mesh/router heuristics, final multi-phone UX, or final crypto format.
+  Check: ESP can persist Wi-Fi profiles, device identity, and paired-phone secret data across reboot and expose hooks for TCP/BLE auth and setup.
+  Sub-steps:
+  - Former 3.8: Add storage for multiple simple `SSID + password` profiles; ESP can store, list, try, and clear saved profiles.
+  - Former 3.9: Add storage for device identity and paired-phone secret(s); ESP can persist identity/secret across reboot and use them for TCP/BLE authentication hooks.
 
-- [ ] 3.8 Add ESP Wi-Fi profile storage
-  Output: Storage for multiple simple `SSID + password` profiles.
-  Non-goals: BSSID/mesh/router heuristics.
-  Check: ESP can store, list, try, and clear saved profiles.
-
-- [ ] 3.9 Add ESP pairing identity storage
-  Output: Storage for device identity and paired-phone secret(s).
-  Non-goals: Final multi-phone UX.
-  Check: ESP can persist device identity/secret across reboot and use it for TCP/BLE authentication hooks.
-
-- [ ] 3.10 Add ESP status, capability, and BLE Wi-Fi setup commands
-  Output: ESP status/capability reporting plus BLE scan/set/list/forget Wi-Fi setup commands.
-  Non-goals: iOS current-SSID dependency.
-  Check: App can read firmware/protocol/capabilities/device ID, show only ESP-visible SSIDs, and provision Wi-Fi without hardcoded credentials.
+- [ ] 3.8 Merge BLE fallback with setup/status control path
+  Output: BLE path supporting cursor, buttons, drag, scroll, keyboard, ownership, setup/status, heartbeat, release-all, and Wi-Fi setup commands.
+  Non-goals: Preserve BLE as the smooth cursor path or depend on iOS current-SSID access.
+  Check: BLE Mode drives all features only when it owns HID, uses shared HID state, cannot drive HID while Wi-Fi owns the ESP, reports status/capabilities/device ID, shows only ESP-visible SSIDs, and provisions Wi-Fi without hardcoded credentials.
+  Sub-steps:
+  - Former 3.7: Merge full-feature BLE fallback into TinyUSB firmware.
+  - Former 3.10: Add ESP status, capability, and BLE Wi-Fi setup commands.
 
 ## Step 4: iOS Transport Architecture
 
@@ -318,3 +315,9 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-05-31: Marked Step 3.3 complete after hardware run confirmed the reorganized production firmware works.
 - 2026-05-31: Implemented Step 3.4 owner/session foundation (`OwnerSession` module, boot heartbeat polling, diagnostics owner line); source tests and Arduino compile pass.
 - 2026-06-06: Completed Step 3.5 Wi-Fi TCP control server (`WifiTcpControl` module with negotiation, placeholder auth, owner claim, heartbeat, status, reliable HID controls, release-all, setup result, and error handling); source checks, Arduino compile, TCP smoke, HID smoke, bad-session rejection, and heartbeat-timeout validation pass. Recorded one resolved first-run helper timeout.
+- 2026-06-06: Reorganized unfinished Step 3 work for faster delivery: keep UDP owner gate as 3.6, combine Wi-Fi profile and pairing identity storage into 3.7, and combine BLE fallback with setup/status control into 3.8.
+- 2026-06-07: Validated Step 3.6 production UDP owner gate (`0xB3` packet, TCP owner IP/session/token/epoch checks, gate diagnostics, and `udp-smoke` helper); source checks, Arduino compile, TCP ownership, gated UDP cursor movement, and invalid-probe rejection pass. Root-caused intermittent manual-test timeouts to the old Wi-Fi path with severe packet loss; validation completed on the healthier `192.168.3.x` network.
+- 2026-06-07: Recorded Step 3.6 debugging lessons: ESP `TCP tx ... ok=yes` plus Mac timeout means verify network reachability before changing protocol code; `ping`, `nc`, and `arp` separated Wi-Fi/AP instability from firmware bugs; disabling UDP RX isolated task contention; `udpRx iters=0/s` after a supposed re-enable means the board is still running the old diagnostic build.
+- 2026-06-06: Hardened Step 3.6/3.5 TCP helper path after repeated manual-test timeouts by adding hello/idle timeout cleanup for stale single TCP clients and diagnostics for TCP client timeouts.
+- 2026-06-07: Added TCP frame-level diagnostics (`rx`, `tx`, read bytes, write failures, counters) and increased periodic Serial summary interval to reduce log noise while investigating intermittent TCP manual-test timeouts.
+- 2026-06-07: Hardened TCP response delivery by enabling no-delay on accepted clients and sending each TCP response as one contiguous frame with flush; source checks and Arduino compile pass.
