@@ -52,6 +52,7 @@ OwnerClaimResult claimWifiOwner(uint32_t phoneId, const OwnerTcpEndpoint& tcpEnd
                                 uint32_t nowMs);
 OwnerClaimResult claimBleOwner(uint32_t phoneId, uint32_t nowMs);
 void releaseOwner(uint32_t sessionId, OwnerKind ownerKind, ReleaseReason reason);
+void releaseOwnerKind(OwnerKind ownerKind, ReleaseReason reason);
 bool refreshOwnerHeartbeat(uint32_t sessionId, OwnerKind ownerKind, uint32_t nowMs);
 void checkOwnerHeartbeatTimeout(uint32_t nowMs);
 OwnerSnapshot getOwnerSnapshot(uint32_t nowMs);
@@ -59,6 +60,8 @@ bool isWifiOwnerSession();
 bool isBleOwnerSession();
 bool acceptWifiTcpHidForOwner(uint32_t sessionId);
 bool acceptWifiControlAndRefresh(uint32_t sessionId, uint32_t nowMs);
+bool acceptBleHidForOwner(uint32_t sessionId);
+bool acceptBleControlAndRefresh(uint32_t sessionId, uint32_t nowMs);
 bool acceptWifiUdpMotionForOwner(uint32_t sessionId, uint32_t udpToken,
                                  uint32_t inputEpoch, uint32_t remoteIpv4,
                                  uint32_t nowMs);

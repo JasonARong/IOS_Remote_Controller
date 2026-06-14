@@ -44,9 +44,11 @@
 // want Wi-Fi/UDP to come up so the diagnostic line tells us what failed.
 #define USB_MOUNT_TIMEOUT_MS      3000
 
-#define DIAGNOSTICS_INTERVAL_MS   3000
+#define DIAGNOSTICS_INTERVAL_MS   5000
 
-#define OWNER_HEARTBEAT_TIMEOUT_MS 1500
+// Long bring-up timeout keeps manual BLE/nRF testing practical. Final tuning
+// can lower this once iOS sends automatic owner heartbeats.
+#define OWNER_HEARTBEAT_TIMEOUT_MS 600000
 #define OWNER_SESSION_INITIAL_EPOCH 1
 
 #define TCP_CONTROL_PORT          4211
@@ -54,24 +56,48 @@
 #define TCP_CONTROL_FRAME_VERSION 1
 #define TCP_CONTROL_PROTOCOL_VERSION 1
 #define TCP_CONTROL_MAX_PAYLOAD_LENGTH 1024
-#define TCP_CONTROL_FIRMWARE_VERSION "esp-production-3.7"
-#define TCP_CONTROL_IDLE_TIMEOUT_MS 3000
+#define TCP_CONTROL_FIRMWARE_VERSION "esp-production-3.8"
+#define TCP_CONTROL_IDLE_TIMEOUT_MS 600000
 #define TCP_CONTROL_HELLO_TIMEOUT_MS 1500
 
-#define TCP_CAP_WIFI_CONTROL      0x00000001UL
-#define TCP_CAP_UDP_MOTION        0x00000002UL
-#define TCP_CAP_MOUSE_BUTTONS     0x00000004UL
-#define TCP_CAP_WHEEL             0x00000008UL
-#define TCP_CAP_KEYBOARD          0x00000010UL
-#define TCP_CAP_RELEASE_ALL       0x00000020UL
-#define TCP_CAP_STATUS            0x00000040UL
-#define TCP_CAP_SETUP_ADMIN       0x00000080UL
-#define TCP_CAP_SAVED_WIFI_PROFILES 0x00002000UL
-#define TCP_CONTROL_CAPABILITIES  (TCP_CAP_WIFI_CONTROL | TCP_CAP_UDP_MOTION | \
-                                   TCP_CAP_MOUSE_BUTTONS | TCP_CAP_WHEEL | \
-                                   TCP_CAP_KEYBOARD | TCP_CAP_RELEASE_ALL | \
-                                   TCP_CAP_STATUS | TCP_CAP_SETUP_ADMIN | \
-                                   TCP_CAP_SAVED_WIFI_PROFILES)
+#define REMOTE_CAP_BLE_CONTROL_V1        0x00000001UL
+#define REMOTE_CAP_BLE_LEGACY_INPUT      0x00000002UL
+#define REMOTE_CAP_WIFI_TCP_CONTROL_V1   0x00000004UL
+#define REMOTE_CAP_WIFI_UDP_MOTION_V1    0x00000008UL
+#define REMOTE_CAP_TINYUSB_HIGH_RATE_HID 0x00000010UL
+#define REMOTE_CAP_OWNER_SESSION         0x00000020UL
+#define REMOTE_CAP_RELEASE_ALL           0x00000040UL
+#define REMOTE_CAP_OWNER_HEARTBEAT       0x00000080UL
+#define REMOTE_CAP_BLE_WIFI_PROVISIONING 0x00000100UL
+#define REMOTE_CAP_BONJOUR_DISCOVERY     0x00000200UL
+#define REMOTE_CAP_MOUSE_BUTTONS         0x00000400UL
+#define REMOTE_CAP_WHEEL_INPUT           0x00000800UL
+#define REMOTE_CAP_KEYBOARD_INPUT        0x00001000UL
+#define REMOTE_CAP_SAVED_WIFI_PROFILES   0x00002000UL
+
+#define TCP_CONTROL_CAPABILITIES  (REMOTE_CAP_BLE_CONTROL_V1 | \
+                                   REMOTE_CAP_BLE_LEGACY_INPUT | \
+                                   REMOTE_CAP_WIFI_TCP_CONTROL_V1 | \
+                                   REMOTE_CAP_WIFI_UDP_MOTION_V1 | \
+                                   REMOTE_CAP_TINYUSB_HIGH_RATE_HID | \
+                                   REMOTE_CAP_OWNER_SESSION | \
+                                   REMOTE_CAP_RELEASE_ALL | \
+                                   REMOTE_CAP_OWNER_HEARTBEAT | \
+                                   REMOTE_CAP_BLE_WIFI_PROVISIONING | \
+                                   REMOTE_CAP_MOUSE_BUTTONS | \
+                                   REMOTE_CAP_WHEEL_INPUT | \
+                                   REMOTE_CAP_KEYBOARD_INPUT | \
+                                   REMOTE_CAP_SAVED_WIFI_PROFILES)
+
+#define BLE_DEVICE_NAME           "ESP_MouseBridge"
+#define BLE_SERVICE_UUID          "00001234-0000-1000-8000-00805f9b34fb"
+#define BLE_RX_CHARACTERISTIC_UUID "0000abcd-0000-1000-8000-00805f9b34fb"
+#define BLE_TX_CHARACTERISTIC_UUID "0000abce-0000-1000-8000-00805f9b34fb"
+#define BLE_CONTROL_MARKER        0xF2
+#define BLE_DEBUG_MOUSE_MARKER    0xA1
+#define BLE_KEY_COMBO_MARKER      0xF1
+#define BLE_CONTROL_FRAME_VERSION 1
+#define BLE_CONTROL_MAX_PAYLOAD_LENGTH 180
 
 // Optional local test knobs. Keep disabled in the normal production base.
 #define HID_LOCAL_GENERATOR_TEST  0

@@ -26,6 +26,12 @@ struct Diagnostics {
   volatile uint32_t tcpBytesRx = 0;
   volatile uint32_t tcpWriteFails = 0;
   volatile uint32_t tcpClientTimeouts = 0;
+  volatile uint32_t bleFramesRx = 0;
+  volatile uint32_t bleFramesTx = 0;
+  volatile uint32_t bleMalformed = 0;
+  volatile uint32_t bleHidAccepted = 0;
+  volatile uint32_t bleHidIgnored = 0;
+  volatile uint32_t bleSetupOps = 0;
   volatile uint32_t hidLateMaxUs = 0;
 
   // Time between consecutive successful mouse HID sends (ms buckets).

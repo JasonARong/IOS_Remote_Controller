@@ -81,8 +81,8 @@ class Step37PersistenceChecks(unittest.TestCase):
         source = read_file("WifiTcpControl.cpp")
         hello_body = function_body(source, "handleHello")
 
-        self.assertIn("TCP_CAP_SAVED_WIFI_PROFILES", config)
-        self.assertIn("TCP_CONTROL_FIRMWARE_VERSION \"esp-production-3.7\"", config)
+        self.assertIn("REMOTE_CAP_SAVED_WIFI_PROFILES", config)
+        self.assertIn("TCP_CONTROL_FIRMWARE_VERSION", config)
         self.assertIn("getPersistentDeviceId", hello_body)
         self.assertIn("writer.writeBytes((const uint8_t*)deviceId", hello_body)
 

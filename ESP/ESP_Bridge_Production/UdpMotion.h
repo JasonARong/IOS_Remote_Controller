@@ -6,4 +6,8 @@
 #include <Arduino.h>
 
 bool setupUdpMotion();
+bool connectWifiForProvisioning(const char* ssid, const char* password,
+                                bool saveProfile);
+bool ensureUdpMotionListening();
+bool isUdpMotionListening();
 void startUdpRxTask();

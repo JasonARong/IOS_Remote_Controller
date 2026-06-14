@@ -118,6 +118,32 @@ void releaseOwner(uint32_t sessionId, OwnerKind ownerKind, ReleaseReason reason)
   }
 }
 
+void releaseOwnerKind(OwnerKind ownerKind, ReleaseReason reason) {
+  uint32_t capturedSessionId = 0;
+
+  portENTER_CRITICAL(&ownerSessionMux);
+  if (ownerState.ownerKind != ownerKind) {
+    portEXIT_CRITICAL(&ownerSessionMux);
+    return;
+  }
+  capturedSessionId = ownerState.sessionId;
+  portEXIT_CRITICAL(&ownerSessionMux);
+
+  releaseAllHidState(reason);
+
+  bool clearedOwner = false;
+  portENTER_CRITICAL(&ownerSessionMux);
+  if (ownerState.ownerKind == ownerKind &&
+      ownerState.sessionId == capturedSessionId) {
+    clearOwnerLocked();
+    clearedOwner = true;
+  }
+  portEXIT_CRITICAL(&ownerSessionMux);
+  if (clearedOwner) {
+    setActiveInputMode(INPUT_MODE_NONE);
+  }
+}
+
 bool refreshOwnerHeartbeat(uint32_t sessionId, OwnerKind ownerKind, uint32_t nowMs) {
   portENTER_CRITICAL(&ownerSessionMux);
 
@@ -218,6 +244,19 @@ bool acceptWifiTcpHidForOwner(uint32_t sessionId) {
 bool acceptWifiControlAndRefresh(uint32_t sessionId, uint32_t nowMs) {
   if (!acceptWifiTcpHidForOwner(sessionId)) return false;
   return refreshOwnerHeartbeat(sessionId, OWNER_WIFI, nowMs);
+}
+
+bool acceptBleHidForOwner(uint32_t sessionId) {
+  portENTER_CRITICAL(&ownerSessionMux);
+  bool accepted = ownerState.ownerKind == OWNER_BLE &&
+                  ownerState.sessionId == sessionId;
+  portEXIT_CRITICAL(&ownerSessionMux);
+  return accepted;
+}
+
+bool acceptBleControlAndRefresh(uint32_t sessionId, uint32_t nowMs) {
+  if (!acceptBleHidForOwner(sessionId)) return false;
+  return refreshOwnerHeartbeat(sessionId, OWNER_BLE, nowMs);
 }
 
 bool acceptWifiUdpMotionForOwner(uint32_t sessionId, uint32_t udpToken,

@@ -6520,3 +6520,72 @@ left clicked and sent
 14:02:47.261 ->   HID interval ms <8=0 8-12=0 12-17=0 17-25=0 25-34=0 34-50=0 >=50=0
 14:02:47.652 -> 🔌 iPhone disconnected, reason: 531
 14:02:48.178 -> 🔄 Restarting advertising...
+
+---
+
+## Step 3.8 BLE fallback/setup hardware validation notes
+
+Date: 2026-06-08
+Firmware: `esp-production-3.8`
+ESP IP: `192.168.3.228`
+BLE tool: nRF Connect
+
+### TCP Wi-Fi owner claim for mode isolation
+
+Command:
+
+```bash
+python3 ESP/ESP_Bridge_Production/tools/tcp_control_client.py 192.168.3.228 --phone-id codex --proof secret claim --keepalive 120
+```
+
+Observed helper output:
+
+```text
+CLIENT rx HelloAck seq=1 len=20
+HelloAck protocol=1 capabilities=0x50534511 device=not-reported firmware=malformed-trailing:332d463031303035424132303130 raw=010011455350332d463031303035424132303130
+CLIENT rx AuthResult seq=2 len=1
+AuthResult accepted=True reason=0 legacy=reason-only
+CLIENT rx OwnerResult seq=3 len=1
+OwnerResult granted=True reason=0 legacy=sessionless
+legacy sessionless owner: holding TCP connection open for 120.0s
+```
+
+Lesson: hardware can emit one-byte legacy TCP results where `00` means success. The helper must use the same pairing identity stored by BLE pairing (`codex` / `secret` for this manual test).
+
+### BLE ignored while Wi-Fi owns HID
+
+BLE write:
+
+```text
+A101000040000000
+```
+
+Observed: no cursor movement while Serial showed Wi-Fi ownership active.
+
+### Authenticated BLE safety release-all while Wi-Fi owns HID
+
+BLE write:
+
+```text
+F201070C0000000001050000000005
+```
+
+Observed Serial:
+
+```text
+ble: framesRx=1 framesTx=0 malformed=0 hidAccepted=0 hidIgnored=0 setupOps=0
+releaseAll=1
+owner: kind=wifi session=2698857195 epoch=1 hb=584170ms left
+```
+
+Lesson: successful authenticated BLE safety release-all is success-by-silence. Confirm with `releaseAll` increment and unchanged healthy Wi-Fi owner.
+
+### Reset pairing
+
+BLE write:
+
+```text
+F201130A00000000010105
+```
+
+Observed: expected `CommandResult` notification was received and owner changed from Wi-Fi to none.

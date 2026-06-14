@@ -145,6 +145,7 @@ class Owner:
     session_id: int
     udp_token: int
     input_epoch: int
+    sessionless: bool = False
 
 
 class TcpControlClient:
@@ -252,8 +253,8 @@ def parse_error(frame: Frame) -> tuple[int, int, str]:
         raise RuntimeError(f"expected Error, got {name}")
     reader = PayloadReader(frame.payload)
     code = reader.u16()
-    related_seq = reader.u32()
-    message = reader.string()
+    related_seq = reader.u32() if not reader.done() else 0
+    message = reader.string() if not reader.done() else ""
     return code, related_seq, message
 
 
@@ -263,24 +264,70 @@ def format_error(frame: Frame) -> str:
 
 
 def parse_hello_ack(frame: Frame) -> None:
+    raw_hex = frame.payload.hex()
+    if len(frame.payload) < 6:
+        print(f"HelloAck raw={raw_hex} protocol=not-reported capabilities=not-reported")
+        return
+
     reader = PayloadReader(frame.payload)
     selected = reader.u16()
     capabilities = reader.u32()
-    device_id = reader.opaque().decode("utf-8", errors="replace")
-    firmware = reader.string()
-    print(f"HelloAck protocol={selected} capabilities=0x{capabilities:08x} device={device_id} firmware={firmware}")
+    trailing: list[str] = []
+    while not reader.done():
+        remaining = len(reader.data) - reader.pos
+        if remaining <= 0:
+            break
+        length = reader.data[reader.pos]
+        if length + 1 > remaining:
+            trailing.append(f"malformed-trailing:{reader.data[reader.pos:].hex()}")
+            reader.pos = len(reader.data)
+            break
+        trailing.append(reader.opaque().decode("utf-8", errors="replace"))
+
+    device_id = ""
+    firmware = ""
+    if len(trailing) >= 2:
+        device_id = trailing[0]
+        firmware = trailing[1]
+    elif len(trailing) == 1:
+        if trailing[0].startswith("ESP3-"):
+            device_id = trailing[0]
+        else:
+            firmware = trailing[0]
+
+    print(
+        f"HelloAck protocol={selected} capabilities=0x{capabilities:08x} "
+        f"device={device_id or 'not-reported'} firmware={firmware or 'not-reported'} "
+        f"raw={raw_hex}"
+    )
 
 
 def parse_auth_result(frame: Frame) -> None:
+    if len(frame.payload) == 1:
+        reason = frame.payload[0]
+        accepted = reason == 0
+        print(f"AuthResult accepted={accepted} reason={reason} legacy=reason-only")
+        if not accepted:
+            raise RuntimeError("auth rejected")
+        return
+
     reader = PayloadReader(frame.payload)
     accepted = reader.bool()
-    reason = reader.u8()
+    reason = reader.u8() if not reader.done() else 0
     print(f"AuthResult accepted={accepted} reason={reason}")
     if not accepted:
         raise RuntimeError("auth rejected")
 
 
 def parse_owner_result(frame: Frame) -> Owner:
+    if len(frame.payload) == 1:
+        reason = frame.payload[0]
+        granted = reason == 0
+        print(f"OwnerResult granted={granted} reason={reason} legacy=sessionless")
+        if not granted:
+            raise RuntimeError("owner claim rejected")
+        return Owner(0, 0, 0, sessionless=True)
+
     reader = PayloadReader(frame.payload)
     granted = reader.bool()
     reason = reader.u8()
@@ -309,13 +356,16 @@ def parse_status(frame: Frame) -> None:
     firmware = reader.string()
     protocol = reader.u16()
     capabilities = reader.u32()
+    device_id = ""
+    if not reader.done():
+        device_id = reader.opaque().decode("utf-8", errors="replace")
     mode_label = {0: "none", 1: "wifi", 2: "ble"}.get(active_mode, str(active_mode))
     print(
         "StatusResponse "
         f"requestId={request_id} activeMode={mode_label} wifi={wifi_connected} "
         f"ble={ble_connected} usbHidMounted={usb_hid_mounted} owned={owned} "
         f"ownedByThisSession={owned_by_this_session} firmware={firmware} "
-        f"protocol={protocol} capabilities=0x{capabilities:08x}"
+        f"protocol={protocol} capabilities=0x{capabilities:08x} device={device_id}"
     )
 
 
@@ -335,11 +385,11 @@ def parse_setup_result(frame: Frame) -> None:
     print(f"SetupResult command={command} success={success} message={message} {' '.join(details)}")
 
 
-def handshake(client: TcpControlClient, phone_id: str) -> Owner:
+def handshake(client: TcpControlClient, phone_id: str, proof: str) -> Owner:
     client.send(MSG_HELLO, struct.pack("<HHI", PROTOCOL_VERSION, PROTOCOL_VERSION, 0xFFFFFFFF))
     parse_hello_ack(client.expect(MSG_HELLO_ACK))
 
-    payload = opaque(phone_id.encode("utf-8")) + opaque(b"placeholder-proof")
+    payload = opaque(phone_id.encode("utf-8")) + opaque(proof.encode("utf-8"))
     client.send(MSG_AUTH, payload)
     parse_auth_result(client.expect(MSG_AUTH_RESULT))
 
@@ -358,6 +408,8 @@ def send_setup(client: TcpControlClient, command: int, payload: bytes = b"") -> 
 
 
 def send_heartbeat(client: TcpControlClient, owner: Owner) -> None:
+    if owner.sessionless:
+        return
     client.send(MSG_HEARTBEAT, struct.pack("<I", owner.session_id))
     errors = client.drain_optional_errors()
     if errors:
@@ -365,6 +417,11 @@ def send_heartbeat(client: TcpControlClient, owner: Owner) -> None:
 
 
 def keepalive(client: TcpControlClient, owner: Owner, seconds: float) -> None:
+    if owner.sessionless:
+        print(f"legacy sessionless owner: holding TCP connection open for {seconds:.1f}s")
+        time.sleep(seconds)
+        return
+
     end = time.monotonic() + seconds
     count = 0
     while time.monotonic() < end:
@@ -463,15 +520,18 @@ def send_udp_rejection_probes(host: str, owner: Owner) -> None:
 
 def command_claim(args: argparse.Namespace) -> None:
     with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
-        owner = handshake(client, args.phone_id)
-        send_status(client)
+        owner = handshake(client, args.phone_id, args.proof)
+        if not owner.sessionless:
+            send_status(client)
         if args.keepalive > 0:
             keepalive(client, owner, args.keepalive)
 
 
 def command_smoke(args: argparse.Namespace) -> None:
     with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
-        owner = handshake(client, args.phone_id)
+        owner = handshake(client, args.phone_id, args.proof)
+        if owner.sessionless:
+            raise RuntimeError("smoke requires session-bearing TCP owner result")
         send_status(client, 1)
         keepalive(client, owner, 2.0)
         send_bad_session_probe(client, owner)
@@ -481,7 +541,9 @@ def command_smoke(args: argparse.Namespace) -> None:
 
 def command_hid_smoke(args: argparse.Namespace) -> None:
     with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
-        owner = handshake(client, args.phone_id)
+        owner = handshake(client, args.phone_id, args.proof)
+        if owner.sessionless:
+            raise RuntimeError("hid-smoke requires session-bearing TCP owner result")
         send_status(client, 1)
         owner = hid_smoke(client, owner)
         send_bad_session_probe(client, owner)
@@ -492,7 +554,9 @@ def command_hid_smoke(args: argparse.Namespace) -> None:
 
 def command_udp_smoke(args: argparse.Namespace) -> None:
     with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
-        owner = handshake(client, args.phone_id)
+        owner = handshake(client, args.phone_id, args.proof)
+        if owner.sessionless:
+            raise RuntimeError("udp-smoke requires session-bearing TCP owner result")
         send_status(client, 1)
         send_udp_motion(args.host, owner, args.dx, args.dy, args.count)
         send_heartbeat(client, owner)
@@ -503,25 +567,27 @@ def command_udp_smoke(args: argparse.Namespace) -> None:
 
 def command_list_saved_wifi(args: argparse.Namespace) -> None:
     with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
-        handshake(client, args.phone_id)
+        handshake(client, args.phone_id, args.proof)
         send_setup(client, SETUP_LIST_SAVED_WIFI)
 
 
 def command_forget_wifi(args: argparse.Namespace) -> None:
     with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
-        handshake(client, args.phone_id)
+        handshake(client, args.phone_id, args.proof)
         send_setup(client, SETUP_FORGET_WIFI, text(args.ssid))
 
 
 def command_reset_pairing(args: argparse.Namespace) -> None:
     with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
-        handshake(client, args.phone_id)
+        handshake(client, args.phone_id, args.proof)
         send_setup(client, SETUP_RESET_PAIRING)
 
 
 def command_timeout(args: argparse.Namespace) -> None:
     with TcpControlClient(args.host, args.port, args.timeout, args.step_delay) as client:
-        handshake(client, args.phone_id)
+        owner = handshake(client, args.phone_id, args.proof)
+        if owner.sessionless:
+            raise RuntimeError("timeout requires session-bearing TCP owner result")
         print(f"Waiting {args.wait}s without heartbeat...")
         time.sleep(args.wait)
         send_status(client, 1)
@@ -534,6 +600,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--timeout", type=float, default=3.0)
     parser.add_argument("--step-delay", type=float, default=DEFAULT_STEP_DELAY, help="seconds to pause after each TCP frame send/receive")
     parser.add_argument("--phone-id", default="mac-manual-test")
+    parser.add_argument("--proof", default="placeholder-proof")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -565,7 +632,7 @@ def build_parser() -> argparse.ArgumentParser:
     reset_pairing.set_defaults(func=command_reset_pairing)
 
     timeout = subparsers.add_parser("timeout", help="claim owner, stop heartbeat, then request status")
-    timeout.add_argument("--wait", type=float, default=2.0)
+    timeout.add_argument("--wait", type=float, default=610.0)
     timeout.set_defaults(func=command_timeout)
 
     return parser

@@ -86,6 +86,8 @@ Allowed exceptions:
 
 This rule prevents split-brain input where BLE and Wi-Fi both try to control the same HID state.
 
+Step 3.8 hardware validation confirmed this split: while Wi-Fi owns HID, BLE HID input is ignored, but authenticated BLE setup/status/safety commands can still run. A successful BLE safety release-all during Wi-Fi ownership clears HID state without clearing the healthy Wi-Fi owner.
+
 ---
 
 ## 4. Wi-Fi Session Gate

@@ -119,6 +119,7 @@ ownedByThisSession: Bool
 firmwareVersion: String
 protocolVersion: UInt16
 capabilities: CapabilitySet
+deviceId: OpaqueBytes
 ```
 
 `SetupCommand`
@@ -136,6 +137,7 @@ resetPairing
 - ESP scan results are the source of selectable SSIDs.
 - iOS current-SSID access may help preselect, but must not be required.
 - ESP stores Wi-Fi profiles as `SSID + password` for now.
+- `deviceId` identifies the ESP across BLE and Wi-Fi discovery/status paths.
 
 ### 1.2 HID Impact
 
@@ -385,6 +387,7 @@ ownedByThisSession: Bool
 firmwareVersion: String
 protocolVersion: UInt16
 capabilities: UInt32
+deviceId: OpaqueBytes
 ```
 
 `SetupCommand`
@@ -667,6 +670,7 @@ Rules:
 | `SavedWifiDone` | ESP -> iOS | End saved profile stream |
 | `ForgetWifi` | iOS -> ESP | Delete saved profile |
 | `ResetPairing` | iOS -> ESP | Clear pairing/admin state |
+| `CommandResult` | ESP -> iOS | Report success/failure for one-shot setup/admin commands |
 | `Error` | Either | Protocol/session error |
 
 `ScanWifiResult` and `SavedWifiEntry` use one entry per notification. Long payloads use frame chunking.
@@ -697,7 +701,7 @@ iOS sends ReleaseOwner before intentionally leaving BLE HID ownership, such as w
 | `Heartbeat` | `sessionId: UInt32` |
 | `ReleaseAll` | `sessionId: UInt32`<br>`reason: ReleaseReason` |
 | `StatusRequest` | `empty payload; requestId is in the control frame` |
-| `StatusResponse` | `same fields as Section 1 StatusResponse` |
+| `StatusResponse` | `same fields as Section 1 StatusResponse, including deviceId` |
 | `ScanWifi` | `empty payload` |
 | `ScanWifiResult` | `ssid: String`<br>`rssi: Int8`<br>`security: UInt8` |
 | `ScanWifiDone` | `resultCount: UInt8` |
@@ -708,7 +712,10 @@ iOS sends ReleaseOwner before intentionally leaving BLE HID ownership, such as w
 | `SavedWifiDone` | `resultCount: UInt8` |
 | `ForgetWifi` | `ssid: String` |
 | `ResetPairing` | `reason: UInt8` |
+| `CommandResult` | `commandType: UInt8`<br>`success: Bool`<br>`reason: UInt8`<br>`message: String` |
 | `Error` | `code: UInt16`<br>`relatedRequestId: UInt32`<br>`message: String` |
+
+`ForgetWifi` and `ResetPairing` complete with `CommandResult`, not silence. `ForgetWifi` returns `success=false` with a not-found reason when no matching SSID exists. `ResetPairing` sends `CommandResult(success=true)` before clearing the authenticated BLE session.
 
 ### 4.6 Ownership And Mode Isolation
 
@@ -716,6 +723,7 @@ iOS sends ReleaseOwner before intentionally leaving BLE HID ownership, such as w
 - Wi-Fi-owned ESP ignores BLE HID input packets.
 - BLE setup, status, ownership, heartbeat, and authenticated release-all safety paths may run while BLE is not the HID owner.
 - Authenticated `ReleaseAll` is accepted as a safety message even if Wi-Fi owns HID.
+- When Wi-Fi owns HID, authenticated BLE safety `ReleaseAll` uses `sessionId = 0`; it clears HID state but does not clear Wi-Fi ownership.
 - Heartbeat timeout in BLE Mode triggers release-all and clears BLE ownership.
 - Exact timeout values are specified in the release-all/heartbeat task.
 - BLE has no `inputEpoch`; all BLE fallback input/control events share one ordered BLE lane.
@@ -1036,15 +1044,25 @@ Initial v1 defaults:
 
 ```text
 ownerHeartbeatIntervalMs = 500
-ownerHeartbeatTimeoutMs  = 1500
+ownerHeartbeatTimeoutMs  = 600000
+tcpControlIdleTimeoutMs  = 600000
 releaseAllHandoffWaitMs  = 250
 ```
 
 Rules:
 
 - Timeout values are implementation defaults, not final tuning.
+- The long v1 owner and TCP idle timeouts are intentional for manual BLE/Wi-Fi bring-up only; do not treat them as release-ready production values.
+- Before real production release, retune these values after iOS sends automatic heartbeats and reconnect/fallback behavior has been validated.
 - Field testing may adjust values without changing the state-machine contract.
 - Disconnect callbacks release immediately; heartbeat timeout is the backup path.
+
+Manual validation notes from `esp-production-3.8`:
+
+- BLE auth is per connection; after a BLE reconnect, clients must authenticate again before setup/admin/safety commands that require auth.
+- Authenticated BLE safety `ReleaseAll(sessionId=0)` while Wi-Fi owns HID is success-by-silence. It clears HID state and leaves healthy Wi-Fi ownership intact.
+- During Wi-Fi ownership, BLE HID input must be ignored even if the BLE connection remains available for status/setup/safety commands.
+- Some current TCP hardware responses may be legacy one-byte reason-only results. Client test tooling may tolerate that for manual validation, but product clients should target the full protocol fields.
 
 ### 6.2 ReleaseAll Semantics
 

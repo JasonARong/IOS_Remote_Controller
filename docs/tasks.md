@@ -139,10 +139,11 @@ Performance baseline: Continue product implementation unless a minimum gate in `
   - Former 3.8: Add storage for multiple simple `SSID + password` profiles; ESP can store, list, try, and clear saved profiles.
   - Former 3.9: Add storage for device identity and paired-phone secret(s); ESP can persist identity/secret across reboot and use them for TCP/BLE authentication hooks.
 
-- [ ] 3.8 Merge BLE fallback with setup/status control path
+- [x] 3.8 Merge BLE fallback with setup/status control path
   Output: BLE path supporting cursor, buttons, drag, scroll, keyboard, ownership, setup/status, heartbeat, release-all, and Wi-Fi setup commands.
   Non-goals: Preserve BLE as the smooth cursor path or depend on iOS current-SSID access.
   Check: BLE Mode drives all features only when it owns HID, uses shared HID state, cannot drive HID while Wi-Fi owns the ESP, reports status/capabilities/device ID, shows only ESP-visible SSIDs, and provisions Wi-Fi without hardcoded credentials.
+  Status: Complete. `esp-production-3.8` hardware validation passed on `192.168.3.228`: BLE pair/auth, status/device ID/capabilities, owner claim, heartbeat, cursor, Escape, saved-profile list, forget-missing-SSID, Wi-Fi scan, Wi-Fi-owner BLE HID isolation, authenticated BLE safety release-all, reset-pairing owner clear, source checks, and Arduino compile all pass.
   Sub-steps:
   - Former 3.7: Merge full-feature BLE fallback into TinyUSB firmware.
   - Former 3.10: Add ESP status, capability, and BLE Wi-Fi setup commands.
@@ -286,6 +287,11 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
   Non-goals: Full firmware update flow.
   Check: iOS disables only unsupported modes/features and never routes HID input to an incompatible transport.
 
+- [ ] 7.7 Retune development-only owner/TCP timeouts
+  Output: Release-ready owner heartbeat and TCP idle timeout values after iOS automatic heartbeat, reconnect, and fallback behavior are implemented.
+  Non-goals: Reopen the ownership state machine.
+  Check: Timeouts are short enough for real safety/recovery, long enough for normal transport jitter, and no longer use the 10-minute manual bring-up defaults.
+
 ## Plan Change Log
 
 - 2026-05-05: Initial production transport task plan based on `docs/Production_Transport_Architecture.md`.
@@ -323,3 +329,11 @@ Exit criteria: Manual and diagnostic tests pass for motion, controls, setup, fal
 - 2026-06-07: Added TCP frame-level diagnostics (`rx`, `tx`, read bytes, write failures, counters) and increased periodic Serial summary interval to reduce log noise while investigating intermittent TCP manual-test timeouts.
 - 2026-06-07: Hardened TCP response delivery by enabling no-delay on accepted clients and sending each TCP response as one contiguous frame with flush; source checks and Arduino compile pass.
 - 2026-06-07: Completed Step 3.7 ESP persistence foundation (`PersistentStore` NVS storage, saved Wi-Fi profile list/forget hooks, persistent device ID, pairing validation/reset hook, and `esp-production-3.7` firmware reporting); source checks, Arduino compile, hardware setup commands, pairing reset, and reboot-stable device ID validation pass on `192.168.3.228`.
+- 2026-06-07: Implemented Step 3.8 firmware slice (`BleControl` module, BLE RX/TX GATT, control frame handlers, owner-gated legacy BLE HID, BLE status/device ID, BLE Wi-Fi scan/provisioning, saved profile commands, reset-pairing, and shared spec-aligned capabilities). Source checks and Arduino compile passed; hardware BLE validation was completed on 2026-06-08.
+- 2026-06-07: Hardened Step 3.8 after review by adding BLE local-owner timeout sync, explicit `CommandResult` success/failure notifications for BLE admin commands, heartbeat-aware manual BLE smoke steps, nRF Connect test tooling guidance, safe setup/admin checks, Wi-Fi-owner BLE isolation, and authenticated BLE safety release-all validation.
+- 2026-06-08: Increased owner heartbeat timeout to 30 seconds for manual BLE bring-up, updated the TCP timeout helper wait, and rewrote the Step 3.8 manual test with click-by-click nRF Connect instructions and command-local expected responses.
+- 2026-06-08: Increased owner heartbeat timeout again to 10 minutes after manual nRF testing proved 30 seconds was still too short for reliable BLE validation; updated the TCP timeout helper and manual-test heartbeat guidance.
+- 2026-06-08: Fixed TCP helper/manual mode-isolation path after hardware showed legacy one-byte TCP results: helper now accepts an explicit proof, parses one-byte reason-only Auth/Owner results, can hold sessionless TCP ownership for isolation testing, and firmware disconnect cleanup now clears any Wi-Fi owner held by the TCP client.
+- 2026-06-08: Increased TCP control idle timeout to 10 minutes so manual Wi-Fi-owner isolation checks do not drop ownership after the former 3-second TCP idle timer.
+- 2026-06-08: Completed Step 3.8 hardware validation on `192.168.3.228`. Key debugging lessons: nRF Connect writes must use `ByteArray`, `Request`, and no spaces; nRF displays notifications in 4-hex-digit groups, so expected bytes should match that display; BLE auth is connection-local and must be repeated after reconnect before authenticated safety release-all; successful BLE safety release-all intentionally sends no BLE response, so confirm with Serial `releaseAll` and owner state; TCP helper must use the same pairing identity as BLE (`--phone-id codex --proof secret` in the manual test); one-byte TCP `00` means legacy success, not boolean false; manual bring-up needs both owner heartbeat and TCP idle timeouts long enough to inspect nRF/Serial state.
+- 2026-06-08: Marked the 10-minute owner heartbeat and TCP idle timeout values as development-only manual bring-up defaults and added Step 7.7 to retune them before real production release.

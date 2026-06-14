@@ -16,6 +16,7 @@
 
 static WiFiUDP udpMotion;
 static TaskHandle_t udpRxTaskHandle = nullptr;
+static bool udpMotionListening = false;
 
 static uint16_t readLe16(const uint8_t* bytes) {
   return (uint16_t)bytes[0] | ((uint16_t)bytes[1] << 8);
@@ -56,12 +57,38 @@ static bool connectStoredWifiProfiles() {
   return false;
 }
 
-// Connect to stored Wi-Fi or WIFI_SSID fallback and bind UDP_MOTION_PORT.
-bool setupUdpMotion() {
-  Serial.println("🔧 Initializing UDP motion...");
+bool ensureUdpMotionListening() {
+  if (udpMotionListening) return true;
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("⚠️ Wi-Fi connection failed; UDP motion inactive.");
+    return false;
+  }
+
+  if (udpMotion.begin(UDP_MOTION_PORT) == 1) {
+    udpMotionListening = true;
+    Serial.printf("✅ UDP motion listening on %s:%u\n",
+                  WiFi.localIP().toString().c_str(),
+                  (unsigned int)UDP_MOTION_PORT);
+    return true;
+  }
+  Serial.println("⚠️ UDP motion listener failed to start.");
+  return false;
+}
+
+bool isUdpMotionListening() {
+  return udpMotionListening;
+}
+
+static void prepareWifiStation() {
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   esp_wifi_set_ps(WIFI_PS_NONE);
+}
+
+// Connect to stored Wi-Fi or WIFI_SSID fallback and bind UDP_MOTION_PORT.
+bool setupUdpMotion() {
+  Serial.println("🔧 Initializing UDP motion...");
+  prepareWifiStation();
 
   if (!connectStoredWifiProfiles()) {
     if (strlen(WIFI_SSID) == 0) {
@@ -74,19 +101,19 @@ bool setupUdpMotion() {
     }
   }
 
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("⚠️ Wi-Fi connection failed; UDP motion inactive.");
-    return false;
-  }
+  return ensureUdpMotionListening();
+}
 
-  if (udpMotion.begin(UDP_MOTION_PORT) == 1) {
-    Serial.printf("✅ UDP motion listening on %s:%u\n",
-                  WiFi.localIP().toString().c_str(),
-                  (unsigned int)UDP_MOTION_PORT);
-    return true;
-  }
-  Serial.println("⚠️ UDP motion listener failed to start.");
-  return false;
+bool connectWifiForProvisioning(const char* ssid, const char* password,
+                                bool saveProfile) {
+  prepareWifiStation();
+  udpMotion.stop();
+  udpMotionListening = false;
+  WiFi.disconnect(true);
+  delay(100);
+  if (!connectWifiCredential(ssid, password)) return false;
+  if (saveProfile && !saveStoredWifiProfile(ssid, password)) return false;
+  return ensureUdpMotionListening();
 }
 
 // Drain all pending datagrams in one call (invoked from udp-rx task each iteration).

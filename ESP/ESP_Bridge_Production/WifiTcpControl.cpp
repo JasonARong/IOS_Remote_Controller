@@ -4,6 +4,7 @@
 
 #include <WiFi.h>
 
+#include "BleControl.h"
 #include "Config.h"
 #include "Diagnostics.h"
 #include "HidState.h"
@@ -422,18 +423,21 @@ static void handleStatusRequest(const TcpFrame& frame) {
                             owner.state.ownerKind == OWNER_WIFI &&
                             tcpClientOwnsWifi &&
                             owner.state.sessionId == tcpClientSessionId;
+  char deviceId[PERSISTENT_MAX_DEVICE_ID_LENGTH + 1] = "ESP3";
+  getPersistentDeviceId(deviceId, sizeof(deviceId));
 
   PayloadWriter writer;
   writer.writeU32(requestId);
   writer.writeU8(activeMode);
   writer.writeBool(WiFi.status() == WL_CONNECTED);
-  writer.writeBool(false);
+  writer.writeBool(isBleControlClientConnected());
   writer.writeBool(isUsbHidMounted());
   writer.writeBool(owned);
   writer.writeBool(ownedByThisSession);
   writer.writeString(TCP_CONTROL_FIRMWARE_VERSION);
   writer.writeU16(TCP_CONTROL_PROTOCOL_VERSION);
   writer.writeU32(TCP_CONTROL_CAPABILITIES);
+  writer.writeBytes((const uint8_t*)deviceId, (uint8_t)strlen(deviceId));
   if (writer.ok) {
     sendFrame(TCP_MSG_STATUS_RESPONSE, writer.data, (uint16_t)writer.len);
   } else {
@@ -690,8 +694,12 @@ static void processRxBuffer() {
 }
 
 static void releaseOwnedClientOnDisconnect() {
-  if (tcpClientOwnsWifi && tcpClientSessionId != 0) {
-    releaseOwner(tcpClientSessionId, OWNER_WIFI, RELEASE_REASON_DISCONNECT);
+  if (tcpClientOwnsWifi) {
+    if (tcpClientSessionId != 0) {
+      releaseOwner(tcpClientSessionId, OWNER_WIFI, RELEASE_REASON_DISCONNECT);
+    } else {
+      releaseOwnerKind(OWNER_WIFI, RELEASE_REASON_DISCONNECT);
+    }
   }
   resetTcpClientState();
 }

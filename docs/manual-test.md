@@ -284,16 +284,210 @@ Result:
 
 Manual tests:
 
-- Add BLE fallback and Wi-Fi setup/status tests when this task is implemented.
+Source checks:
+
+```bash
+python3 ESP/ESP_Bridge_Production/test_step_3_8.py
+```
+
+Arduino compile:
+
+```bash
+"/Applications/Arduino IDE.app/Contents/Resources/app/lib/backend/resources/arduino-cli" compile --fqbn esp32:esp32:esp32s3 ESP/ESP_Bridge_Production
+```
+
+Hardware smoke:
+
+1. Upload `ESP/ESP_Bridge_Production` to the ESP32-S3.
+2. Open Serial Monitor at `115200` and wait for `ESP_Bridge_Production ready`.
+3. Open nRF Connect and connect to `ESP_MouseBridge`.
+4. Find service `00001234-0000-1000-8000-00805f9b34fb`.
+5. Find characteristic `0000abce-0000-1000-8000-00805f9b34fb`. This is the ESP response/notify channel.
+6. Tap the down-arrow button on the `0000abce...` row to enable notifications. ESP replies appear as `Last Read` on this row.
+7. Find characteristic `0000abcd-0000-1000-8000-00805f9b34fb`. This is the phone-to-ESP write channel.
+8. For every write below:
+   - Tap the up-arrow button on the `0000abcd...` row.
+   - Choose `ByteArray`.
+   - Select all old value text and delete it.
+   - Paste the command exactly as shown, with no spaces.
+   - Set Write Type to `Request`.
+   - Tap `Write`.
+   - If the screen shakes, check that `ByteArray` is still selected and that the pasted command has no spaces.
+9. Pair with phone ID `codex` and proof `secret`.
+
+```text
+F201010100000000010D05636F64657806736563726574
+```
+
+Expected notification:
+
+```text
+F201 0201 0000 0000 0102 0100
+```
+
+10. Request status.
+
+```text
+F2010802000000000100
+```
+
+Expected notification: variable-length `StatusResponse` starting with:
+
+```text
+F201 0902 0000 0000 01
+```
+
+11. Claim BLE owner.
+
+```text
+F2010303000000000100
+```
+
+Expected notification: `OwnerResult granted=true`, followed by 4 `sessionId` bytes. Copy those last 4 bytes for heartbeat/release-owner.
+
+```text
+F201 0403 0000 0000 0106 0100 <sessionIdLE>
+```
+
+Example: if nRF shows `F201 0403 0000 0000 0106 0100 C727 640F`, then `<sessionIdLE>` is `C727640F`.
+
+12. Send BLE heartbeat. Replace `<sessionIdLE>` with the 4 little-endian session bytes copied from `OwnerResult`.
+
+```text
+F2010604000000000104<sessionIdLE>
+```
+
+Expected: no BLE notification. Serial should show `owner: kind=ble ... hb=...ms left`. After a fresh claim or heartbeat, `hb` should be near `600000ms left`.
+
+13. Send one legacy debug mouse packet.
+
+```text
+A101000040000000
+```
+
+Expected: no BLE notification. The cursor should move.
+
+14. Send one legacy key combo packet for Escape.
+
+```text
+F10118
+```
+
+Expected: no BLE notification. Escape should send once and no key should stay held.
+
+15. If more than 8 minutes passed since the previous heartbeat, send the heartbeat frame again.
+16. List saved Wi-Fi profiles.
+
+```text
+F2010F05000000000100
+```
+
+Expected notification: zero or more `SavedWifiEntry` notifications, then `SavedWifiDone`. If the count is zero:
+
+```text
+F201 1105 0000 0000 0101 00
+```
+
+17. Exercise safe forget-missing-SSID path.
+
+```text
+F2011206000000000116155F5F6D697373696E675F746573745F737369645F5F
+```
+
+Expected notification:
+
+```text
+F201 1506 0000 0000 011A 1200 0716 7769 6669 2070 726F 6669 6C65 206E 6F74 2066 6F75 6E64
+```
+
+18. Request ESP-visible Wi-Fi scan.
+
+```text
+F2010A07000000000100
+```
+
+Expected notification: zero or more `ScanWifiResult` notifications starting with `F201 0B07 0000 0000 01`, followed by `ScanWifiDone` starting with:
+
+```text
+F201 0C07 0000 0000 0101
+```
+
+Final expected Serial check: BLE counters show accepted HID and control frames without malformed growth.
+
+Mode isolation check:
+
+1. Release BLE owner before claiming Wi-Fi. Replace `<sessionIdLE>` with the BLE owner session bytes.
+
+```text
+F2010508000000000105<sessionIdLE>03
+```
+
+Expected: no BLE notification.
+
+2. On the Mac, from the repo root, claim Wi-Fi ownership with the same `codex` / `secret` identity used in the BLE pair step, and keep it alive for 2 minutes:
+
+```bash
+python3 ESP/ESP_Bridge_Production/tools/tcp_control_client.py 192.168.3.228 --phone-id codex --proof secret claim --keepalive 120
+```
+
+Expected terminal output includes `AuthResult accepted=True` and `OwnerResult granted=True`. Keep the command running for the next step.
+
+If `OwnerResult granted=False reason=1`, the ESP already has an owner. Reboot the ESP, reconnect nRF, and restart this mode-isolation section.
+
+Expected Serial while the helper is running: `owner: kind=wifi ... hb=...ms left`. It should not hit `TCP control client timeout: idle` during this 2-minute check.
+
+3. While the TCP helper is still running, send the legacy BLE mouse packet again through nRF Connect on `0000abcd...`.
+
+```text
+A101000040000000
+```
+
+Expected: no cursor movement. Serial BLE line increments `hidIgnored`.
+
+4. While Wi-Fi still owns HID, send authenticated BLE safety release-all with `sessionId = 0`.
+
+```text
+F20107090000000001050000000005
+```
+
+Expected: no BLE notification. Serial increments `releaseAll` but does not clear healthy Wi-Fi ownership.
+
+Reset pairing check:
+
+1. Run this last because it clears BLE auth/pairing and any active owner.
+
+```text
+F201130A00000000010105
+```
+
+Expected notification:
+
+```text
+F201 150A 0000 0000 011C 1301 0018 7061 6972 696E 6720 6964 656E 7469 7479 2063 6C65 6172 6564
+```
+
+Expected Serial: increments `releaseAll` and returns to `owner: kind=none`.
 
 Verification:
 
-- Full BLE fallback validation is deferred to Step 7.3.
+- Pair/status/owner/heartbeat, BLE cursor, BLE Escape, saved Wi-Fi list, forget-missing-SSID, Wi-Fi scan, Wi-Fi-owner mode isolation, authenticated BLE safety release-all, and reset-pairing owner clear pass on hardware.
+- Full app-level BLE fallback validation remains in Step 7.3.
 
 Result:
 
-- Notes:
-- Decision:
+- Notes: Source checks and Arduino compile pass for `esp-production-3.8`; hardware BLE validation passed on `192.168.3.228`.
+- Decision: Close Step 3.8.
+
+Debugging notes:
+
+- nRF Connect write values must be `ByteArray`, `Request`, and pasted with no spaces. If the screen shakes, nRF rejected the value locally.
+- nRF displays notifications as 4 hex digits plus a space. Expected values in this section use that display format.
+- Four hex digits are two bytes. One byte is two hex digits.
+- BLE auth is connection-local. If nRF disconnects/reconnects, send the Pair frame again before authenticated commands such as safety release-all.
+- Successful BLE safety release-all sends no BLE response. Confirm it by Serial: `ble framesRx` increments, `releaseAll` increments, and a healthy Wi-Fi owner remains `owner: kind=wifi`.
+- TCP helper auth must match the BLE pairing identity. For this manual test, use `--phone-id codex --proof secret`.
+- The hardware TCP path may return legacy one-byte results. In helper output, `AuthResult ... legacy=reason-only` and `OwnerResult ... legacy=sessionless` are acceptable when `reason=0`.
+- During manual bring-up, both owner heartbeat and TCP idle timeout are intentionally long (`600000ms`) so nRF/Serial checks do not race the timeout. These values are not release-ready production tuning; revisit them before shipping.
 
 ---
 

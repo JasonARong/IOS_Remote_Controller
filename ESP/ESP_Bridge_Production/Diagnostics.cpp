@@ -62,6 +62,12 @@ void Diagnostics::resetWindow() {
   tcpBytesRx = 0;
   tcpWriteFails = 0;
   tcpClientTimeouts = 0;
+  bleFramesRx = 0;
+  bleFramesTx = 0;
+  bleMalformed = 0;
+  bleHidAccepted = 0;
+  bleHidIgnored = 0;
+  bleSetupOps = 0;
   hidLateMaxUs = 0;
   for (int i = 0; i < 5; i++) hidIntervalBuckets[i] = 0;
   for (int i = 0; i < 8; i++) emitDeltaBuckets[i] = 0;
@@ -116,6 +122,15 @@ void printSummaryIfNeeded() {
     (unsigned long)diag.tcpBytesRx,
     (unsigned long)diag.tcpWriteFails,
     (unsigned long)diag.tcpClientTimeouts);
+
+  Serial.printf(
+    "  ble: framesRx=%lu framesTx=%lu malformed=%lu hidAccepted=%lu hidIgnored=%lu setupOps=%lu\n",
+    (unsigned long)diag.bleFramesRx,
+    (unsigned long)diag.bleFramesTx,
+    (unsigned long)diag.bleMalformed,
+    (unsigned long)diag.bleHidAccepted,
+    (unsigned long)diag.bleHidIgnored,
+    (unsigned long)diag.bleSetupOps);
 
   Serial.printf(
     "  HID interval ms <2=%lu 2-4=%lu 4-8=%lu 8-16=%lu >=16=%lu\n",

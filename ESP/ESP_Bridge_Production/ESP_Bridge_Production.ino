@@ -16,6 +16,7 @@
 
 #include <Arduino.h>
 
+#include "BleControl.h"
 #include "Config.h"
 #include "Diagnostics.h"
 #include "HidPacer.h"
@@ -46,6 +47,7 @@ void setup() {
   resetSharedHidState();
   resetOwnerSession();
   setupPersistentStore();
+  setupBleControl();
   startHidPacerTask();
 
   if (setupUdpMotion()) {
@@ -69,6 +71,7 @@ void loop() {
 
   checkOwnerHeartbeatTimeout(millis());
   pollWifiTcpControl();
+  pollBleControl();
   printSummaryIfNeeded();
   delay(10);
 }
